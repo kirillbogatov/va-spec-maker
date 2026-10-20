@@ -1,4 +1,5 @@
 export interface Project { id: number; name: string; description: string }
+export interface ProjectListItem extends Project { scenario_count: number; created_at: string }
 
 export type UsedBy = { id: number; name: string; scenario_id: number | null }[];
 export interface EntityListItem extends Entity { value_count: number }
@@ -11,23 +12,8 @@ export interface Entity {
 
 export interface IntentListItem { id: number; name: string; enabled: boolean; phrase_count: number; scenario_id: number | null }
 export interface IntentEntity { entity_id: number; required: boolean }
-/** Вариация интента: одна относительная регулировка (или «none») со своими примерами запросов, сущностями и фразами. */
-export interface IntentVariant {
-  key?: string; enabled: boolean; adjustment_id: number | null; examples: string[]; phrases: string[]; entities: IntentEntity[];
-}
-/** Интент в таблице Intents занимает столько строк, сколько у него вариаций. */
 export interface Intent {
-  id: number; project_id: number; name: string; enabled: boolean; comment: string; variants: IntentVariant[];
-}
-
-export type ResultCodeListItem = ResultCode
-export interface ResultCode {
-  id: number; project_id: number; name: string; description: string; used_by: { id: number; name: string; scenario_id: number | null }[];
-}
-
-export type AdjustmentListItem = Adjustment
-export interface Adjustment {
-  id: number; project_id: number; name: string; description: string; used_by: { id: number; name: string; scenario_id: number | null }[];
+  id: number; project_id: number; name: string; enabled: boolean; comment: string; phrases: string[]; entities: IntentEntity[];
 }
 
 export interface DictionaryDependency { id: number; name: string; values: string[]; used_by: { id: number; name: string }[] }
@@ -69,7 +55,7 @@ export interface ScenarioEntity { key?: string; entity_id: number | null; follow
  * Состояние схемы. x и y — устаревшая раскладка (схема раскладывается автоматически);
  * остальное — то, что происходит при входе в состояние: ответ ассистента и действие системы.
  */
-export interface StateInfo { x: number; y: number; description?: string; prompt_id?: number | null; system_action?: string; result_code?: string }
+export interface StateInfo { x: number; y: number; description?: string; prompt_id?: number | null; system_action?: string }
 /** Состояния сценария по имени (в том числе без переходов). */
 export type Layout = Record<string, StateInfo>;
 /** Вкладка сценария — отдельный подсценарий: свои состояния и переходы, в экспорте — отдельный раздел со своим заголовком. */

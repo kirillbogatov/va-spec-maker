@@ -1,6 +1,9 @@
 import type {
-  Adjustment, AdjustmentListItem, DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Project, Prompt, PromptListItem, ResultCode, ResultCodeListItem, Scenario, ScenarioListItem,
+  DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
 } from './types';
+
+import { request } from './backend';
+import { downloadResponse } from './download';
 
 export class ApiError extends Error {
   status: number;
@@ -15,21 +18,23 @@ export class ApiError extends Error {
 }
 
 export async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const j = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, j.error ?? 'error', j.message ?? res.statusText, j.details);
+  const r = await request(method, url, body);
+  if (r.status >= 400) {
+    const j = (r.body ?? {}) as { error?: string; message?: string; details?: unknown };
+    throw new ApiError(r.status, j.error ?? 'error', j.message ?? 'Ошибка', j.details);
   }
-  return res.status === 204 ? (undefined as T) : res.json();
+  return (r.status === 204 ? undefined : r.body) as T;
 }
 
 export const api = {
   projects: {
-    list: () => req<Project[]>('GET', '/api/projects'),
+    list: () => req<ProjectListItem[]>('GET', '/api/projects'),
+    create: (name: string, description = '') => req<{ id: number; name: string }>('POST', '/api/projects', { name, description }),
+    rename: (id: number, body: { name: string; description: string }) => req<Project>('PATCH', `/api/projects/${id}`, body),
+    remove: (id: number) => req<void>('DELETE', `/api/projects/${id}`),
+    duplicate: (id: number) => req<{ id: number; name: string }>('POST', `/api/projects/${id}/duplicate`),
+    dump: (id: number) => req<unknown>('GET', `/api/projects/${id}/dump`),
+    import: (dump: unknown) => req<{ id: number; name: string }>('POST', '/api/projects/import', dump),
   },
   entities: {
     list: (pid: number) => req<EntityListItem[]>('GET', `/api/projects/${pid}/entities`),
@@ -49,24 +54,6 @@ export const api = {
     create: (sid: number, name: string) => req<{ id: number; name: string }>('POST', `/api/scenarios/${sid}/intents`, { name }),
     save: (id: number, body: Omit<Intent, 'id' | 'project_id'>) => req<Intent>('PUT', `/api/intents/${id}`, body),
     remove: (id: number) => req<void>('DELETE', `/api/intents/${id}`),
-  },
-  adjustments: {
-    list: (pid: number) => req<AdjustmentListItem[]>('GET', `/api/projects/${pid}/relative-adjustments`),
-    get: (id: number) => req<Adjustment>('GET', `/api/relative-adjustments/${id}`),
-    create: (pid: number, name: string) =>
-      req<{ id: number; name: string }>('POST', `/api/projects/${pid}/relative-adjustments`, { name }),
-    save: (id: number, body: { name: string; description: string }) =>
-      req<Adjustment>('PUT', `/api/relative-adjustments/${id}`, body),
-    remove: (id: number, force = false) => req<void>('DELETE', `/api/relative-adjustments/${id}${force ? '?force=1' : ''}`),
-  },
-  resultCodes: {
-    list: (pid: number) => req<ResultCodeListItem[]>('GET', `/api/projects/${pid}/result-codes`),
-    get: (id: number) => req<ResultCode>('GET', `/api/result-codes/${id}`),
-    create: (pid: number, name: string) =>
-      req<{ id: number; name: string }>('POST', `/api/projects/${pid}/result-codes`, { name }),
-    save: (id: number, body: { name: string; description: string }) =>
-      req<ResultCode>('PUT', `/api/result-codes/${id}`, body),
-    remove: (id: number) => req<void>('DELETE', `/api/result-codes/${id}`),
   },
   dependencyDictionary: {
     list: (pid: number) => req<DictionaryDependency[]>('GET', `/api/projects/${pid}/dependency-dictionary`),
@@ -92,12 +79,6 @@ export const api = {
     save: (id: number, body: Omit<Scenario, 'id' | 'project_id'>) => req<Scenario>('PUT', `/api/scenarios/${id}`, body),
     remove: (id: number) => req<void>('DELETE', `/api/scenarios/${id}`),
   },
-  exportUrl: (scenarioId: number, format: 'md' | 'docx') => `/api/scenarios/${scenarioId}/export?format=${format}`,
-  projectExportUrl: (projectId: number, format: 'md' | 'docx') => `/api/projects/${projectId}/export?format=${format}`,
-  backupUrl: '/api/backup',
-  preview: async (scenarioId: number): Promise<string> => {
-    const res = await fetch(`/api/scenarios/${scenarioId}/preview`);
-    if (!res.ok) throw new ApiError(res.status, 'error', res.statusText);
-    return res.text();
-  },
+  exportFile: async (url: string, fallback: string) => downloadResponse(await request('GET', url), fallback),
+  preview: (scenarioId: number) => req<string>('GET', `/api/scenarios/${scenarioId}/preview`),
 };

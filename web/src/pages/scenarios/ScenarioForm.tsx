@@ -10,7 +10,7 @@ import { SaveIndicator } from '@/components/SaveIndicator';
 import { ExportMenu } from '@/components/ExportMenu';
 import { Section } from '@/components/Section';
 import { cn, GHOST } from '@/lib/utils';
-import { useProjectId } from '@/hooks/project';
+import { usePath, useProjectId } from '@/hooks/project';
 import { useAutosave } from '@/hooks/useAutosave';
 import { api } from '@/lib/api';
 import type { Dependency, Layout, Scenario, ScenarioPart, Step } from '@/lib/types';
@@ -59,6 +59,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
   const projectId = useProjectId();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const path = usePath();
   const [draft, setDraft] = useState<Draft>(() => initialDraft(scenario));
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Имя хранится вместе с ключом: после удаления вкладки диалог ещё закрывается и не должен потерять заголовок
@@ -161,7 +162,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
     mutationFn: () => api.scenarios.remove(scenario.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['scenarios', projectId] });
-      navigate('/scenarios');
+      navigate(path('/scenarios'));
     },
   });
 
@@ -188,7 +189,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
           if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
           const i = TABS.findIndex((t) => t.id === tab);
           const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
-          navigate(`/scenarios/${scenario.id}/${next.id}`);
+          navigate(path(`/scenarios/${scenario.id}/${next.id}`));
           requestAnimationFrame(() => document.getElementById(`tab-${next.id}`)?.focus());
         }}
       >
@@ -197,7 +198,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
             key={t.id}
             id={`tab-${t.id}`}
             role="tab"
-            to={`/scenarios/${scenario.id}/${t.id}`}
+            to={path(`/scenarios/${scenario.id}/${t.id}`)}
             aria-selected={tab === t.id}
             tabIndex={tab === t.id ? 0 : -1}
             className={cn(

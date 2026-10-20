@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 export function MasterDetail({ list, children }: { list: ReactNode; children: ReactNode }) {
   return (
     <div className="flex h-full min-h-0">
-      <aside className="flex w-72 shrink-0 flex-col bg-nav-2 text-nav-fg">{list}</aside>
+      <aside className="flex w-72 shrink-0 flex-col border-r bg-background text-nav-fg">{list}</aside>
       <section className="min-w-0 flex-1 overflow-y-auto bg-page p-4">{children}</section>
     </div>
   );
@@ -19,8 +19,8 @@ export function EmptyDetail({ text = 'Выберите элемент слева
 /** Шапка тёмного списка: «⊕ Создать». */
 export function ListHeader({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="flex items-center border-b border-white/10 px-4 py-3">
-      <button type="button" onClick={onCreate} className="inline-flex items-center gap-1.5 text-xs font-medium text-white hover:underline">
+    <div className="flex items-center border-b px-4 py-3">
+      <button type="button" onClick={onCreate} className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline">
         <CirclePlus className="size-3.5" /> Создать
       </button>
     </div>
@@ -34,8 +34,8 @@ export function ListItem({ to, children, count, dim }: { to: string; children: R
       to={to}
       className={({ isActive }) =>
         cn(
-          'flex items-center justify-between gap-2 px-4 py-2 text-sm font-medium text-nav-fg hover:bg-white/5',
-          isActive && 'bg-white/10',
+          'flex items-center justify-between gap-2 px-4 py-2 text-sm font-medium text-nav-fg hover:bg-muted',
+          isActive && 'bg-brand/10 text-brand hover:bg-brand/10',
           dim && 'opacity-50',
         )
       }
@@ -47,7 +47,7 @@ export function ListItem({ to, children, count, dim }: { to: string; children: R
 }
 
 export const listEmpty = 'px-4 py-3 text-sm text-nav-muted';
-export const listSearch = 'border-transparent bg-white/10 text-nav-fg placeholder:text-nav-muted focus-visible:border-white/40 dark:bg-white/10';
+export const listSearch = 'bg-muted text-nav-fg placeholder:text-nav-muted';
 
 /** Фильтр по названию для тёмного списка: поле появляется, когда элементов больше шести. */
 export function useListFilter<T extends { name: string }>(items: T[]) {
@@ -63,7 +63,7 @@ export function useListFilter<T extends { name: string }>(items: T[]) {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Фильтр по названию"
           aria-label="Фильтр списка"
-          className="h-8 w-full rounded-none bg-white/10 pl-7 pr-2 text-sm text-nav-fg outline-none placeholder:text-nav-muted focus-visible:ring-1 focus-visible:ring-white/40"
+          className="h-8 w-full rounded-lg bg-muted pl-7 pr-2 text-sm text-nav-fg outline-none placeholder:text-nav-muted focus-visible:ring-2 focus-visible:ring-brand"
         />
       </div>
     ) : null;

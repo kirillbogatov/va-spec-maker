@@ -65,7 +65,6 @@ interface RowProps {
   allStates: string[];
   issues: StepIssue[];
   /** Задано только для ошибок: показывает колонку «Код результата». */
-  resultCode?: string;
   onPatch: (p: Partial<Step>) => void;
   onRemove: () => void;
   onDuplicate: () => void;
@@ -103,7 +102,7 @@ export function IntentSelect({ intents, step, onPatch, label }: { intents: Inten
   );
 }
 
-function StepRow({ step, index, intents, promptOptions, dependencies, entities, allStates, issues, resultCode, onPatch, onRemove, onDuplicate, onInsertBelow }: RowProps) {
+function StepRow({ step, index, intents, promptOptions, dependencies, entities, allStates, issues, onPatch, onRemove, onDuplicate, onInsertBelow }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: step.key! });
   return (
     <TableRow ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className="group/row [&>td]:align-top"
@@ -142,11 +141,6 @@ function StepRow({ step, index, intents, promptOptions, dependencies, entities, 
       <TableCell className="w-44">
         <OptionSelect options={promptOptions} value={step.prompt_id} onChange={(prompt_id) => onPatch({ prompt_id })} label={`Ответ ассистента, строка ${index + 1}`} />
       </TableCell>
-      {resultCode !== undefined && (
-        <TableCell className="w-40">
-          <div className="flex h-9 items-center font-mono text-[13px] text-muted-foreground" title="Задаётся в состоянии на вкладке «Сценарная логика»">{resultCode || '-'}</div>
-        </TableCell>
-      )}
       <TableCell className="w-20">
         <div className="flex h-9 items-center">
           {issues.length > 0 && (
@@ -163,8 +157,7 @@ function StepRow({ step, index, intents, promptOptions, dependencies, entities, 
   );
 }
 
-export function StepsTable({ kind, title, steps, intents, prompts, dependencies, entities, allStates, issues, layout, onChange }: Props) {
-  const showCode = kind === 'error';
+export function StepsTable({ kind, title, steps, intents, prompts, dependencies, entities, allStates, issues, onChange }: Props) {
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const promptOptions = [{ value: 'none', label: '— не выбран —' }, ...prompts.map((p) => ({ value: String(p.id), label: p.name }))];
 
@@ -206,7 +199,6 @@ export function StepsTable({ kind, title, steps, intents, prompts, dependencies,
                 <TableHead>Действие системы</TableHead>
                 <TableHead>Следующие состояния</TableHead>
                 <TableHead>Ответ ассистента</TableHead>
-                {showCode && <TableHead>Код результата</TableHead>}
                 <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
@@ -222,7 +214,6 @@ export function StepsTable({ kind, title, steps, intents, prompts, dependencies,
                   entities={entities}
                   allStates={allStates}
                   issues={issues.get(s.key!) ?? []}
-                  resultCode={showCode ? layout?.[s.state]?.result_code ?? '' : undefined}
                   onPatch={(p) => patch(i, p)}
                   onRemove={() => remove(i)}
                   onDuplicate={() => duplicate(i)}
@@ -231,7 +222,7 @@ export function StepsTable({ kind, title, steps, intents, prompts, dependencies,
               ))}
               {steps.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={showCode ? 9 : 8} className="py-6 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="py-6 text-center text-sm text-muted-foreground">
                     Строк пока нет.{' '}
                     <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={add}>Добавить первую</button>
                   </TableCell>

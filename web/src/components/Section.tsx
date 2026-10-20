@@ -12,7 +12,7 @@ interface SectionProps {
 /** Белая карточка на сером фоне: крупный заголовок, действие справа, содержимое. */
 export function Section({ title, action, className, children }: SectionProps) {
   return (
-    <section className={cn('rounded-sm bg-card px-5 py-4', className)}>
+    <section className={cn('rounded-xl border bg-card px-5 py-4', className)}>
       {(title || action) && (
         <div className="mb-3 flex items-start justify-between gap-4">
           <div>

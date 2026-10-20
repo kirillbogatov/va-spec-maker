@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { usePath } from '@/hooks/project';
 import { cn } from '@/lib/utils';
 import type { Analysis } from '@/lib/states';
 import type { IntentListItem, PromptListItem, Step } from '@/lib/types';
@@ -57,6 +58,7 @@ const ICON = {
 export function ScenarioChecks({ scenarioId, checks }: { scenarioId: number; checks: Check[] }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const path = usePath();
   const problems = checks.filter((c) => c.level !== 'info').length;
   const hasErrors = checks.some((c) => c.level === 'error');
   return (
@@ -81,7 +83,7 @@ export function ScenarioChecks({ scenarioId, checks }: { scenarioId: number; che
                     className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                     onClick={() => {
                       setOpen(false);
-                      navigate(`/scenarios/${scenarioId}/${c.tab}`);
+                      navigate(path(`/scenarios/${scenarioId}/${c.tab}`));
                     }}
                   >
                     {ICON[c.level]}

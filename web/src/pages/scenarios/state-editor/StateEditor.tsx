@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Background, Controls, MarkerType, ReactFlow, type Connection, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Section } from '@/components/Section';
-import { useProjectId } from '@/hooks/project';
-import { api } from '@/lib/api';
 import { layoutStateGraph, type LayoutResult } from '@/lib/elkLayout';
 import { ENTRY_STATE, newTransition, removeState, renameState, uniqueStateName } from '@/lib/fsm';
 import { splitNext, type Analysis } from '@/lib/states';
@@ -49,9 +46,6 @@ export function StateEditor({ steps, layout, analysis, intents, prompts, depende
     if (s) onSelectElement?.();
   };
   useEffect(() => { if (showPart) setSelectedRaw(null); }, [showPart]);
-  const projectId = useProjectId();
-  const { data: codes = [] } = useQuery({ queryKey: ['result-codes', projectId], queryFn: () => api.resultCodes.list(projectId) });
-  const resultCodes = useMemo(() => codes.map((c) => c.name), [codes]);
 
   const names = useMemo(() => {
     const out = [...analysis.states];
@@ -213,7 +207,6 @@ export function StateEditor({ steps, layout, analysis, intents, prompts, depende
               name={selected.name}
               info={layout[selected.name]}
               prompts={prompts}
-              resultCodes={resultCodes}
               onPatchInfo={(p) => patchState(selected.name, p)}
               isEntry={selected.name === analysis.states[0]}
               entryName={ENTRY_STATE}

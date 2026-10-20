@@ -3,16 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { useProjectId } from '@/hooks/project';
+import { usePath, useProjectId } from '@/hooks/project';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface Hit { key: string; kind: string; name: string; hint?: string; to: string }
 
-/** Глобальный поиск по Ctrl+K: сценарии, интенты, промпты, сущности, регулировки и зависимости. */
+/** Глобальный поиск по Ctrl+K: сценарии, интенты, промпты, сущности и зависимости. */
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const projectId = useProjectId();
   const navigate = useNavigate();
+  const path = usePath();
   const [q, setQ] = useState('');
   const [cursor, setCursor] = useState(0);
   const enabled = { enabled: open, staleTime: 10_000 };
@@ -20,29 +21,25 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const intents = useQuery({ queryKey: ['intents', projectId], queryFn: () => api.intents.list(projectId), ...enabled });
   const prompts = useQuery({ queryKey: ['prompts', projectId], queryFn: () => api.prompts.list(projectId), ...enabled });
   const entities = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId), ...enabled });
-  const adjustments = useQuery({ queryKey: ['adjustments', projectId], queryFn: () => api.adjustments.list(projectId), ...enabled });
-  const codes = useQuery({ queryKey: ['result-codes', projectId], queryFn: () => api.resultCodes.list(projectId), ...enabled });
   const deps = useQuery({ queryKey: ['dependency-dictionary', projectId], queryFn: () => api.dependencyDictionary.list(projectId), ...enabled });
 
   const scenarioName = (id: number | null) => scenarios.data?.find((s) => s.id === id)?.name;
   const all = useMemo<Hit[]>(
     () => [
-      ...(scenarios.data ?? []).map((s) => ({ key: `s${s.id}`, kind: 'Сценарий', name: s.name, to: `/scenarios/${s.id}` })),
+      ...(scenarios.data ?? []).map((s) => ({ key: `s${s.id}`, kind: 'Сценарий', name: s.name, to: path(`/scenarios/${s.id}`) })),
       ...(intents.data ?? []).map((i) => ({
         key: `i${i.id}`, kind: 'Интент', name: i.name, hint: scenarioName(i.scenario_id),
-        to: i.scenario_id ? `/scenarios/${i.scenario_id}/intents?open=${i.id}` : '/scenarios',
+        to: path(i.scenario_id ? `/scenarios/${i.scenario_id}/intents?open=${i.id}` : '/scenarios'),
       })),
       ...(prompts.data ?? []).map((p) => ({
         key: `p${p.id}`, kind: 'Промпт', name: p.name, hint: scenarioName(p.scenario_id),
-        to: p.scenario_id ? `/scenarios/${p.scenario_id}/prompts` : '/scenarios',
+        to: path(p.scenario_id ? `/scenarios/${p.scenario_id}/prompts` : '/scenarios'),
       })),
-      ...(entities.data ?? []).map((e) => ({ key: `e${e.id}`, kind: 'Сущность', name: e.name, to: `/entities?focus=${e.id}` })),
-      ...(adjustments.data ?? []).map((a) => ({ key: `a${a.id}`, kind: 'Регулировка', name: a.name, to: `/adjustments?focus=${a.id}` })),
-      ...(deps.data ?? []).map((d) => ({ key: `d${d.id}`, kind: 'Зависимость', name: d.name, to: `/dependencies?focus=${d.id}` })),
-      ...(codes.data ?? []).map((c) => ({ key: `c${c.id}`, kind: 'Result code', name: c.name, to: `/result-codes?focus=${c.id}` })),
+      ...(entities.data ?? []).map((e) => ({ key: `e${e.id}`, kind: 'Сущность', name: e.name, to: path(`/entities?focus=${e.id}`) })),
+      ...(deps.data ?? []).map((d) => ({ key: `d${d.id}`, kind: 'Зависимость', name: d.name, to: path(`/dependencies?focus=${d.id}`) })),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scenarios.data, intents.data, prompts.data, entities.data, adjustments.data, deps.data, codes.data],
+    [scenarios.data, intents.data, prompts.data, entities.data, deps.data],
   );
   const hits = useMemo(() => {
     const t = q.trim().toLowerCase();

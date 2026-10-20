@@ -7,7 +7,7 @@ import { cn, GHOST } from '@/lib/utils';
 import { splitNext, type StepIssue } from '@/lib/states';
 import type { Dependency, EntityListItem, IntentListItem, Step } from '@/lib/types';
 import { ConditionsCell } from '../ConditionsCell';
-import { IntentSelect, OptionSelect } from '../StepsTable';
+import { IntentSelect } from '../StepsTable';
 
 interface Props {
   step: Step;
