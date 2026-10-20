@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Промпты — макет</title><link rel="stylesheet" href="styles.css"></head>
+<body><div class="app">
+<header class="topbar"><button class="btn ghost sm">Салон автомобиля VA ▾</button><button class="btn sm">⬇ Экспорт</button></header>
+<div class="body"><nav class="nav"><a href="01-intents.html" class="">Интенты</a><a href="02-entities.html" class="">Сущности</a><a href="03-prompts.html" class="active">Промпты</a><a href="04-scenarios.html" class="">Сценарии</a></nav><div class="main">
+<aside class="list"><div class="list-head"><span>Промпты <span class="muted">3</span></span><button class="btn ghost sm">+ Создать</button></div><div class="list-search"><input class="input" placeholder="Поиск"></div><div class="list-body"><div class="item active"><span>PR_GAME_RESUMED</span><span class="count">3</span></div><div class="item "><span>PR_NO_ACCESS</span><span class="count">2</span></div><div class="item "><span>PR_ASK_SEAT</span><span class="count">1</span></div></div></aside><section class="detail"><div class="stack-lg" style="max-width:768px">
+<div class="row"><input class="input title" value="PR_GAME_RESUMED"><span class="save">Сохранено</span><button class="btn ghost icon" title="Удалить">🗑</button></div>
+<div class="stack"><b>Result code</b><input class="input" value="RESULT_SUCCESS" placeholder="RESULT_SUCCESS"></div>
+<div class="stack"><div><b>Full answer</b><p class="small muted">Ответ VA, когда режим коротких ответов выключен</p></div><textarea class="textarea" rows="3">Хорошо, продолжаем игру.</textarea></div>
+<div class="stack"><div><b>Short answer</b><p class="small muted">Варианты ответа, когда режим коротких ответов включён (Enter — добавить). Если пусто, используется Full answer.</p></div><div class="tags"><span class="tag">Хорошо</span><span class="tag">Продолжаем</span><span class="tag">Играем дальше</span></div></div>
+</div></section>
+</div></div></div></body></html>

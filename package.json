@@ -1,0 +1,15 @@
+{
+  "name": "va-spec-maker",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "core",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "test": "npm run test -w core && npm run test -w web"
+  }
+}
