@@ -12,8 +12,8 @@ type Cond = { dep: string; op: string; value: string } | { entity_id: number; op
 const step = (state: string, next: string, intent_id: number | null, conditions: Cond[] = []): Step => ({
   kind: 'transition', state, intent_id, next_states: next, ...base, conditions,
 });
-const error = (state: string, next: string, condition: string, prompt_id: number, system_action = '', conditions: Cond[] = []): Step => ({
-  kind: 'error', state, intent_id: null, next_states: next, ...base, condition, conditions, prompt_id, system_action,
+const error = (name: string, state: string, next: string, condition: string, prompt_id: number, system_action = '', conditions: Cond[] = []): Step => ({
+  kind: 'error', name, state, intent_id: null, next_states: next, ...base, condition, conditions, prompt_id, system_action,
 });
 const dep = (ref: string, name: string, type: 'string' | 'enum' | 'bool', options: string[] = []) => ({ ref, entity_id: null, name, type, options });
 const entityDep = (ref: string, entity_id: number) => ({ ref, entity_id, name: '', type: 'string', options: [] });
@@ -74,7 +74,7 @@ export async function seedDemo(app: App): Promise<number> {
     await call(app, 'PUT', `/api/scenarios/${sid}/intents/${stop}`, { is_global: true });
     await call(app, 'PUT', `/api/scenarios/${sid}/prompts/${offline}`, {});
   };
-  const cancelStep = (): Step => ({ kind: 'global', state: '', intent_id: stop, next_states: 'START', ...base });
+  const cancelStep = (): Step => ({ kind: 'global', name: 'Отмена', state: '', intent_id: stop, next_states: 'START', ...base });
 
   const scenario = async (name: string) => (await call(app, 'POST', `/api/projects/${pid}/scenarios`, { name })).id as number;
   const intent = async (sid: number, name: string, phrases: string[], entities: { entity_id: number; required: boolean }[] = []) => {
@@ -115,9 +115,9 @@ export async function seedDemo(app: App): Promise<number> {
         step('START', 'ASK_ROOM', on, [{ dep: 'home_mode', op: '=', value: 'night' }, { entity_id: room, op: '=', value: 'bedroom' }]),
         step('START', 'LIGHT_OFF', off),
         step('ASK_ROOM', 'LIGHT_ON', roomAnswer),
-        error('ASK_ROOM', 'ASK_ROOM', 'Комната не распознана', noRoom),
+        error('Комната не распознана', 'ASK_ROOM', 'ASK_ROOM', 'Комната не распознана', noRoom),
         cancelStep(),
-        error('LIGHT_ON', 'START', 'Устройство не отвечает', offline, 'Записать сбой устройства в журнал', [{ dep: 'lamp_online', op: '=', value: 'false' }]),
+        error('Лампа недоступна', 'LIGHT_ON', 'START', 'Устройство не отвечает', offline, 'Записать сбой устройства в журнал', [{ dep: 'lamp_online', op: '=', value: 'false' }]),
       ],
       layout: {
         START: node(0, 0, 'Вход в сценарий'),
@@ -152,12 +152,12 @@ export async function seedDemo(app: App): Promise<number> {
         step('START', 'ASK_TEMP', setTemp),
         step('START', 'TEMP_SHIFT', shift),
         step('ASK_TEMP', 'TEMP_SET', tempAnswer),
-        error('ASK_TEMP', 'ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '<', value: '15' }]),
-        error('ASK_TEMP', 'ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '>', value: '30' }]),
+        error('Температура ниже 15', 'ASK_TEMP', 'ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '<', value: '15' }]),
+        error('Температура выше 30', 'ASK_TEMP', 'ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '>', value: '30' }]),
         // Если дома никого нет, температуру не меняем.
-        error('START', 'START', 'Никого нет дома', awayMsg, '', [{ dep: 'home_mode', op: '=', value: 'away' }]),
-        error('TEMP_SET', 'START', 'Термостат не отвечает', offline, 'Повторить запрос к термостату через 10 секунд'),
-        error('TEMP_SHIFT', 'START', 'Термостат не отвечает', offline),
+        error('Никого нет дома', 'START', 'START', 'Никого нет дома', awayMsg, '', [{ dep: 'home_mode', op: '=', value: 'away' }]),
+        error('Термостат не отвечает при установке', 'TEMP_SET', 'START', 'Термостат не отвечает', offline, 'Повторить запрос к термостату через 10 секунд'),
+        error('Термостат не отвечает при изменении', 'TEMP_SHIFT', 'START', 'Термостат не отвечает', offline),
         cancelStep(),
       ],
       layout: {
@@ -194,8 +194,8 @@ export async function seedDemo(app: App): Promise<number> {
         step('START', 'ASK_TIME', setAlarm),
         step('START', 'ALARM_CANCELLED', cancelAlarm, [{ dep: 'has_alarm', op: '=', value: 'true' }]),
         step('ASK_TIME', 'ALARM_SET', timeAnswer),
-        error('ASK_TIME', 'ASK_TIME', 'Время не распознано', badTime),
-        error('START', 'START', 'Нет активных будильников', noAlarm, '', [{ dep: 'has_alarm', op: '=', value: 'false' }]),
+        error('Время не распознано', 'ASK_TIME', 'ASK_TIME', 'Время не распознано', badTime),
+        error('Нет будильников', 'START', 'START', 'Нет активных будильников', noAlarm, '', [{ dep: 'has_alarm', op: '=', value: 'false' }]),
         cancelStep(),
       ],
       layout: {

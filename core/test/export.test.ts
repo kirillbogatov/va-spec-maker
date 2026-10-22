@@ -81,12 +81,6 @@ describe('renderMarkdown', () => {
     const s: ProjectSpec = { ...spec, transitions: [{ ...row, condition: 'a|b' }] };
     expect(renderMarkdown(s, 'd')).toContain('a\\|b');
   });
-  it('renders a global transitions section only when there are any', () => {
-    expect(md).not.toContain('Глобальные переходы');
-    const g = renderMarkdown({ ...spec, globals: [{ ...row, state: '', intent: 'INT_CANCEL', next_states: 'ST_END' }] }, 'd');
-    expect(g).toContain('## Глобальные переходы');
-    expect(g).toContain('| ST_END | INT_CANCEL | Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
-  });
 });
 
 describe('renderDocx', () => {
@@ -204,7 +198,7 @@ describe('export route', () => {
     expect(xml).toContain('Включение');
     expect(xml).toContain('Выключение');
   });
-  it('lists connected intents even when unused and exports global transitions in their own section', async () => {
+  it('lists connected intents even when unused and does not export global transitions as a section', async () => {
     const { app, db } = await makeApp();
     const pid = createProject(db);
     const sid = (await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' })).body.id as number;
@@ -225,16 +219,16 @@ describe('export route', () => {
       }],
     });
     const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
-    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Сущности', '## Промпты', '## Глобальные переходы', '## Переходы между состояниями', '## Ошибки']);
+    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Сущности', '## Промпты', '## Переходы между состояниями', '## Ошибки']);
     expect(md).toContain('| В состояние | Запрос пользователя | Условия | Действие системы | Ответ ассистента |');
-    expect(md).toContain('| ST_END | INT_CANCEL | всегда | Сбросить | PRM_BYE |');
+    expect(md).not.toContain('Глобальные переходы');
     expect(md).toContain('| INT_SPARE |');
     const [, afterTransitions] = md.split('## Переходы между состояниями');
     expect(afterTransitions).not.toContain('ST_END');
     expect(afterTransitions).toContain('Любой интент сценария');
     const docx = await request(app).get(`/api/scenarios/${sid}/export?format=docx`);
     const xml = await (await JSZip.loadAsync(docx.body)).file('word/document.xml')!.async('string');
-    expect(xml).toContain('Глобальные переходы');
+    expect(xml).not.toContain('Глобальные переходы');
   });
 
   it('does not export an intent that is not connected to the scenario', async () => {

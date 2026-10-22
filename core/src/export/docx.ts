@@ -4,7 +4,7 @@ import {
 } from 'docx';
 import type { ProjectSpec, ScenarioDoc } from './model';
 import {
-  entitiesTable, globalsTable, intentsTable, promptsTable, transitionsTable,
+  entitiesTable, intentsTable, promptsTable, transitionsTable,
   type Cell, type TableDef,
 } from './tables';
 
@@ -104,22 +104,10 @@ function sectionBlocks(spec: ProjectSpec, parts?: ScenarioDoc['parts']): Block[]
           tableBlock(transitionsTable(p.transitions)),
           gap(),
         ]);
-  const globals = parts ? parts.filter((p) => p.globals.length) : spec.globals?.length ? [{ title: '', globals: spec.globals }] : [];
-  const globalBlocks: Block[] = globals.length
-    ? [
-        heading('Глобальные переходы'),
-        ...globals.flatMap((g): Block[] => [
-          ...(parts && parts.length > 1 ? [subheading(g.title)] : []),
-          tableBlock(globalsTable(g.globals)),
-          gap(),
-        ]),
-      ]
-    : [];
   return [
     heading('Интенты'), tableBlock(intentsTable(spec)), gap(),
     heading('Сущности'), tableBlock(entitiesTable(spec)), gap(),
     heading('Промпты'), tableBlock(promptsTable(spec)), gap(),
-    ...globalBlocks,
     heading('Переходы между состояниями'), ...transitions, gap(),
     heading('Ошибки'), tableBlock(transitionsTable(spec.errors)),
   ];
