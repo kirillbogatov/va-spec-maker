@@ -1,10 +1,8 @@
-import { Trash2 } from 'lucide-react';
+import { Trash2, TriangleAlert } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Section, SectionAction } from '@/components/Section';
+import { Combobox } from '@base-ui/react/combobox';
+import { AddButton, Card, HEAD, ROW } from './Card';
 import { TagInput } from '@/components/TagInput';
 import { cn, GHOST } from '@/lib/utils';
 import { useProjectId } from '@/hooks/project';
@@ -18,97 +16,96 @@ interface Props {
   onChange: (update: (deps: Dependency[]) => Dependency[]) => void;
 }
 
-const CUSTOM = 'custom';
-const DICT = 'dict:';
+const COLS = 'md:grid-cols-[minmax(0,260px)_minmax(0,1fr)_32px]';
+
+/** Название зависимости: свободный ввод с подсказками из справочника. */
+function NameCombobox({ value, names, onType, onPick }: { value: string; names: string[]; onType: (v: string) => void; onPick: (v: string) => void }) {
+  return (
+    <Combobox.Root
+      items={names}
+      value={null}
+      inputValue={value}
+      openOnInputClick
+      onInputValueChange={(v, details) => { if (details.reason === 'input-change') onType(v); }}
+      onValueChange={(v: string | null) => { if (v) onPick(v); }}
+    >
+      <Combobox.Input
+        spellCheck={false}
+        aria-label="Название зависимости"
+        placeholder="Выберите или введите название"
+        className={cn(GHOST, 'h-8 w-full rounded-md border px-2.5 text-sm outline-none placeholder:text-muted-foreground max-md:h-10 md:-ml-2.5 md:w-[calc(100%+0.625rem)]')}
+      />
+      {names.length > 0 && (
+        <Combobox.Portal>
+          <Combobox.Positioner sideOffset={4} align="start" className="isolate z-50">
+            <Combobox.Popup className="max-h-(--available-height) w-max min-w-(--anchor-width) max-w-[min(36rem,95vw)] origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 empty:hidden">
+              <Combobox.List className="max-h-72 overflow-y-auto p-1">
+                {(n: string) => (
+                  <Combobox.Item key={n} value={n} className="flex w-full cursor-default items-center rounded-md px-2 py-1 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground">
+                    {n}
+                  </Combobox.Item>
+                )}
+              </Combobox.List>
+            </Combobox.Popup>
+          </Combobox.Positioner>
+        </Combobox.Portal>
+      )}
+    </Combobox.Root>
+  );
+}
 
 export function DependenciesTable({ dependencies, entities, onChange }: Props) {
   const projectId = useProjectId();
   const { data: dictionary = [] } = useQuery({ queryKey: ['dependency-dictionary', projectId], queryFn: () => api.dependencyDictionary.list(projectId) });
-  const entityOptions = [
-    { value: CUSTOM, label: '— своё условие —' },
-    ...entities.map((e) => ({ value: String(e.id), label: e.name })),
-    ...dictionary.map((d) => ({ value: `${DICT}${d.id}`, label: `${d.name} (справочник)` })),
-  ];
-
-  /** Выбранный пункт списка: сущность, запись справочника (по имени) или своё условие. */
-  const selected = (d: Dependency) => {
-    if (d.entity_id !== null) return String(d.entity_id);
-    const dict = d.name && dictionary.find((x) => x.name === d.name);
-    return dict ? `${DICT}${dict.id}` : CUSTOM;
-  };
 
   const patch = (ref: string, p: Partial<Dependency>) =>
     onChange((deps) => deps.map((d) => (d.ref === ref ? { ...d, ...p } : d)));
   const add = () =>
     onChange((deps) => [...deps, { ref: crypto.randomUUID(), entity_id: null, name: '', type: 'enum', options: [] }]);
 
-  /** Выбрав сущность, подставляем её значения как варианты списка. */
-  const pickEntity = async (ref: string, v: string | null) => {
-    if (!v) return;
-    if (v === CUSTOM) return patch(ref, { entity_id: null, name: '' });
-    if (v.startsWith(DICT)) {
-      const d = dictionary.find((x) => x.id === Number(v.slice(DICT.length)));
-      if (d) patch(ref, { entity_id: null, name: d.name, type: d.values.length ? 'enum' : 'string', options: d.values });
-      return;
-    }
-    const id = Number(v);
-    patch(ref, { entity_id: id, name: '', type: 'enum', options: [] });
-    const full = await api.entities.get(id);
-    patch(ref, { options: full.values.map((x) => x.value) });
+  /** Выбрав запись справочника, подставляем её значения как варианты списка. */
+  const pick = (ref: string, name: string) => {
+    const d = dictionary.find((x) => x.name === name);
+    if (d) patch(ref, { entity_id: null, name: d.name, type: d.values.length ? 'enum' : 'string', options: d.values });
   };
 
   return (
-    <Section
-      title="Зависимости"
-      action={<SectionAction onClick={add}>Добавить зависимость</SectionAction>}
-    >
-      <Table className="min-w-[760px]">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-72">Зависимость</TableHead>
-                        <TableHead>Значения</TableHead>
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {dependencies.map((d) => (
-            <TableRow key={d.ref} className="[&>td]:align-top">
-              <TableCell>
-                <div className="space-y-1">
-                  <Select items={entityOptions} value={selected(d)} onValueChange={(v) => pickEntity(d.ref, v)}>
-                    <SelectTrigger className={cn(GHOST, 'w-full')} aria-label="Сущность"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {entityOptions.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selected(d) === CUSTOM && (
-                    <Input className={GHOST} value={d.name} onChange={(e) => patch(d.ref, { name: e.target.value })} aria-label="Название условия" placeholder="Например: двигатель запущен" />
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                {d.type === 'bool' ? (
-                  <p className="pt-2 text-sm text-muted-foreground">true / false</p>
-                ) : (
-                  <TagInput value={d.options} onChange={(options) => patch(d.ref, { options, type: 'enum' })} placeholder="Вариант и Enter" />
+    <Card flush title="Внешние зависимости" action={<AddButton onClick={add}>Добавить</AddButton>}>
+      <div className={cn(ROW, HEAD, COLS)}>
+        <span>Зависимость</span>
+        <span>Значения</span>
+        <span />
+      </div>
+      {dependencies.map((d) => (
+        <div key={d.ref} className={cn(ROW, COLS, 'md:items-start')}>
+          <NameCombobox
+            value={d.name || (d.entity_id !== null ? entities.find((e) => e.id === d.entity_id)?.name ?? '' : '')}
+            names={dictionary.map((x) => x.name)}
+            onType={(name) => patch(d.ref, { name, entity_id: null })}
+            onPick={(name) => pick(d.ref, name)}
+          />
+          <div>
+            {d.type === 'bool' ? (
+              <p className="pt-1.5 text-sm text-muted-foreground">true / false</p>
+            ) : (
+              <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+                {d.options.length === 0 && (
+                  <span className="ml-2 inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-warning-bg px-2.5 py-0.5 text-xs font-medium text-warning">
+                    <TriangleAlert className="size-3" /> Не выбрано ни одного значения
+                  </span>
                 )}
-              </TableCell>
-              <TableCell>
-                <Button variant="ghost" size="icon" aria-label="Удалить зависимость" onClick={() => onChange((deps) => deps.filter((x) => x.ref !== d.ref))}>
-                  <Trash2 className="size-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-          {dependencies.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={3} className="text-sm text-muted-foreground">Зависимостей пока нет</TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </Section>
+                <div className="min-w-32 flex-1">
+                  <TagInput value={d.options} onChange={(options) => patch(d.ref, { options, type: 'enum' })} placeholder="Вариант" />
+                </div>
+              </div>
+            )}
+          </div>
+          <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label="Удалить зависимость" onClick={() => onChange((deps) => deps.filter((x) => x.ref !== d.ref))}>
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ))}
+      {dependencies.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Внешних зависимостей пока нет. Добавьте параметры, от которых зависит запуск сценария.</p>}
+    </Card>
   );
 }

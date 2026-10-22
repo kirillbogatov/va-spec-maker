@@ -1,27 +1,28 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash2 } from 'lucide-react';
+import { Ellipsis, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SaveIndicator } from '@/components/SaveIndicator';
 import { ExportMenu } from '@/components/ExportMenu';
-import { Section } from '@/components/Section';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn, GHOST } from '@/lib/utils';
 import { usePath, useProjectId } from '@/hooks/project';
 import { useAutosave } from '@/hooks/useAutosave';
 import { api } from '@/lib/api';
 import type { Dependency, Layout, Scenario, ScenarioPart, Step } from '@/lib/types';
 import { DependenciesTable } from './DependenciesTable';
-import { reconcile } from './dependencies';
+import { depLabel, reconcile } from './dependencies';
 import { ScenarioEntities } from './ScenarioEntities';
 import { ScenarioIntents } from './ScenarioIntents';
 import { ScenarioPrompts } from './ScenarioPrompts';
+import { GlobalTransitions } from './GlobalTransitions';
 import { analyzeSteps } from '@/lib/states';
 import { StepsTable } from './StepsTable';
-import { buildChecks, ScenarioChecks } from './ScenarioChecks';
+import { Card } from './Card';
 import { ScenarioPreview } from './ScenarioPreview';
 import { canonicalOrder, normalizeEntry, splitLegacySteps } from '@/lib/fsm';
 import { StateEditor } from './state-editor/StateEditor';
@@ -33,8 +34,8 @@ const TABS: { id: ScenarioTab; label: string }[] = [
   { id: 'general', label: 'Общая информация' },
   { id: 'intents', label: 'Интенты' },
   { id: 'prompts', label: 'Промпты' },
-  { id: 'logic', label: 'Сценарная логика' },
-  { id: 'errors', label: 'Обработка ошибок' },
+  { id: 'logic', label: 'Логика' },
+  { id: 'errors', label: 'Ошибки' },
   { id: 'preview', label: 'Предпросмотр' },
 ];
 
@@ -71,7 +72,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
   const { data: entities = [] } = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId) });
   const { data: ownPrompts = [] } = useQuery({ queryKey: ['prompts', 'scenario', scenario.id], queryFn: () => api.prompts.listByScenario(scenario.id) });
   const { data: allPrompts = [] } = useQuery({ queryKey: ['prompts', projectId], queryFn: () => api.prompts.list(projectId) });
-  // В шагах выбираются интенты и промпты этого сценария; ссылки на чужие (до привязки) остаются видимыми
+  // В шагах выбираются интенты и промпты, подключённые к сценарию; сохранение само подключает ссылки, поэтому чужие здесь возможны только до первого сохранения
   const withUsed = <T extends { id: number }>(own: T[], all: T[], used: (number | null)[]) => [
     ...own,
     ...all.filter((x) => used.includes(x.id) && !own.some((o) => o.id === x.id)),
@@ -95,14 +96,11 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
     () => analyzeSteps(transitions, intentName, part.layout),
     [transitions, part.layout, intents],
   );
-  const checks = useMemo(
-    () => buildChecks({
-      description: draft.description,
-      parts: draft.parts.map((p, i) => ({ name: p.name, steps: p.steps, analysis: analyses[i] })),
-      intents: ownIntents,
-      prompts: ownPrompts,
-    }),
-    [draft.description, draft.parts, analyses, ownIntents, ownPrompts],
+  const globalIntents = intents.filter((i) => i.is_global);
+  const globalSteps = part.steps.filter((s) => s.kind === 'global');
+  const knownStates = useMemo(
+    () => [...new Set([...fsm.states, ...Object.keys(part.layout), ...fsm.edges.map((e) => e.to)])],
+    [fsm, part.layout],
   );
   const counts: Partial<Record<ScenarioTab, number>> = {
     intents: ownIntents.length,
@@ -135,9 +133,13 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
     setDraft((d) => ({ ...d, parts: d.parts.map((p) => (p.key === key ? update(p) : p)) }));
 
   const stepsOf = (kind: Step['kind']) => part.steps.filter((s) => s.kind === kind);
-  const setErrors = (rows: Step[]) => updatePart(part.key!, (p) => ({ ...p, steps: [...p.steps.filter((s) => s.kind === 'transition'), ...rows] }));
+  // Каждый вид строк правится отдельно и не должен терять остальные
+  const setKind = (kind: Step['kind'], rows: Step[]) =>
+    updatePart(part.key!, (p) => ({ ...p, steps: [...p.steps.filter((s) => s.kind !== kind), ...rows] }));
+  const setErrors = (rows: Step[]) => setKind('error', rows);
+  const setGlobals = (rows: Step[]) => setKind('global', rows);
   const setTransitions = (rows: Step[], layout?: Layout) =>
-    updatePart(part.key!, (p) => ({ ...p, layout: layout ?? p.layout, steps: [...rows, ...p.steps.filter((s) => s.kind === 'error')] }));
+    updatePart(part.key!, (p) => ({ ...p, layout: layout ?? p.layout, steps: [...rows, ...p.steps.filter((s) => s.kind !== 'transition')] }));
 
   const addPart = () => {
     const key = crypto.randomUUID();
@@ -166,76 +168,106 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
     },
   });
 
+  // Активная вкладка всегда видна в полосе вкладок (на узких экранах она прокручивается)
+  useEffect(() => {
+    document.getElementById(`tab-${tab}`)?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }, [tab]);
+
+  // Колонка содержимого: на вкладках без схемы ограничена по ширине
+  const column = 'min-h-0 flex-1 overflow-y-auto';
+  const inner = 'px-4 py-4 md:px-8 md:py-5';
+
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      <Section>
-        <div className="flex items-start gap-4">
-          <Input className={cn(GHOST, 'h-10 min-w-0 flex-1 text-lg font-semibold')} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} aria-label="Название сценария" placeholder="Название сценария" />
-          <div className="flex shrink-0 items-center gap-4">
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="shrink-0 border-b bg-page px-4 pt-3 md:px-8 md:pt-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Input
+            className={cn(GHOST, '-ml-2 h-11 w-full min-w-0 flex-1 max-sm:flex-none rounded-md px-2 text-[26px] font-semibold leading-tight tracking-tight sm:basis-64 md:text-[26px]')}
+            value={draft.name}
+            onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            aria-label="Название сценария"
+            placeholder="Название сценария"
+          />
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:gap-3">
             <SaveIndicator state={status} />
-            <ScenarioChecks scenarioId={scenario.id} checks={checks} />
             <ExportMenu scenarioId={scenario.id} />
-            <Button variant="ghost" size="icon" aria-label="Удалить сценарий" onClick={() => setConfirmDelete(true)}>
-              <Trash2 className="size-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Действия со сценарием" className="max-md:size-10" />}>
+                <Ellipsis className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 className="size-4" /> Удалить сценарий
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-      </Section>
-      <div
-        role="tablist"
-        aria-label="Разделы сценария"
-        className="flex gap-1 border-b"
-        onKeyDown={(e) => {
-          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-          const i = TABS.findIndex((t) => t.id === tab);
-          const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
-          navigate(path(`/scenarios/${scenario.id}/${next.id}`));
-          requestAnimationFrame(() => document.getElementById(`tab-${next.id}`)?.focus());
-        }}
-      >
-        {TABS.map((t) => (
-          <Link
-            key={t.id}
-            id={`tab-${t.id}`}
-            role="tab"
-            to={path(`/scenarios/${scenario.id}/${t.id}`)}
-            aria-selected={tab === t.id}
-            tabIndex={tab === t.id ? 0 : -1}
-            className={cn(
-              '-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium',
-              tab === t.id ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
-            )}
+        <div className="mt-3 flex items-end gap-2">
+          <div
+            role="tablist"
+            aria-label="Разделы сценария"
+            className="-mb-px flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+              const i = TABS.findIndex((t) => t.id === tab);
+              if (i < 0) return;
+              const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
+              navigate(path(`/scenarios/${scenario.id}/${next.id}`));
+              requestAnimationFrame(() => document.getElementById(`tab-${next.id}`)?.focus());
+            }}
           >
-            {t.label}
-            {counts[t.id] !== undefined && (
-              <span className="rounded-full bg-muted px-1.5 text-xs font-semibold text-muted-foreground">{counts[t.id]}</span>
-            )}
-            {t.id === 'logic' && logicHasErrors && <span className="size-2 rounded-full bg-destructive" title="Есть ошибки в таблицах" />}
-            {t.id === 'errors' && errorsHaveErrors && <span className="size-2 rounded-full bg-destructive" title="Есть ошибки в таблице" />}
-          </Link>
-        ))}
-      </div>
+            {TABS.map((t) => (
+              <Link
+                key={t.id}
+                id={`tab-${t.id}`}
+                role="tab"
+                to={path(`/scenarios/${scenario.id}/${t.id}`)}
+                aria-selected={tab === t.id}
+                tabIndex={tab === t.id ? 0 : -1}
+                className={cn(
+                  'flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:px-3.5',
+                  tab === t.id ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t.id === 'general' ? <><span className="sm:hidden">Общее</span><span className="max-sm:hidden">{t.label}</span></> : t.label}
+                {counts[t.id] !== undefined && (
+                  <span className="rounded-full bg-muted px-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{counts[t.id]}</span>
+                )}
+                {t.id === 'logic' && logicHasErrors && <span className="size-2 rounded-full bg-destructive" title="Есть ошибки в таблицах" />}
+                {t.id === 'errors' && errorsHaveErrors && <span className="size-2 rounded-full bg-destructive" title="Есть ошибки в таблице" />}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </header>
       {tab === 'general' && (
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-          <Section title="Описание">
-            <Textarea rows={1} className={cn(GHOST, 'min-h-8')} placeholder="Добавьте описание" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
-          </Section>
-      <ScenarioEntities value={draft.entities} entities={entities} onChange={(es) => setDraft((d) => ({ ...d, entities: es }))} />
-      <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} />
+        <div className={column}>
+          <div className={cn(inner, 'grid min-w-0 gap-4')}>
+            <Card title="Описание">
+              <Textarea rows={1} className={cn(GHOST, 'min-h-0 resize-none rounded-md')} placeholder="Добавьте описание" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+            </Card>
+            <ScenarioEntities value={draft.entities} entities={entities} onChange={(es) => setDraft((d) => ({ ...d, entities: es }))} />
+            <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} />
+          </div>
         </div>
       )}
       {tab === 'intents' && (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <ScenarioIntents scenarioId={scenario.id} />
+        <div className={column}>
+          <div className={inner}>
+            <ScenarioIntents scenarioId={scenario.id} />
+          </div>
         </div>
       )}
       {tab === 'prompts' && (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <ScenarioPrompts scenarioId={scenario.id} />
+        <div className={column}>
+          <div className={inner}>
+            <ScenarioPrompts scenarioId={scenario.id} />
+          </div>
         </div>
       )}
       {tab === 'logic' && (
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-8">
           <StateEditor
             key={part.key}
             tabs={
@@ -266,10 +298,20 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
               />
             }
           />
+          {(globalIntents.length > 0 || globalSteps.length > 0) && (
+            <GlobalTransitions
+              steps={globalSteps}
+              intents={globalIntents}
+              dependencies={draft.dependencies}
+              entities={entities}
+              states={knownStates}
+              onChange={setGlobals}
+            />
+          )}
         </div>
       )}
       {tab === 'errors' && (
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-8">
           <PartTabs parts={draft.parts} activeKey={part.key!} onSelect={setActiveKey} />
           <StepsTable
             key={`errors-${part.key}`}
@@ -288,22 +330,24 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
         </div>
       )}
       {tab === 'preview' && (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <ScenarioPreview scenarioId={scenario.id} version={status} />
+        <div className={column}>
+          <div className="px-4 py-4 md:px-8 md:py-5">
+            <ScenarioPreview scenarioId={scenario.id} version={status} />
+          </div>
         </div>
       )}
       <ConfirmDialog
         open={confirmPart !== null}
         onOpenChange={(o) => !o && setConfirmPart(null)}
         title={`Удалить вкладку «${confirmPart?.name ?? ''}»?`}
-        description="Её состояния и переходы будут удалены. Интенты и промпты сценария останутся."
+        description="Её состояния и переходы будут удалены. Интенты и промпты останутся подключёнными к сценарию."
         onConfirm={() => { if (confirmPart) removePart(confirmPart.key); setConfirmPart(null); }}
       />
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={`Удалить сценарий «${scenario.name}»?`}
-        description="Интенты и промпты этого сценария будут удалены вместе с ним."
+        description="Интенты и промпты останутся в словаре проекта."
         onConfirm={() => remove.mutate()}
       />
     </div>

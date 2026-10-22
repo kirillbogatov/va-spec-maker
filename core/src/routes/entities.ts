@@ -1,6 +1,7 @@
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { HttpError, notFound } from '../errors';
+import { parseEntityKind, type EntityKind, type EntityType } from '../entity-types';
 import { cleanStrings, optString, parseId, requireString } from '../validate';
 
 interface ValueIn { value: string; synonyms: string[] }
@@ -19,18 +20,23 @@ export function entitiesRouter(db: Db): RouterT {
   const r = Router();
 
   const usedBy = (id: number) =>
-    db
-      .prepare(
-        `SELECT DISTINCT i.id, i.name, i.scenario_id FROM intent_entities ie
-         JOIN intents i ON i.id = ie.intent_id WHERE ie.entity_id = ? ORDER BY i.name`,
-      )
-      .all(id) as { id: number; name: string; scenario_id: number | null }[];
+    (
+      db
+        .prepare(
+          `SELECT DISTINCT i.id, i.name FROM intent_entities ie
+           JOIN intents i ON i.id = ie.intent_id WHERE ie.entity_id = ? ORDER BY i.name`,
+        )
+        .all(id) as { id: number; name: string }[]
+    ).map((i) => ({
+      ...i,
+      scenario_ids: (db.prepare('SELECT scenario_id FROM scenario_intents WHERE intent_id = ? ORDER BY scenario_id').all(i.id) as { scenario_id: number }[]).map((r) => r.scenario_id),
+    }));
 
   const load = (id: number) => {
     const e = db
-      .prepare('SELECT id, project_id, name, description, multiple_values FROM entities WHERE id = ?')
+      .prepare('SELECT id, project_id, name, description, multiple_values, type, range_min, range_max FROM entities WHERE id = ?')
       .get(id) as
-      | { id: number; project_id: number; name: string; description: string; multiple_values: number }
+      | { id: number; project_id: number; name: string; description: string; multiple_values: number; type: EntityType; range_min: string; range_max: string }
       | undefined;
     if (!e) throw notFound('Сущность');
     const values = (
@@ -51,9 +57,12 @@ export function entitiesRouter(db: Db): RouterT {
   r.post('/projects/:pid/entities', (req, res) => {
     const pid = parseId(req.params.pid);
     const name = requireString(req.body?.name, 'Название');
+    const kind = parseEntityKind(req.body);
     if (!db.prepare('SELECT 1 FROM projects WHERE id = ?').get(pid)) throw notFound('Проект');
-    const info = db.prepare('INSERT INTO entities(project_id, name) VALUES (?, ?)').run(pid, name);
-    res.status(201).json({ id: Number(info.lastInsertRowid), name });
+    const info = db
+      .prepare('INSERT INTO entities(project_id, name, type, range_min, range_max) VALUES (?, ?, ?, ?, ?)')
+      .run(pid, name, kind.type, kind.range_min, kind.range_max);
+    res.status(201).json({ id: Number(info.lastInsertRowid), name, ...kind });
   });
 
   r.get('/entities/:id', (req, res) => {
@@ -62,13 +71,14 @@ export function entitiesRouter(db: Db): RouterT {
 
   r.put('/entities/:id', (req, res) => {
     const id = parseId(req.params.id);
-    load(id);
+    const current = load(id);
     const name = requireString(req.body?.name, 'Название');
     const description = optString(req.body?.description);
-    const values = cleanValues(req.body?.values);
+    const kind: EntityKind = parseEntityKind(req.body, current);
+    const values = kind.type === 'string' ? cleanValues(req.body?.values) : [];
     db.transaction(() => {
-      db.prepare('UPDATE entities SET name = ?, description = ?, multiple_values = ? WHERE id = ?').run(
-        name, description, req.body?.multiple_values ? 1 : 0, id,
+      db.prepare('UPDATE entities SET name = ?, description = ?, multiple_values = ?, type = ?, range_min = ?, range_max = ? WHERE id = ?').run(
+        name, description, req.body?.multiple_values ? 1 : 0, kind.type, kind.range_min, kind.range_max, id,
       );
       db.prepare('DELETE FROM entity_values WHERE entity_id = ?').run(id);
       const ins = db.prepare('INSERT INTO entity_values(entity_id, value, synonyms, position) VALUES (?, ?, ?, ?)');

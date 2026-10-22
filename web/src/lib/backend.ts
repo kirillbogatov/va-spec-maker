@@ -43,3 +43,13 @@ export async function request(method: string, url: string, body?: unknown): Prom
   if (method !== 'GET' && r.status < 400) persist();
   return r;
 }
+
+let starting: Promise<void> | undefined;
+/** Открывает базу проектов один раз; повторные вызовы возвращают тот же промис. */
+export const ensureBackend = (): Promise<void> => (starting ??= initBackend());
+
+/** Добавляет ещё один демо-проект в текущую БД. */
+export async function addDemo(): Promise<void> {
+  await seedDemo(app);
+  persist();
+}

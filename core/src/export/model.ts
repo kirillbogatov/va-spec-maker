@@ -20,15 +20,20 @@ export interface ProjectSpec {
   }[];
   entities: {
     name: string;
+    type: string;
+    range_min: string;
+    range_max: string;
     multiple_values: boolean;
     values: { value: string; synonyms: string[] }[];
   }[];
   /** Сущности сценария с его follow-up prompt. */
   scenario_entities: { scenario: string; name: string; followup_prompt: string; required: boolean; is_array: boolean }[];
-  prompts: { name: string; full_answers: string[]; short_answers: string[] }[];
+  prompts: { name: string; full_answers: string[] }[];
   dependencies: { scenario: string; name: string; type: string; values: string[] }[];
   transitions: TransitionRow[];
   errors: TransitionRow[];
+  /** Переходы глобальных интентов (из любого состояния). */
+  globals?: TransitionRow[];
 }
 
 /** Часть (вкладка) сценария: в документе — подраздел только в State transitions. */
@@ -36,6 +41,7 @@ export interface SpecPart {
   title: string;
   description: string;
   transitions: TransitionRow[];
+  globals: TransitionRow[];
 }
 
 /** Документ сценария: общие таблицы целиком, переходы — по вкладкам. */
@@ -67,10 +73,12 @@ export function loadScenarioDoc(db: Db, scenarioId: number): ScenarioDoc {
   for (const r of db.prepare('SELECT entity_id FROM scenario_entities WHERE scenario_id = ?').all(scenarioId) as { entity_id: number }[]) {
     entityIds.add(r.entity_id);
   }
-  const stepRefs = db.prepare('SELECT intent_id, prompt_id FROM scenario_steps WHERE scenario_id = ?').all(scenarioId) as { intent_id: number | null; prompt_id: number | null }[];
-  const stateRefs = db.prepare('SELECT prompt_id FROM scenario_states WHERE scenario_id = ?').all(scenarioId) as { prompt_id: number | null }[];
-  const intentIds = new Set(stepRefs.map((r) => r.intent_id).filter((x): x is number => x != null));
-  const promptIds = new Set([...stepRefs, ...stateRefs].map((r) => r.prompt_id).filter((x): x is number => x != null));
+  const intentIds = new Set(
+    (db.prepare('SELECT intent_id FROM scenario_intents WHERE scenario_id = ?').all(scenarioId) as { intent_id: number }[]).map((r) => r.intent_id),
+  );
+  const promptIds = new Set(
+    (db.prepare('SELECT prompt_id FROM scenario_prompts WHERE scenario_id = ?').all(scenarioId) as { prompt_id: number }[]).map((r) => r.prompt_id),
+  );
   for (const iid of intentIds) {
     for (const r of db
       .prepare('SELECT entity_id FROM intent_entities WHERE intent_id = ?')
@@ -82,11 +90,10 @@ export function loadScenarioDoc(db: Db, scenarioId: number): ScenarioDoc {
   const single = parts.length === 1;
   return {
     spec: { ...spec, transitions: [] },
-    parts: parts.map((part) => ({
-      title: single ? scenario.name : part.name,
-      description: part.description,
-      transitions: buildSpec(db, projectId, project, { scenarioId, partId: part.id, intentIds, promptIds, entityIds }).transitions,
-    })),
+    parts: parts.map((part) => {
+      const ps = buildSpec(db, projectId, project, { scenarioId, partId: part.id, intentIds, promptIds, entityIds });
+      return { title: single ? scenario.name : part.name, description: part.description, transitions: ps.transitions, globals: ps.globals ?? [] };
+    }),
   };
 }
 
@@ -127,14 +134,17 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], s
 
   const entities = (
     (db
-      .prepare('SELECT id, name, multiple_values FROM entities WHERE project_id = ? ORDER BY id')
-      .all(projectId) as { id: number; name: string; multiple_values: number }[]).filter(
+      .prepare('SELECT id, name, type, range_min, range_max, multiple_values FROM entities WHERE project_id = ? ORDER BY id')
+      .all(projectId) as { id: number; name: string; type: string; range_min: string; range_max: string; multiple_values: number }[]).filter(
       (e) => !scope || scope.entityIds.has(e.id),
     )
   ).map((e) => ({
     name: e.name,
+    type: e.type,
+    range_min: e.range_min,
+    range_max: e.range_max,
     multiple_values: !!e.multiple_values,
-    values: (
+    values: e.type !== 'string' ? [] : (
       db.prepare('SELECT value, synonyms FROM entity_values WHERE entity_id = ? ORDER BY position, id').all(e.id) as {
         value: string; synonyms: string;
       }[]
@@ -153,12 +163,12 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], s
 
   const prompts = (
     db
-      .prepare('SELECT id, name, full_answers, short_answers FROM prompts WHERE project_id = ? ORDER BY id')
-      .all(projectId) as { id: number; name: string; full_answers: string; short_answers: string }[]
+      .prepare('SELECT id, name, full_answers FROM prompts WHERE project_id = ? ORDER BY id')
+      .all(projectId) as { id: number; name: string; full_answers: string }[]
   )
     .filter((p) => !scope || scope.promptIds.has(p.id))
     .map(({ id: _id, ...p }) => p)
-    .map((p) => ({ ...p, full_answers: JSON.parse(p.full_answers) as string[], short_answers: JSON.parse(p.short_answers) as string[] }));
+    .map((p) => ({ ...p, full_answers: JSON.parse(p.full_answers) as string[] }));
 
   const depLabel = new Map<string, string>();
   const dependencies = (
@@ -191,10 +201,10 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], s
     stateInfo.set(`${st.part_id}|${st.name}`, st);
   }
 
-  type Raw = TransitionRow & { kind: string; conditions: string; part_id: number | null };
+  type Raw = TransitionRow & { kind: string; conditions: string; cond_mode: string; part_id: number | null };
   const rows = db
     .prepare(
-      `SELECT t.part_id, t.kind, t.state, CASE WHEN t.any_intent = 1 THEN 'Любой интент сценария' ELSE i.name END AS intent, t.request_params, t.condition, t.conditions, p.name AS prompt, t.system_action, t.next_states
+      `SELECT t.part_id, t.kind, t.state, CASE WHEN t.kind = 'error' AND t.intent_id IS NULL THEN 'Любой интент сценария' ELSE i.name END AS intent, t.request_params, t.condition, t.conditions, t.cond_mode, p.name AS prompt, t.system_action, t.next_states
        FROM scenario_steps t
        JOIN scenarios s ON s.id = t.scenario_id
        LEFT JOIN intents i ON i.id = t.intent_id
@@ -203,12 +213,13 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], s
     )
     .all(projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
   const entityName = new Map((db.prepare('SELECT id, name FROM entities WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((e) => [e.id, e.name]));
-  const strip = ({ kind, conditions, part_id, ...row }: Raw): TransitionRow => {
+  const strip = ({ kind, conditions, cond_mode, part_id, ...row }: Raw): TransitionRow => {
     const pairs = (JSON.parse(conditions) as { dep: string; value: string; entity_id?: number; op?: string }[])
       .map((c) => ({ ...c, label: c.entity_id !== undefined ? entityName.get(c.entity_id) : depLabel.get(c.dep) }))
       .filter((c) => c.label !== undefined)
       .map((c) => `[${c.label}] ${c.op || '='} ${c.value}`);
-    const out = { ...row, condition: [...pairs, ...row.condition.split('\n').map((l) => l.trim())].filter(Boolean).join('\n') };
+    const all = [...pairs, ...row.condition.split('\n').map((l) => l.trim())].filter(Boolean);
+    const out = { ...row, condition: [...(cond_mode === 'any' && all.length > 1 ? ['Любое из:'] : []), ...all].join('\n') };
     if (kind === 'error') return out;
     const targets = row.next_states.split(/[\s,;|]+|->|→/).map((x) => x.trim()).filter(Boolean).map((t) => stateInfo.get(`${part_id}|${t}`));
     const uniq = (xs: (string | null | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x && !!x.trim()))].join('\n');
@@ -222,7 +233,8 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], s
     scenario_entities,
     prompts,
     dependencies,
-    transitions: rows.filter((r) => r.kind !== 'error').map(strip),
+    transitions: rows.filter((r) => r.kind === 'transition').map(strip),
     errors: rows.filter((r) => r.kind === 'error').map(strip),
+    globals: rows.filter((r) => r.kind === 'global' && r.intent !== null).map(strip),
   };
 }

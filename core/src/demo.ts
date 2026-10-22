@@ -6,49 +6,183 @@ async function call<T = any>(app: App, method: string, url: string, body?: unkno
   return r.body as T;
 }
 
-const step = (state: string, next: string, intent_id: number | null) => ({
-  kind: 'transition', state, intent_id, any_intent: intent_id === null, request_params: '', condition: '', conditions: [],
-  prompt_id: null, system_action: '', next_states: next,
+type Step = Record<string, unknown>;
+const base = { request_params: '', condition: '', conditions: [], prompt_id: null, system_action: '' };
+type Cond = { dep: string; op: string; value: string } | { entity_id: number; op: string; value: string };
+const step = (state: string, next: string, intent_id: number | null, conditions: Cond[] = []): Step => ({
+  kind: 'transition', state, intent_id, next_states: next, ...base, conditions,
 });
+const error = (state: string, next: string, condition: string, prompt_id: number, system_action = '', conditions: Cond[] = []): Step => ({
+  kind: 'error', state, intent_id: null, next_states: next, ...base, condition, conditions, prompt_id, system_action,
+});
+const dep = (ref: string, name: string, type: 'string' | 'enum' | 'bool', options: string[] = []) => ({ ref, entity_id: null, name, type, options });
+const entityDep = (ref: string, entity_id: number) => ({ ref, entity_id, name: '', type: 'string', options: [] });
+const node = (x: number, y: number, description: string, prompt_id: number | null = null, system_action = '') =>
+  ({ x, y, description, prompt_id, system_action });
 
-/** Демо-проект «умный дом»: один сценарий, сущность, интент, два промпта и схема состояний. */
+/** Демо-проект «умный дом»: три сценария с сущностями, интентами, промптами, схемами состояний и ошибками. */
 export async function seedDemo(app: App): Promise<number> {
   const { id: pid } = await call(app, 'POST', '/api/projects', {
     name: 'Демо: умный дом',
-    description: 'Пример проекта: управление светом голосом.',
+    description: 'Пример проекта: управление светом, температурой и будильником голосом.',
   });
-  const { id: room } = await call(app, 'POST', `/api/projects/${pid}/entities`, { name: 'ROOM' });
-  await call(app, 'PUT', `/api/entities/${room}`, {
-    name: 'ROOM', description: 'Комната', multiple_values: false,
-    values: [
-      { value: 'kitchen', synonyms: ['кухня', 'на кухне'] },
-      { value: 'bedroom', synonyms: ['спальня', 'в спальне'] },
-    ],
-  });
-  const { id: sid } = await call(app, 'POST', `/api/projects/${pid}/scenarios`, { name: 'Управление светом' });
-  const { id: on } = await call(app, 'POST', `/api/scenarios/${sid}/intents`, { name: 'LIGHT_ON' });
-  await call(app, 'PUT', `/api/intents/${on}`, {
-    name: 'LIGHT_ON', enabled: true, comment: '',
-    phrases: ['включи свет', 'зажги свет в комнате', 'включи свет на кухне'],
-    entities: [{ entity_id: room, required: true }],
-  });
-  const { id: ask } = await call(app, 'POST', `/api/scenarios/${sid}/prompts`, { name: 'PRM_ASK_ROOM' });
-  await call(app, 'PUT', `/api/prompts/${ask}`, { name: 'PRM_ASK_ROOM', full_answers: ['В какой комнате включить свет?'], short_answers: ['В какой?'] });
-  const { id: done } = await call(app, 'POST', `/api/scenarios/${sid}/prompts`, { name: 'PRM_DONE' });
-  await call(app, 'PUT', `/api/prompts/${done}`, { name: 'PRM_DONE', full_answers: ['Свет включён.'], short_answers: ['Готово.'] });
+  const entity = async (
+    name: string,
+    description: string,
+    values: [string, string[]][],
+    kind: { type?: string; range_min?: string; range_max?: string } = {},
+  ) => {
+    const { id } = await call(app, 'POST', `/api/projects/${pid}/entities`, { name, ...kind });
+    await call(app, 'PUT', `/api/entities/${id}`, {
+      name, description, multiple_values: false, ...kind, values: values.map(([value, synonyms]) => ({ value, synonyms })),
+    });
+    return id as number;
+  };
+  const room = await entity('ROOM', 'Комната', [
+    ['kitchen', ['кухня', 'на кухне']], ['bedroom', ['спальня', 'в спальне']], ['hall', ['коридор', 'в коридоре']],
+  ]);
+  const mode = await entity('TEMP_MODE', 'Режим отопления', [
+    ['warmer', ['теплее', 'потеплее', 'прибавь']], ['colder', ['холоднее', 'попрохладнее', 'убавь']],
+  ]);
 
-  const sc = await call(app, 'GET', `/api/scenarios/${sid}`);
-  await call(app, 'PUT', `/api/scenarios/${sid}`, {
-    ...sc,
-    description: 'Пользователь просит включить свет; если комната не названа, ассистент уточняет.',
+  const temp = await entity('TEMP_VALUE', 'Целевая температура', [], { type: 'number', range_min: '15', range_max: '30' });
+  const time = await entity('TIME', 'Время', [], { type: 'time', range_min: '05:00', range_max: '23:00' });
+  const alarmDate = await entity('ALARM_DATE', 'Дата будильника', [], { type: 'date' });
+  const alarmRepeat = await entity('ALARM_REPEAT', 'Повторять будильник', [], { type: 'boolean' });
+
+  // Справочник зависимостей: сценарии подставляют отсюда название и варианты значений.
+  for (const [name, values] of [
+    ['Режим дома', ['home', 'away', 'night']],
+    ['Лампа подключена', ['true', 'false']],
+    ['Есть активный будильник', ['true', 'false']],
+  ] as [string, string[]][]) {
+    const { id } = await call(app, 'POST', `/api/projects/${pid}/dependency-dictionary`, { name });
+    await call(app, 'PUT', `/api/dependency-dictionary/${id}`, { name, values });
+  }
+
+  const scenario = async (name: string) => (await call(app, 'POST', `/api/projects/${pid}/scenarios`, { name })).id as number;
+  const intent = async (sid: number, name: string, phrases: string[], entities: { entity_id: number; required: boolean }[] = []) => {
+    const { id } = await call(app, 'POST', `/api/scenarios/${sid}/intents`, { name });
+    await call(app, 'PUT', `/api/intents/${id}`, { name, enabled: true, comment: '', phrases, entities });
+    return id as number;
+  };
+  const prompt = async (sid: number, name: string, full: string[]) => {
+    const { id } = await call(app, 'POST', `/api/scenarios/${sid}/prompts`, { name });
+    await call(app, 'PUT', `/api/prompts/${id}`, { name, full_answers: full });
+    return id as number;
+  };
+  const fill = async (sid: number, patch: Step) => {
+    const sc = await call(app, 'GET', `/api/scenarios/${sid}`);
+    await call(app, 'PUT', `/api/scenarios/${sid}`, { ...sc, ...patch });
+  };
+
+  // 1. Свет
+  const light = await scenario('Управление светом');
+  const on = await intent(light, 'LIGHT_ON', ['включи свет', 'зажги свет в комнате', 'включи свет на кухне'], [{ entity_id: room, required: true }]);
+  const off = await intent(light, 'LIGHT_OFF', ['выключи свет', 'погаси свет в спальне', 'выруби свет'], [{ entity_id: room, required: false }]);
+  const roomAnswer = await intent(light, 'ROOM_ANSWER', ['на кухне', 'в спальне', 'в коридоре'], [{ entity_id: room, required: true }]);
+  const askRoom = await prompt(light, 'PRM_ASK_ROOM', ['В какой комнате включить свет?']);
+  const lightOn = await prompt(light, 'PRM_LIGHT_ON', ['Свет включён.']);
+  const lightOff = await prompt(light, 'PRM_LIGHT_OFF', ['Свет выключен.']);
+  const noRoom = await prompt(light, 'PRM_ERR_UNKNOWN_ROOM', ['Не знаю такой комнаты. Назовите кухню, спальню или коридор.']);
+  const lampFail = await prompt(light, 'PRM_ERR_LAMP', ['Не получилось связаться с лампой. Попробуйте ещё раз позже.']);
+  await fill(light, {
+    description: 'Пользователь просит включить или выключить свет; если комната не названа, ассистент уточняет.',
     entities: [{ entity_id: room, followup_prompt: 'В какой комнате?', required: true, is_array: false }],
+    // Зависимости: данные «снаружи» диалога, от которых зависят переходы.
+    dependencies: [dep('home_mode', 'Режим дома', 'enum', ['home', 'away', 'night']), dep('lamp_online', 'Лампа подключена', 'bool'), entityDep('room_dep', room)],
     parts: [{
       name: 'Управление светом', description: '',
-      steps: [step('START', 'ASK_ROOM', on), step('ASK_ROOM', 'DONE', null)],
+      steps: [
+        // Ночью свет в спальне не включаем автоматически — сначала уточняем.
+        step('START', 'ASK_ROOM', on, [{ dep: 'home_mode', op: '!=', value: 'night' }]),
+        step('START', 'ASK_ROOM', on, [{ dep: 'home_mode', op: '=', value: 'night' }, { entity_id: room, op: '=', value: 'bedroom' }]),
+        step('START', 'LIGHT_OFF', off),
+        step('ASK_ROOM', 'LIGHT_ON', roomAnswer),
+        error('ASK_ROOM', 'ASK_ROOM', 'Комната не распознана', noRoom),
+        error('LIGHT_ON', 'START', 'Устройство не отвечает', lampFail, 'Записать сбой устройства в журнал', [{ dep: 'lamp_online', op: '=', value: 'false' }]),
+      ],
       layout: {
-        START: { x: 0, y: 0, description: 'Вход в сценарий', prompt_id: null, system_action: '' },
-        ASK_ROOM: { x: 280, y: 0, description: 'Уточнение комнаты', prompt_id: ask, system_action: '' },
-        DONE: { x: 560, y: 0, description: 'Свет включён', prompt_id: done, system_action: 'Включить свет в выбранной комнате' },
+        START: node(0, 0, 'Вход в сценарий'),
+        ASK_ROOM: node(280, 0, 'Уточнение комнаты', askRoom),
+        LIGHT_ON: node(560, 0, 'Свет включён', lightOn, 'Включить свет в выбранной комнате'),
+        LIGHT_OFF: node(280, 160, 'Свет выключен', lightOff, 'Выключить свет в выбранной комнате'),
+      },
+    }],
+  });
+
+  // 2. Температура
+  const climate = await scenario('Температура');
+  const setTemp = await intent(climate, 'SET_TEMPERATURE', ['поставь двадцать два градуса', 'установи температуру 24', 'нужно двадцать градусов'], [{ entity_id: room, required: false }]);
+  const shift = await intent(climate, 'CHANGE_TEMPERATURE', ['сделай теплее', 'здесь холодно, прибавь', 'сделай попрохладнее'], [{ entity_id: mode, required: true }]);
+  const tempAnswer = await intent(climate, 'TEMP_ANSWER', ['двадцать два', 'на двадцать четыре', 'двадцать'], [{ entity_id: temp, required: true }]);
+  const askTemp = await prompt(climate, 'PRM_ASK_TEMP', ['Какую температуру установить?']);
+  const tempSet = await prompt(climate, 'PRM_TEMP_SET', ['Температура установлена.']);
+  const tempShift = await prompt(climate, 'PRM_TEMP_SHIFT', ['Изменила температуру на два градуса.']);
+  const badTemp = await prompt(climate, 'PRM_ERR_TEMP_RANGE', ['Могу выставить от пятнадцати до тридцати градусов.']);
+  const awayMsg = await prompt(climate, 'PRM_ERR_AWAY', ['Дома никого нет, температуру не меняю.']);
+  const heaterFail = await prompt(climate, 'PRM_ERR_HEATER', ['Термостат не отвечает. Проверьте, что он подключён к сети.']);
+  await fill(climate, {
+    description: 'Пользователь задаёт температуру в комнате или просит сделать теплее/холоднее.',
+    dependencies: [dep('home_mode', 'Режим дома', 'enum', ['home', 'away', 'night']), entityDep('temp_dep', temp)],
+    entities: [
+      { entity_id: mode, followup_prompt: 'Теплее или холоднее?', required: false, is_array: false },
+      { entity_id: temp, followup_prompt: 'Какую температуру установить?', required: false, is_array: false },
+    ],
+    parts: [{
+      name: 'Температура', description: '',
+      steps: [
+        step('START', 'ASK_TEMP', setTemp),
+        step('START', 'TEMP_SHIFT', shift),
+        step('ASK_TEMP', 'TEMP_SET', tempAnswer),
+        error('ASK_TEMP', 'ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '<', value: '15' }]),
+        error('ASK_TEMP', 'ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '>', value: '30' }]),
+        // Если дома никого нет, температуру не меняем.
+        error('START', 'START', 'Никого нет дома', awayMsg, '', [{ dep: 'home_mode', op: '=', value: 'away' }]),
+        error('TEMP_SET', 'START', 'Термостат не отвечает', heaterFail, 'Повторить запрос к термостату через 10 секунд'),
+        error('TEMP_SHIFT', 'START', 'Термостат не отвечает', heaterFail),
+      ],
+      layout: {
+        START: node(0, 0, 'Вход в сценарий'),
+        ASK_TEMP: node(280, 0, 'Уточнение температуры', askTemp),
+        TEMP_SET: node(560, 0, 'Температура установлена', tempSet, 'Отправить целевую температуру на термостат'),
+        TEMP_SHIFT: node(280, 160, 'Температура изменена', tempShift, 'Изменить целевую температуру на 2 градуса'),
+      },
+    }],
+  });
+
+  // 3. Будильник
+  const alarm = await scenario('Будильник');
+  const setAlarm = await intent(alarm, 'ALARM_SET', ['разбуди меня в семь утра', 'поставь будильник на 6:30', 'заведи будильник']);
+  const cancelAlarm = await intent(alarm, 'ALARM_CANCEL', ['отмени будильник', 'выключи будильник', 'не буди меня']);
+  const timeAnswer = await intent(alarm, 'TIME_ANSWER', ['на шесть тридцать', 'в десять вечера', 'в семь'], [{ entity_id: time, required: true }]);
+  const askTime = await prompt(alarm, 'PRM_ASK_TIME', ['На какое время поставить будильник?']);
+  const alarmSet = await prompt(alarm, 'PRM_ALARM_SET', ['Будильник поставлен.']);
+  const alarmOff = await prompt(alarm, 'PRM_ALARM_CANCEL', ['Будильник отменён.']);
+  const badTime = await prompt(alarm, 'PRM_ERR_TIME', ['Не поняла время. Скажите, например, «в семь тридцать».']);
+  const noAlarm = await prompt(alarm, 'PRM_ERR_NO_ALARM', ['У вас нет активных будильников.']);
+  await fill(alarm, {
+    description: 'Пользователь ставит или отменяет будильник; время уточняется, если не названо.',
+    entities: [
+      { entity_id: time, followup_prompt: 'На какое время?', required: true, is_array: false },
+      { entity_id: alarmDate, followup_prompt: 'На какую дату?', required: false, is_array: false },
+      { entity_id: alarmRepeat, followup_prompt: 'Повторять каждый день?', required: false, is_array: false },
+    ],
+    dependencies: [dep('has_alarm', 'Есть активный будильник', 'bool')],
+    parts: [{
+      name: 'Будильник', description: '',
+      steps: [
+        step('START', 'ASK_TIME', setAlarm),
+        step('START', 'ALARM_CANCELLED', cancelAlarm, [{ dep: 'has_alarm', op: '=', value: 'true' }]),
+        step('ASK_TIME', 'ALARM_SET', timeAnswer),
+        error('ASK_TIME', 'ASK_TIME', 'Время не распознано', badTime),
+        error('START', 'START', 'Нет активных будильников', noAlarm, '', [{ dep: 'has_alarm', op: '=', value: 'false' }]),
+      ],
+      layout: {
+        START: node(0, 0, 'Вход в сценарий'),
+        ASK_TIME: node(280, 0, 'Уточнение времени', askTime),
+        ALARM_SET: node(560, 0, 'Будильник поставлен', alarmSet, 'Создать будильник на указанное время'),
+        ALARM_CANCELLED: node(280, 160, 'Будильник отменён', alarmOff, 'Удалить ближайший будильник'),
       },
     }],
   });

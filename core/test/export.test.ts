@@ -22,13 +22,14 @@ const spec: ProjectSpec = {
   ],
   entities: [
     {
-      name: 'seat_position', multiple_values: true,
+      name: 'seat_position', type: 'string', range_min: '', range_max: '', multiple_values: true,
       values: [{ value: 'Driver', synonyms: ['водитель', 'левый'] }, { value: 'All', synonyms: [] }],
     },
+    { name: 'heating_level', type: 'number', range_min: '1', range_max: '3', multiple_values: false, values: [] },
   ],
   scenario_entities: [{ scenario: 'Обогрев', name: 'seat_position', followup_prompt: 'Для какого сиденья включить обогрев?', required: true, is_array: false }],
   prompts: [
-    { name: 'PRM_TEMPERATURE_SET', full_answers: ['Устанавливаю'], short_answers: ['Хорошо', 'Готово'] },
+    { name: 'PRM_TEMPERATURE_SET', full_answers: ['Устанавливаю'] },
   ],
   dependencies: [{ scenario: 'Обогрев', name: 'seat_position', type: 'enum', values: ['Driver', 'All'] }],
   transitions: [row],
@@ -62,22 +63,29 @@ describe('renderMarkdown', () => {
   it('renders intents with numbered lists and required entities', () => {
     expect(md).toContain('| Интент | Фразы для обучения | Сущности |');
     expect(md).toContain('| INT_SEAT_HEATING_SET | 1. Обогрев сиденья на 3<br>2. Включи обогрев | 1. [seat_position]<br>2. [heating_level] (обязательно) |');
-    expect(md).toContain('| Из состояния | Запрос пользователя | Условия | Действие системы | В состояние | Ответ ассистента |');
+    expect(md).toContain('| Из состояния | В состояние | Запрос пользователя | Условия | Действие системы | Ответ ассистента |');
     expect(md).not.toMatch(/Result code|Relative adjustment|\(required\)/);
   });
 
   it('renders entities, prompts, transitions and errors', () => {
-    expect(md).toContain('| [seat_position] | • **Driver:** "водитель", "левый"<br>• **All** | да |');
+    expect(md).toContain('| [seat_position] | Строка | • **Driver:** "водитель", "левый"<br>• **All** | да |');
+    expect(md).toContain('| [heating_level] | Число<br>от 1 до 3 | - | нет |');
     expect(md).toContain('| да | Для какого сиденья включить обогрев? |');
     expect(md).not.toContain('## Scenario entities');
-    expect(md).toContain('| PRM_TEMPERATURE_SET | 1. Устанавливаю | 1. Хорошо<br>2. Готово |');
-    expect(md).toContain('| ST_SEAT_HEATING | INT_SEAT_HEATING | Обогрев сидений выключен | Включить обогрев | - | PRM_SEAT_HEATING_ON |');
-    expect(md).toContain("| DRIVER_ONLY | [seat position] = 'driver' | - | Включить обогрев | - | - |");
+    expect(md).toContain('| PRM_TEMPERATURE_SET | 1. Устанавливаю |');
+    expect(md).toContain('| ST_SEAT_HEATING | - | INT_SEAT_HEATING | Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
+    expect(md).toContain("| DRIVER_ONLY | - | [seat position] = 'driver' | - | Включить обогрев | - |");
   });
 
   it('escapes pipes in table cells', () => {
     const s: ProjectSpec = { ...spec, transitions: [{ ...row, condition: 'a|b' }] };
     expect(renderMarkdown(s, 'd')).toContain('a\\|b');
+  });
+  it('renders a global transitions section only when there are any', () => {
+    expect(md).not.toContain('Глобальные переходы');
+    const g = renderMarkdown({ ...spec, globals: [{ ...row, state: '', intent: 'INT_CANCEL', next_states: 'ST_END' }] }, 'd');
+    expect(g).toContain('## Глобальные переходы');
+    expect(g).toContain('| ST_END | INT_CANCEL | Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
   });
 });
 
@@ -165,7 +173,7 @@ describe('export route', () => {
     });
     const res = await request(app).get(`/api/scenarios/${sid}/export?format=md`);
     expect(res.text).toContain('| INT_PLAY | 1. INT_PLAY |  |');
-    expect(res.text).toContain('| ST_IDLE | INT_PLAY | - | Играть | ST_PLAY | PRM_OK |');
+    expect(res.text).toContain('| ST_IDLE | ST_PLAY | INT_PLAY | - | Играть | PRM_OK |');
     expect(res.text).not.toContain('INT_OTHER');
     expect(res.text).not.toContain('PRM_OTHER');
     expect(res.text).not.toContain('ST_OTHER');
@@ -195,5 +203,46 @@ describe('export route', () => {
     const xml = await (await JSZip.loadAsync(docx.body)).file('word/document.xml')!.async('string');
     expect(xml).toContain('Включение');
     expect(xml).toContain('Выключение');
+  });
+  it('lists connected intents even when unused and exports global transitions in their own section', async () => {
+    const { app, db } = await makeApp();
+    const pid = createProject(db);
+    const sid = (await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' })).body.id as number;
+    const cancel = (await request(app).post(`/api/scenarios/${sid}/intents`).send({ name: 'INT_CANCEL' })).body.id as number;
+    await request(app).put(`/api/intents/${cancel}`).send({ name: 'INT_CANCEL', phrases: ['отмена'] });
+    await request(app).post(`/api/scenarios/${sid}/intents`).send({ name: 'INT_SPARE' });
+    await request(app).put(`/api/scenarios/${sid}/intents/${cancel}`).send({ is_global: true });
+    const bye = (await request(app).post(`/api/scenarios/${sid}/prompts`).send({ name: 'PRM_BYE' })).body.id as number;
+    await request(app).put(`/api/scenarios/${sid}`).send({
+      name: 'S',
+      parts: [{
+        steps: [
+          { kind: 'transition', state: 'ST_A', next_states: 'ST_B' },
+          { kind: 'global', intent_id: cancel, condition: 'всегда', next_states: 'ST_END' },
+          { kind: 'error', state: 'ST_A', condition: 'сбой' },
+        ],
+        layout: { ST_END: { x: 0, y: 0, prompt_id: bye, system_action: 'Сбросить' } },
+      }],
+    });
+    const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
+    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Сущности', '## Промпты', '## Глобальные переходы', '## Переходы между состояниями', '## Ошибки']);
+    expect(md).toContain('| В состояние | Запрос пользователя | Условия | Действие системы | Ответ ассистента |');
+    expect(md).toContain('| ST_END | INT_CANCEL | всегда | Сбросить | PRM_BYE |');
+    expect(md).toContain('| INT_SPARE |');
+    const [, afterTransitions] = md.split('## Переходы между состояниями');
+    expect(afterTransitions).not.toContain('ST_END');
+    expect(afterTransitions).toContain('Любой интент сценария');
+    const docx = await request(app).get(`/api/scenarios/${sid}/export?format=docx`);
+    const xml = await (await JSZip.loadAsync(docx.body)).file('word/document.xml')!.async('string');
+    expect(xml).toContain('Глобальные переходы');
+  });
+
+  it('does not export an intent that is not connected to the scenario', async () => {
+    const { app, db } = await makeApp();
+    const pid = createProject(db);
+    const sid = (await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' })).body.id as number;
+    await request(app).post(`/api/projects/${pid}/intents`).send({ name: 'INT_LOOSE' });
+    const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
+    expect(md).not.toContain('INT_LOOSE');
   });
 });

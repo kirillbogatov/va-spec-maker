@@ -27,7 +27,7 @@ describe('scenarios API', () => {
     const pr = await request(app).post(`/api/projects/${pid}/prompts`).send({ name: 'PRM_ON' });
     const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' });
     const row = {
-      kind: 'transition', state: 'ST_A', intent_id: intentId, any_intent: false, request_params: '', condition: 'выключен', conditions: [],
+      name: 'Правило', kind: 'transition', state: 'ST_A', intent_id: intentId, request_params: '', condition: 'выключен', conditions: [], cond_mode: 'all',
       prompt_id: pr.body.id, system_action: 'Включить', next_states: '-',
     };
     const err = { ...row, kind: 'error', state: 'DRIVER_ONLY', intent_id: null };
@@ -38,15 +38,6 @@ describe('scenarios API', () => {
     // ответ и действие перехода живут в состоянии: в строке перехода они сбрасываются, в строке ошибки сохраняются
     expect(put.body.parts[0].steps).toEqual([{ ...row, prompt_id: null, system_action: '' }, err]);
     expect((await request(app).get(`/api/projects/${pid}/scenarios`)).body[0].step_count).toBe(2);
-  });
-
-  it('stores "any intent of the scenario" and drops the intent id', async () => {
-    const { app, pid, intentId } = await setup();
-    const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' });
-    const step = { kind: 'transition', state: 'ST_A', intent_id: intentId, any_intent: true, next_states: 'ST_B' };
-    const put = await request(app).put(`/api/scenarios/${c.body.id}`).send({ name: 'S', parts: [{ name: 'P', steps: [step] }] });
-    expect(put.status).toBe(200);
-    expect(put.body.parts[0].steps[0]).toMatchObject({ intent_id: null, any_intent: true });
   });
 
   it('rejects an intent or a prompt from another project', async () => {
@@ -78,7 +69,7 @@ describe('scenarios API', () => {
     const again = await request(app).put(`/api/scenarios/${c.body.id}`).send({ name: 'S2' });
     expect(again.body.parts[0].layout.ST_A).toEqual(layout.ST_A);
     expect((await request(app).get(`/api/prompts/${pr.body.id}`)).status).toBe(200);
-    expect((await request(app).get(`/api/scenarios/${c.body.id}/prompts`)).body).toEqual([]);
+    expect((await request(app).get(`/api/scenarios/${c.body.id}/prompts`)).body.map((p: any) => p.name)).toEqual(['PRM_ON']);
     expect((await request(app).get(`/api/projects/${pid}/prompts`)).body[0].step_count).toBe(1);
   });
 
@@ -180,5 +171,54 @@ describe('scenarios API', () => {
     const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' });
     expect((await request(app).delete(`/api/scenarios/${c.body.id}`)).status).toBe(204);
     expect((await request(app).get(`/api/scenarios/${c.body.id}`)).status).toBe(404);
+  });
+  it('connects what the saved rows and states reference', async () => {
+    const { app, pid, intentId } = await setup();
+    const pr = await request(app).post(`/api/projects/${pid}/prompts`).send({ name: 'PRM_ON' });
+    const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' });
+    await request(app).put(`/api/scenarios/${c.body.id}`).send({
+      name: 'S',
+      parts: [{
+        steps: [{ kind: 'transition', state: 'A', intent_id: intentId, next_states: 'B' }],
+        layout: { B: { x: 0, y: 0, prompt_id: pr.body.id } },
+      }],
+    });
+    const intents = (await request(app).get(`/api/scenarios/${c.body.id}/intents`)).body;
+    expect(intents).toMatchObject([{ id: intentId, is_global: false }]);
+    expect((await request(app).get(`/api/scenarios/${c.body.id}/prompts`)).body.map((p: any) => p.id)).toEqual([pr.body.id]);
+    // повторное сохранение не дублирует и не сбрасывает флаг
+    await request(app).put(`/api/scenarios/${c.body.id}/intents/${intentId}`).send({ is_global: true });
+    await request(app).put(`/api/scenarios/${c.body.id}`).send({ name: 'S' });
+    expect((await request(app).get(`/api/scenarios/${c.body.id}/intents`)).body).toMatchObject([{ id: intentId, is_global: true }]);
+  });
+
+  it('stores global rows only for global intents of the scenario', async () => {
+    const { app, pid, intentId } = await setup();
+    const pr = await request(app).post(`/api/projects/${pid}/prompts`).send({ name: 'PRM_BYE' });
+    const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' });
+    const global = { kind: 'global', state: 'ignored', intent_id: intentId, prompt_id: pr.body.id, system_action: 'x', next_states: 'ST_END' };
+    const save = () => request(app).put(`/api/scenarios/${c.body.id}`).send({ name: 'S', parts: [{ steps: [global] }] });
+    expect((await save()).status).toBe(400);
+    await request(app).put(`/api/scenarios/${c.body.id}/intents/${intentId}`).send({ is_global: true });
+    const ok = await save();
+    expect(ok.status).toBe(200);
+    expect(ok.body.parts[0].steps[0]).toMatchObject({ kind: 'global', state: '', intent_id: intentId, prompt_id: null, system_action: '', next_states: 'ST_END' });
+    expect(ok.body.parts[0].steps[0]).not.toHaveProperty('any_intent');
+    expect((await request(app).delete(`/api/scenarios/${c.body.id}/intents/${intentId}`)).status).toBe(409);
+    // черновая строка без интента допустима
+    const draft = await request(app).put(`/api/scenarios/${c.body.id}`).send({ name: 'S', parts: [{ steps: [{ kind: 'global' }] }] });
+    expect(draft.status).toBe(200);
+    expect(draft.body.parts[0].steps[0]).toMatchObject({ kind: 'global', intent_id: null });
+  });
+
+  it('deleting a scenario keeps its intents and prompts in the project', async () => {
+    const { app, pid } = await setup();
+    const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' });
+    const i = await request(app).post(`/api/scenarios/${c.body.id}/intents`).send({ name: 'INT_KEEP' });
+    const p = await request(app).post(`/api/scenarios/${c.body.id}/prompts`).send({ name: 'PRM_KEEP' });
+    expect((await request(app).delete(`/api/scenarios/${c.body.id}`)).status).toBe(204);
+    expect((await request(app).get(`/api/intents/${i.body.id}`)).status).toBe(200);
+    expect((await request(app).get(`/api/prompts/${p.body.id}`)).status).toBe(200);
+    expect((await request(app).get(`/api/projects/${pid}/intents`)).body.find((x: any) => x.id === i.body.id).scenarios).toEqual([]);
   });
 });

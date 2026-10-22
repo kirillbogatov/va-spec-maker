@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Download, FolderOpen, MoreHorizontal, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { Logo } from '@/components/Logo';
+import { UserMenu } from '@/components/UserMenu';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -10,14 +12,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { api } from '@/lib/api';
-import { downloadBlob } from '@/lib/download';
+import { backupProject } from '@/lib/backup';
+import { addDemo } from '@/lib/backend';
 import type { ProjectListItem } from '@/lib/types';
 
-const plural = (n: number) => {
+/** «3 интента», «1 сущность»: склонение по последней цифре. */
+const forms = (n: number, one: string, few: string, many: string) => {
   const m = n % 100;
   const k = n % 10;
-  const word = m > 10 && m < 15 ? 'сценариев' : k === 1 ? 'сценарий' : k >= 2 && k <= 4 ? 'сценария' : 'сценариев';
-  return `${n} ${word}`;
+  return `${n} ${m > 10 && m < 15 ? many : k === 1 ? one : k >= 2 && k <= 4 ? few : many}`;
 };
 
 const formatDate = (s: string) => new Date(s.replace(' ', 'T') + 'Z').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -67,6 +70,7 @@ export function ProjectsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dialog, setDialog] = useState<{ project: ProjectListItem | null } | null>(null);
   const [deleting, setDeleting] = useState<ProjectListItem | null>(null);
+  const [, bump] = useState(0);
   const { data: projects = [], isLoading } = useQuery({ queryKey: ['projects'], queryFn: api.projects.list });
   const refresh = () => qc.invalidateQueries({ queryKey: ['projects'] });
 
@@ -79,8 +83,15 @@ export function ProjectsPage() {
   const duplicate = useMutation({ mutationFn: (id: number) => api.projects.duplicate(id), onSuccess: refresh });
 
   const exportJson = async (p: ProjectListItem) => {
-    const dump = await api.projects.dump(p.id);
-    downloadBlob(new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' }), `${p.name}.json`);
+    await backupProject(p);
+    bump((n) => n + 1);
+  };
+  const exportDocx = (p: ProjectListItem) =>
+    api.exportFile(`/api/projects/${p.id}/export?format=docx`, `${p.name}.docx`).catch((e: Error) => toast.error(e.message));
+  const loadDemo = async () => {
+    await addDemo();
+    await refresh();
+    toast.success('Демо-проект добавлен');
   };
   const importFile = async (file: File) => {
     try {
@@ -95,58 +106,74 @@ export function ProjectsPage() {
   return (
     <div className="min-h-screen bg-page">
       <header className="border-b bg-background">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+        <div className="mx-auto flex h-16 max-w-[1100px] items-center justify-between px-4 sm:px-6">
           <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <span className="grid size-7 place-items-center rounded-lg bg-brand text-sm font-bold text-white">V</span>
+            <Logo className="size-8" />
             VA Spec Maker
           </span>
+          <UserMenu variant="header" />
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Проекты</h1>
-            <p className="mt-1 text-muted-foreground">Спецификации голосовых ассистентов. Данные хранятся в вашем браузере.</p>
-          </div>
-          <div className="flex gap-2">
-            <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importFile(f); }} />
-            <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="size-4" /> Импорт</Button>
-            <Button onClick={() => setDialog({ project: null })}><Plus className="size-4" /> Новый проект</Button>
-          </div>
-        </div>
+      <main className="mx-auto max-w-[1100px] px-4 py-8 sm:px-6 sm:py-10">
+        <h1 className="mb-6 text-balance text-3xl font-semibold tracking-tight">Проекты</h1>
+        <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importFile(f); }} />
 
         {!isLoading && projects.length === 0 && (
-          <div className="grid place-items-center rounded-xl border border-dashed bg-background px-6 py-20 text-center">
-            <FolderOpen className="mb-3 size-10 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Проектов пока нет</h2>
-            <p className="mb-5 mt-1 text-sm text-muted-foreground">Создайте первый проект или импортируйте файл.</p>
-            <Button onClick={() => setDialog({ project: null })}><Plus className="size-4" /> Новый проект</Button>
+          <div className="grid place-items-center rounded-xl border border-dashed bg-background px-6 py-16 text-center">
+            <FolderOpen className="mb-3 size-10 text-muted-foreground" aria-hidden />
+            <h2 className="text-balance text-lg font-semibold">Проектов пока нет</h2>
+            <p className="mb-5 mt-1 max-w-md text-sm text-muted-foreground">Создайте пустой проект, импортируйте ранее скачанный JSON или посмотрите готовый пример «Умный дом».</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button className="h-10 sm:h-9" onClick={() => setDialog({ project: null })}><Plus className="size-4" /> Новый проект</Button>
+              <Button variant="outline" className="h-10 sm:h-9" onClick={() => fileRef.current?.click()}>Импорт JSON</Button>
+              <Button variant="outline" className="h-10 sm:h-9" onClick={loadDemo}>Добавить демо</Button>
+            </div>
           </div>
         )}
 
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <li key={p.id} className="group relative rounded-xl border bg-background transition-colors hover:border-brand/40">
-              <button type="button" onClick={() => navigate(`/p/${p.id}/scenarios`)} className="block w-full rounded-xl p-5 text-left">
-                <h2 className="truncate pr-8 text-base font-semibold">{p.name}</h2>
-                <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted-foreground">{p.description || 'Без описания'}</p>
-                <p className="mt-4 text-xs text-muted-foreground">{plural(p.scenario_count)} · {formatDate(p.created_at)}</p>
-              </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="absolute right-2 top-2" aria-label={`Действия с проектом ${p.name}`} />}>
-                  <MoreHorizontal className="size-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setDialog({ project: p })}><Pencil className="size-4" /> Переименовать</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => duplicate.mutate(p.id)}><Copy className="size-4" /> Дублировать</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportJson(p)}><Download className="size-4" /> Экспорт (.json)</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setDeleting(p)}><Trash2 className="size-4" /> Удалить</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+        {projects.length > 0 && (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((p) => {
+              return (
+                <li key={p.id} className="relative flex flex-col gap-3 rounded-xl border bg-background p-5">
+                  <div className="flex items-start gap-2">
+                    <h2 className="min-w-0 flex-1 text-balance pt-1 text-base font-semibold leading-snug">{p.name}</h2>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="-mr-2 -mt-1 size-10 sm:size-9" aria-label={`Действия с проектом ${p.name}`} />}>
+                        <MoreHorizontal className="size-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem className="min-h-9" onClick={() => setDialog({ project: p })}><Pencil className="size-4" /> Переименовать</DropdownMenuItem>
+                        <DropdownMenuItem className="min-h-9" onClick={() => duplicate.mutate(p.id)}><Copy className="size-4" /> Дублировать</DropdownMenuItem>
+                        <DropdownMenuItem className="min-h-9" onClick={() => exportJson(p)}><Download className="size-4" /> Экспорт (.json)</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="min-h-9" variant="destructive" onClick={() => setDeleting(p)}><Trash2 className="size-4" /> Удалить</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <p className="line-clamp-2 min-h-10 text-sm text-muted-foreground">{p.description || 'Без описания'}</p>
+                  <p className="text-[13px] tabular-nums text-muted-foreground">
+                    {p.scenario_count ? forms(p.scenario_count, 'сценарий', 'сценария', 'сценариев') : 'Нет сценариев'}
+                  </p>
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <span className="text-xs text-muted-foreground">Создан {formatDate(p.created_at)}</span>
+                    <span className="flex gap-2">
+                      <Button variant="outline" className="h-10 sm:h-9" onClick={() => exportDocx(p)}>Скачать .docx</Button>
+                      <Button className="h-10 sm:h-9" onClick={() => navigate(`/p/${p.id}/scenarios`)}>Открыть</Button>
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+            <li className="grid min-h-52 place-items-center rounded-xl border border-dashed p-5 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <Button className="h-10 sm:h-9" onClick={() => setDialog({ project: null })}><Plus className="size-4" /> Новый проект</Button>
+                <Button variant="outline" className="h-10 sm:h-9" onClick={() => fileRef.current?.click()}><Upload className="size-4" /> Импорт JSON</Button>
+                <Button variant="link" className="h-10 sm:h-9" onClick={loadDemo}>Добавить демо «Умный дом»</Button>
+              </div>
             </li>
-          ))}
-        </ul>
+          </ul>
+        )}
       </main>
 
       <ProjectDialog

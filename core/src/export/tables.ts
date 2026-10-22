@@ -1,4 +1,5 @@
 import type { ProjectSpec, TransitionRow } from './model';
+import { ENTITY_TYPE_LABEL, rangeText, type EntityType } from '../entity-types';
 
 /** Содержимое ячейки таблицы: абзацы, нумерованный список или маркированный список «жирное: обычное». */
 export type Cell =
@@ -36,25 +37,27 @@ export function intentsTable(spec: ProjectSpec): TableDef {
   };
 }
 
-export const ENTITIES_HEAD = ['Сущность', 'Значения', 'Несколько значений', 'Обязательная', 'Уточняющий вопрос'];
+export const ENTITIES_HEAD = ['Сущность', 'Тип', 'Значения', 'Несколько значений', 'Уточняющий вопрос'];
 export function entitiesTable(spec: ProjectSpec): TableDef {
   return {
     head: ENTITIES_HEAD,
-    widths: [14, 36, 12, 10, 28],
+    widths: [16, 16, 32, 12, 24],
     rows: spec.entities.map((e) => {
       const uses = spec.scenario_entities.filter((s) => s.name === e.name);
       const col = (f: (s: (typeof uses)[number]) => string): Cell => (uses.length ? text(uses.map(f).join('\n')) : dash(''));
       return {
         cells: [
           text(ref(e.name)),
-          {
-            bullets: e.values.map((v) => ({
-              bold: v.synonyms.length ? `${v.value}:` : v.value,
-              text: v.synonyms.map((s) => `"${s}"`).join(', '),
-            })),
-          },
+          text([ENTITY_TYPE_LABEL[e.type as EntityType] ?? e.type, rangeText(e.type, e.range_min, e.range_max)].filter(Boolean).join('\n')),
+          e.type !== 'string'
+            ? text('-')
+            : {
+                bullets: e.values.map((v) => ({
+                  bold: v.synonyms.length ? `${v.value}:` : v.value,
+                  text: v.synonyms.map((s) => `"${s}"`).join(', '),
+                })),
+              },
           text(e.multiple_values || uses.some((s) => s.is_array) ? 'да' : 'нет'),
-          col((s) => (s.required ? 'да' : 'нет')),
           col((s) => s.followup_prompt.trim() || '-'),
         ],
       };
@@ -62,13 +65,13 @@ export function entitiesTable(spec: ProjectSpec): TableDef {
   };
 }
 
-export const PROMPTS_HEAD = ['Промпт', 'Полный ответ', 'Краткий ответ'];
+export const PROMPTS_HEAD = ['Промпт', 'Ответ ассистента'];
 export function promptsTable(spec: ProjectSpec): TableDef {
   return {
     head: PROMPTS_HEAD,
-    widths: [30, 40, 30],
+    widths: [30, 70],
     rows: spec.prompts.map((p) => ({
-      cells: [text(p.name), list(p.full_answers), list(p.short_answers)],
+      cells: [text(p.name), list(p.full_answers)],
     })),
   };
 }
@@ -84,19 +87,34 @@ export function dependenciesTable(spec: ProjectSpec): TableDef {
   };
 }
 
-export const TRANSITION_HEAD = ['Из состояния', 'Запрос пользователя', 'Условия', 'Действие системы', 'В состояние', 'Ответ ассистента'];
+export const TRANSITION_HEAD = ['Из состояния', 'В состояние', 'Запрос пользователя', 'Условия', 'Действие системы', 'Ответ ассистента'];
 const transitionRow = (t: TransitionRow): Row => ({
   cells: [
     dash(t.state),
+    dash(t.next_states),
     dash([t.intent, t.request_params].filter((x) => x && x.trim()).join('\n')),
     dash(t.condition),
     dash(t.system_action),
-    dash(t.next_states),
     dash(t.prompt ?? ''),
   ],
 });
 export const transitionsTable = (rows: TransitionRow[]): TableDef => ({
   head: TRANSITION_HEAD,
-  widths: [14, 17, 17, 17, 20, 15],
+  widths: [14, 20, 17, 17, 17, 15],
   rows: rows.map(transitionRow),
+});
+
+export const GLOBAL_HEAD = ['В состояние', 'Запрос пользователя', 'Условия', 'Действие системы', 'Ответ ассистента'];
+export const globalsTable = (rows: TransitionRow[]): TableDef => ({
+  head: GLOBAL_HEAD,
+  widths: [20, 22, 20, 20, 18],
+  rows: rows.map((t): Row => ({
+    cells: [
+      dash(t.next_states),
+      dash([t.intent, t.request_params].filter((x) => x && x.trim()).join('\n')),
+      dash(t.condition),
+      dash(t.system_action),
+      dash(t.prompt ?? ''),
+    ],
+  })),
 });

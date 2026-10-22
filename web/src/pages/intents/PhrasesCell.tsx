@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useProjectId } from '@/hooks/project';
+import { useNormalize } from '@/lib/normalize';
 import { parsePhrases } from '@/lib/parse';
+import { findSlots } from '@/lib/stem';
 import { cn, GHOST } from '@/lib/utils';
 
 const COLLAPSED = 5;
@@ -9,10 +12,28 @@ const COLLAPSED = 5;
 interface Props {
   value: string[];
   onChange: (value: string[]) => void;
+  /** Значения сущностей интента: в фразах подсвечиваются как слоты. */
+  highlight?: string[];
+}
+
+/** Фраза с подсвеченными слотами значений сущностей (при включённой нормализации — и в других формах слова). */
+export function Slotted({ text, words }: { text: string; words: string[] }) {
+  const normalize = useNormalize(useProjectId());
+  const slots = words.length ? findSlots(text, words, normalize) : [];
+  if (!slots.length) return <>{text}</>;
+  const parts: ReactNode[] = [];
+  let pos = 0;
+  slots.forEach(([from, to], i) => {
+    if (from > pos) parts.push(text.slice(pos, from));
+    parts.push(<span key={i} className="rounded-[3px] bg-ent-bg px-0.5 text-ent">{text.slice(from, to)}</span>);
+    pos = to;
+  });
+  if (pos < text.length) parts.push(text.slice(pos));
+  return <>{parts}</>;
 }
 
 /** Тренировочные фразы вариации: поле добавления (Enter / вставка нескольких строк) и список, свёрнутый после 5 строк. */
-export function PhrasesCell({ value, onChange }: Props) {
+export function PhrasesCell({ value, onChange, highlight = [] }: Props) {
   const [text, setText] = useState('');
   const [all, setAll] = useState(false);
   const add = (raw: string) => {
@@ -20,14 +41,15 @@ export function PhrasesCell({ value, onChange }: Props) {
     if (items.length) onChange([...value, ...items]);
     setText('');
   };
+  const words = [...new Set(highlight.map((w) => w.trim()).filter((w) => w.length > 1))].sort((a, b) => b.length - a.length);
   const shown = all ? value : value.slice(0, COLLAPSED);
 
   return (
     <div className="space-y-2">
       <Input
-        className={cn(GHOST, 'h-8 border-b-border/60')}
+        className={cn(GHOST, 'h-10 border-input md:h-9')}
         aria-label="Добавить тренировочную фразу"
-        placeholder="Фраза или паттерн — Enter, чтобы добавить"
+        placeholder="+ фраза или паттерн"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
@@ -45,14 +67,14 @@ export function PhrasesCell({ value, onChange }: Props) {
         }}
       />
       {shown.length > 0 && (
-      <ul className="divide-y divide-border/60 rounded-md bg-muted/40">
+      <ul className="divide-y divide-border rounded-md border">
         {shown.map((p, i) => (
-          <li key={i} className="group flex items-start gap-2 px-2.5 py-1.5 hover:bg-muted">
-            <span className="flex-1 break-words font-mono text-[13px] leading-5">{p}</span>
+          <li key={i} className="group flex min-h-10 items-center gap-2 px-3 py-1.5 hover:bg-muted md:min-h-9">
+            <span className="min-w-0 flex-1 break-words font-mono text-[13px] leading-5"><Slotted text={p} words={words} /></span>
             <button
               type="button"
               aria-label="Удалить фразу"
-              className="mt-0.5 text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
               onClick={() => onChange(value.filter((_, j) => j !== i))}
             >
               <X className="size-3.5" />
@@ -62,7 +84,7 @@ export function PhrasesCell({ value, onChange }: Props) {
       </ul>
       )}
       {value.length > COLLAPSED && (
-        <button type="button" className="px-2 text-xs text-brand hover:underline" onClick={() => setAll(!all)}>
+        <button type="button" className="inline-flex min-h-8 items-center px-2 text-[13px] text-brand hover:underline" onClick={() => setAll(!all)}>
           {all ? 'Свернуть' : `Показать все (${value.length})`}
         </button>
       )}

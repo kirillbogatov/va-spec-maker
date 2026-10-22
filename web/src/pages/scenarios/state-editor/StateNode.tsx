@@ -3,26 +3,30 @@ import { polylinePath, type Pt } from '@/lib/elkLayout';
 import { cn } from '@/lib/utils';
 
 export interface StateNodeData extends Record<string, unknown> {
-  name: string; description: string; entry: boolean; terminal: boolean; unreachable: boolean; selected: boolean;
+  name: string; description: string; /** Название промпта-ответа состояния. */ prompt: string; entry: boolean; terminal: boolean; unreachable: boolean; selected: boolean;
 }
 
+/** Узел-состояние: метка старта/конца, имя (моно, цвет st), подпись и промпт-ответ. */
 export function StateNode({ data }: NodeProps<Node<StateNodeData>>) {
+  const tag = data.unreachable ? 'НЕДОСТИЖИМО' : data.entry ? 'СТАРТ' : data.terminal ? 'КОНЕЦ' : '';
   return (
     <div
       className={cn(
-        'flex h-full w-full flex-col items-center justify-center rounded-lg border px-3 text-center font-mono text-xs',
-        data.entry ? 'border-2 border-brand bg-brand/10' : data.unreachable ? 'border-dashed border-destructive bg-destructive/10' : data.terminal ? 'border-emerald-600 bg-emerald-50' : 'border-border bg-card',
-        data.selected && 'ring-2 ring-brand/50',
+        'flex h-full w-full flex-col justify-center rounded-[9px] border bg-card px-3 text-left',
+        data.entry ? 'border-brand' : data.unreachable ? 'border-dashed border-destructive' : data.terminal ? 'border-ent/60' : 'border-st/40',
+        data.selected && 'ring-2 ring-brand',
       )}
       title={data.description ? `${data.name}\n${data.description}` : data.name}
     >
       <Handle type="target" position={Position.Left} />
-      <span className="block break-all text-foreground">{data.name}</span>
-      {data.description && (
-        <span className="mt-0.5 line-clamp-4 break-words font-sans text-[11px] leading-[14px] text-muted-foreground" style={{ overflowWrap: 'anywhere' }}>
-          {data.description}
-        </span>
+      {tag && (
+        <span className={cn('text-[10px] font-semibold uppercase leading-3 tracking-wide', data.unreachable ? 'text-destructive' : data.entry ? 'text-brand' : 'text-ent')}>{tag}</span>
       )}
+      <span className="block break-all font-mono text-[13px] font-medium leading-4 text-st">{data.name}</span>
+      {data.description && (
+        <span className="line-clamp-2 break-words text-xs leading-4 text-muted-foreground" style={{ overflowWrap: 'anywhere' }}>{data.description}</span>
+      )}
+      {data.prompt && <span className="truncate font-mono text-xs leading-4 text-prm">{data.prompt}</span>}
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -38,7 +42,7 @@ export interface TransitionEdgeData extends Record<string, unknown> {
   onSelect: (key: string) => void;
 }
 
-/** Ребро-переход: ортогональная ломаная, подпись с полным текстом условий; клик по линии или подписи выбирает переход. */
+/** Ребро-переход: ортогональная ломаная и синяя пилюля с интентом; условия — в подсказке и инспекторе. */
 export function TransitionEdge({ data, markerEnd, selected }: EdgeProps<Edge<TransitionEdgeData>>) {
   if (!data || data.segments.length === 0) return null;
   const { segments, labelBox, card, bad, stepKey, onSelect } = data;
@@ -46,28 +50,23 @@ export function TransitionEdge({ data, markerEnd, selected }: EdgeProps<Edge<Tra
     <>
       <BaseEdge
         path={polylinePath(segments)} markerEnd={markerEnd} interactionWidth={20}
-        className={cn(selected ? 'stroke-brand' : bad ? 'stroke-destructive' : 'stroke-muted-foreground')}
-        style={{ strokeWidth: selected ? 2 : 1.3 }}
+        className={cn(selected ? 'stroke-brand' : bad ? 'stroke-destructive' : 'stroke-faint')}
+        style={{ strokeWidth: selected ? 2.2 : 1.4 }}
       />
       {labelBox && (
         <EdgeLabelRenderer>
-          <div
-            role="button" tabIndex={0} title="Изменить переход"
+          <button
+            type="button" title={[card.title, ...card.conds].join('\n')}
             onClick={() => stepKey && onSelect(stepKey)}
-            onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && stepKey) onSelect(stepKey); }}
-            style={{ transform: `translate(${labelBox.x}px, ${labelBox.y}px)`, width: labelBox.width, minHeight: labelBox.height }}
+            style={{ transform: `translate(${labelBox.x}px, ${labelBox.y}px)`, width: labelBox.width, height: labelBox.height }}
             className={cn(
-              'nodrag nopan pointer-events-auto absolute cursor-pointer whitespace-normal rounded-md border bg-card px-2.5 py-1.5 text-[11px] leading-4 shadow-sm hover:border-brand',
-              selected ? 'border-brand ring-2 ring-brand/30' : bad ? 'border-destructive/60' : 'border-border',
+              'nodrag nopan pointer-events-auto absolute flex cursor-pointer items-center justify-center gap-1 rounded-full px-2.5 font-mono text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring',
+              selected ? 'bg-brand text-primary-foreground' : bad ? 'bg-destructive-bg text-destructive ring-1 ring-destructive' : 'bg-int-bg text-int hover:ring-1 hover:ring-int',
             )}
           >
-            <div className={cn('break-words font-mono font-medium', selected ? 'text-brand' : 'text-foreground')} style={{ overflowWrap: 'anywhere' }}>{card.title}</div>
-            {card.conds.length > 0 && (
-              <ul className="mt-1 text-muted-foreground">
-                {card.conds.map((c, i) => <li key={i} className="break-words" style={{ overflowWrap: 'anywhere' }}>{c}</li>)}
-              </ul>
-            )}
-          </div>
+            <span className="truncate">{card.title}</span>
+            {card.conds.length > 0 && <span className="shrink-0 font-sans font-normal opacity-80">· {card.conds.length} усл.</span>}
+          </button>
         </EdgeLabelRenderer>
       )}
     </>

@@ -1,6 +1,7 @@
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
+import { connect } from '../links';
 import { optString, parseId, requireString } from '../validate';
 
 const DEP_TYPES = ['string', 'enum', 'bool'];
@@ -39,11 +40,11 @@ export function scenariosRouter(db: Db): RouterT {
     const steps = (
       db
         .prepare(
-          `SELECT kind, state, intent_id, any_intent, request_params, condition, conditions, prompt_id, system_action, next_states
+          `SELECT name, kind, state, intent_id, request_params, condition, conditions, cond_mode, prompt_id, system_action, next_states
            FROM scenario_steps WHERE part_id = ? ORDER BY position, id`,
         )
-        .all(part.id) as { conditions: string; any_intent: number }[]
-    ).map((t) => ({ ...t, any_intent: !!t.any_intent, conditions: JSON.parse(t.conditions) as StepCondition[] }));
+        .all(part.id) as { conditions: string }[]
+    ).map((t) => ({ ...t, conditions: JSON.parse(t.conditions) as StepCondition[] }));
     const layout: Layout = {};
     for (const { name, ...info } of db
       .prepare('SELECT name, description, prompt_id, system_action FROM scenario_states WHERE part_id = ? ORDER BY id')
@@ -140,12 +141,13 @@ export function scenariosRouter(db: Db): RouterT {
     }
     const findIntent = db.prepare('SELECT 1 FROM intents WHERE id = ? AND project_id = ?');
     const findPrompt = db.prepare('SELECT 1 FROM prompts WHERE id = ? AND project_id = ?');
+    const isGlobalIntent = db.prepare('SELECT 1 FROM scenario_intents WHERE scenario_id = ? AND intent_id = ? AND is_global = 1');
     const parts = (Array.isArray(b.parts) ? b.parts : cur.parts).map((p: any, n: number) => {
       const steps = (Array.isArray(p?.steps) ? p.steps : []).map((s: any) => ({
-        kind: s?.kind === 'error' ? 'error' : 'transition',
+        name: optString(s?.name).trim(),
+        kind: s?.kind === 'error' || s?.kind === 'global' ? s.kind : 'transition',
         state: optString(s?.state).trim(),
-        intent_id: s?.intent_id == null || s?.any_intent ? null : parseId(s.intent_id),
-        any_intent: s?.any_intent ? 1 : 0,
+        intent_id: s?.intent_id == null ? null : parseId(s.intent_id),
         request_params: optString(s?.request_params),
         condition: optString(s?.condition),
         conditions: (Array.isArray(s?.conditions) ? s.conditions : []).map((c: any) =>
@@ -153,13 +155,15 @@ export function scenariosRouter(db: Db): RouterT {
             ? { dep: optString(c?.dep), op: parseOp(c?.op), value: optString(c?.value) }
             : { dep: '', entity_id: parseId(c.entity_id), op: parseOp(c?.op), value: optString(c?.value) },
         ) as StepCondition[],
+        cond_mode: s?.cond_mode === 'any' ? 'any' : 'all',
         prompt_id: s?.prompt_id == null ? null : parseId(s.prompt_id),
         system_action: optString(s?.system_action),
         next_states: optString(s?.next_states),
       }));
-      // Ответ и действие перехода живут в состоянии-назначении; в строках переходов их нет.
+      // Ответ и действие перехода живут в состоянии-назначении; в строках переходов (в том числе глобальных) их нет.
       for (const s of steps) {
-        if (s.kind === 'transition') { s.prompt_id = null; s.system_action = ''; }
+        if (s.kind !== 'error') { s.prompt_id = null; s.system_action = ''; }
+        if (s.kind === 'global') s.state = '';
       }
       const layout = cleanLayout(p?.layout);
       for (const s of steps) {
@@ -171,6 +175,9 @@ export function scenariosRouter(db: Db): RouterT {
         }
         if (s.intent_id !== null && !findIntent.get(s.intent_id, cur.project_id)) {
           throw badRequest('Интент строки не найден в проекте');
+        }
+        if (s.kind === 'global' && s.intent_id !== null && !isGlobalIntent.get(id, s.intent_id)) {
+          throw badRequest('Глобальный переход возможен только для интента, подключённого к сценарию как глобальный');
         }
         if (s.prompt_id !== null && !findPrompt.get(s.prompt_id, cur.project_id)) {
           throw badRequest('Промпт строки не найден в проекте');
@@ -202,8 +209,8 @@ export function scenariosRouter(db: Db): RouterT {
       const insPart = db.prepare('INSERT INTO scenario_parts(scenario_id, position, name, description, layout) VALUES (?, ?, ?, ?, ?)');
       const insState = db.prepare('INSERT INTO scenario_states(scenario_id, part_id, name, description, prompt_id, system_action) VALUES (?, ?, ?, ?, ?, ?)');
       const ins = db.prepare(
-        `INSERT INTO scenario_steps(scenario_id, part_id, position, kind, state, intent_id, any_intent, request_params, condition, conditions, prompt_id, system_action, next_states)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO scenario_steps(scenario_id, part_id, position, name, kind, state, intent_id, request_params, condition, conditions, cond_mode, prompt_id, system_action, next_states)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       parts.forEach((p: any, n: number) => {
         const points = Object.fromEntries(Object.entries(p.layout as Layout).map(([k, { x, y }]) => [k, { x, y }]));
@@ -212,9 +219,17 @@ export function scenariosRouter(db: Db): RouterT {
           if (st.description.trim() || st.prompt_id !== null || st.system_action.trim()) insState.run(id, pid, k, st.description, st.prompt_id, st.system_action);
         }
         p.steps.forEach((s: any, i: number) =>
-          ins.run(id, pid, i, s.kind, s.state, s.intent_id, s.any_intent, s.request_params, s.condition, JSON.stringify(s.conditions), s.prompt_id, s.system_action, s.next_states),
+          ins.run(id, pid, i, s.name, s.kind, s.state, s.intent_id, s.request_params, s.condition, JSON.stringify(s.conditions), s.cond_mode, s.prompt_id, s.system_action, s.next_states),
         );
       });
+      // Всё, на что ссылаются строки и состояния, подключено к сценарию (глобальные интенты уже подключены проверкой выше)
+      for (const p of parts) {
+        for (const s of p.steps) {
+          if (s.intent_id !== null) connect(db, 'intent', id, s.intent_id);
+          if (s.prompt_id !== null) connect(db, 'prompt', id, s.prompt_id);
+        }
+        for (const st of Object.values(p.layout as Layout)) if (st.prompt_id !== null) connect(db, 'prompt', id, st.prompt_id);
+      }
     })();
     res.json(load(id));
   });

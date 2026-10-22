@@ -22,7 +22,7 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Отмена</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>{confirmLabel}</AlertDialogAction>
+          <AlertDialogAction onClick={() => { onConfirm(); onOpenChange(false); }}>{confirmLabel}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

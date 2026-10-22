@@ -17,7 +17,7 @@ describe('intents API', () => {
     const get = await request(app).get(`/api/intents/${c.body.id}`);
     expect(get.body).toMatchObject({ name: 'INT_SEAT_HEATING', enabled: true, phrases: [], entities: [] });
     const list = await request(app).get(`/api/projects/${pid}/intents`);
-    expect(list.body).toEqual([{ id: c.body.id, name: 'INT_SEAT_HEATING', enabled: true, scenario_id: null, phrase_count: 0 }]);
+    expect(list.body).toEqual([{ id: c.body.id, name: 'INT_SEAT_HEATING', enabled: true, phrase_count: 0, hint: '', scenarios: [] }]);
   });
 
   it('PUT replaces phrases and entities', async () => {
@@ -31,7 +31,7 @@ describe('intents API', () => {
     expect(put.body).toMatchObject({
       enabled: false, comment: 'коммент', phrases: ['на минимум', 'на максимум'], entities: [{ entity_id: entityId, required: true }],
     });
-    expect((await request(app).get(`/api/projects/${pid}/intents`)).body[0].phrase_count).toBe(2);
+    expect((await request(app).get(`/api/projects/${pid}/intents`)).body[0]).toMatchObject({ phrase_count: 2, hint: 'коммент' });
     const again = await request(app).put(`/api/intents/${c.body.id}`).send({ name: 'INT_SET' });
     expect(again.body).toMatchObject({ phrases: [], entities: [], enabled: true });
   });
@@ -77,5 +77,65 @@ describe('intents API', () => {
     expect(rename.body.message).toContain('INT_A');
     expect((await request(app).put(`/api/intents/${b.body.id}`).send({ name: 'int_b' })).status).toBe(200);
     expect((await request(app).post('/api/scenarios/999/intents').send({ name: 'X' })).status).toBe(404);
+  });
+  async function twoScenarios() {
+    const ctx = await setup();
+    const mk = async (name: string) => (await request(ctx.app).post(`/api/projects/${ctx.pid}/scenarios`).send({ name })).body.id as number;
+    return { ...ctx, s1: await mk('S1'), s2: await mk('S2') };
+  }
+
+  it('connects one intent to several scenarios and lists them', async () => {
+    const { app, pid, s1, s2 } = await twoScenarios();
+    const a = await request(app).post(`/api/scenarios/${s1}/intents`).send({ name: 'INT_A' });
+    const put = await request(app).put(`/api/scenarios/${s2}/intents/${a.body.id}`).send({});
+    expect(put.status).toBe(200);
+    expect(put.body).toEqual({ id: a.body.id, is_global: false });
+    const list = (await request(app).get(`/api/projects/${pid}/intents`)).body;
+    expect(list[0].scenarios).toEqual([{ id: s1, name: 'S1' }, { id: s2, name: 'S2' }]);
+    expect((await request(app).get(`/api/scenarios/${s2}/intents`)).body[0]).toMatchObject({ name: 'INT_A', is_global: false });
+  });
+
+  it('keeps the global flag per scenario', async () => {
+    const { app, s1, s2 } = await twoScenarios();
+    const a = await request(app).post(`/api/scenarios/${s1}/intents`).send({ name: 'INT_A' });
+    await request(app).put(`/api/scenarios/${s1}/intents/${a.body.id}`).send({ is_global: true });
+    await request(app).put(`/api/scenarios/${s2}/intents/${a.body.id}`).send({});
+    expect((await request(app).get(`/api/scenarios/${s1}/intents`)).body[0].is_global).toBe(true);
+    expect((await request(app).get(`/api/scenarios/${s2}/intents`)).body[0].is_global).toBe(false);
+  });
+
+  it('refuses to disconnect an intent that rows still use, and to un-global one with global rows', async () => {
+    const { app, db, s1 } = await twoScenarios();
+    const a = (await request(app).post(`/api/scenarios/${s1}/intents`).send({ name: 'INT_A' })).body.id as number;
+    const row = Number(db.prepare('INSERT INTO scenario_steps(scenario_id, kind, intent_id) VALUES (?, ?, ?)').run(s1, 'transition', a).lastInsertRowid);
+    const refused = await request(app).delete(`/api/scenarios/${s1}/intents/${a}`);
+    expect(refused.status).toBe(409);
+    expect(refused.body.error).toBe('in_use');
+    db.prepare('DELETE FROM scenario_steps WHERE id = ?').run(row);
+    expect((await request(app).delete(`/api/scenarios/${s1}/intents/${a}`)).status).toBe(204);
+    expect((await request(app).get(`/api/scenarios/${s1}/intents`)).body).toEqual([]);
+    expect((await request(app).delete(`/api/scenarios/${s1}/intents/${a}`)).status).toBe(404);
+
+    await request(app).put(`/api/scenarios/${s1}/intents/${a}`).send({ is_global: true });
+    db.prepare('INSERT INTO scenario_steps(scenario_id, kind, intent_id) VALUES (?, ?, ?)').run(s1, 'global', a);
+    const unglobal = await request(app).put(`/api/scenarios/${s1}/intents/${a}`).send({ is_global: false });
+    expect(unglobal.status).toBe(409);
+    expect((await request(app).get(`/api/scenarios/${s1}/intents`)).body[0].is_global).toBe(true);
+  });
+
+  it('does not connect an intent of another project', async () => {
+    const { app, db, s1 } = await twoScenarios();
+    const foreign = await request(app).post(`/api/projects/${createProject(db, 'Other')}/intents`).send({ name: 'X' });
+    expect((await request(app).put(`/api/scenarios/${s1}/intents/${foreign.body.id}`).send({})).status).toBe(404);
+    expect((await request(app).put(`/api/scenarios/999/intents/${foreign.body.id}`).send({})).status).toBe(404);
+  });
+
+  it('deleting an intent removes its global rows', async () => {
+    const { app, db, s1 } = await twoScenarios();
+    const a = (await request(app).post(`/api/scenarios/${s1}/intents`).send({ name: 'INT_A' })).body.id as number;
+    db.prepare('INSERT INTO scenario_steps(scenario_id, kind, intent_id) VALUES (?, ?, ?)').run(s1, 'global', a);
+    db.prepare('INSERT INTO scenario_steps(scenario_id, kind, intent_id) VALUES (?, ?, ?)').run(s1, 'transition', a);
+    await request(app).delete(`/api/intents/${a}`);
+    expect(db.prepare('SELECT kind FROM scenario_steps').all()).toEqual([{ kind: 'transition' }]);
   });
 });

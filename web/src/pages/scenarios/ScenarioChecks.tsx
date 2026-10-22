@@ -1,38 +1,46 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Link } from 'react-router-dom';
+import { Check, TriangleAlert } from 'lucide-react';
 import { usePath } from '@/hooks/project';
 import { cn } from '@/lib/utils';
 import type { Analysis } from '@/lib/states';
 import type { IntentListItem, PromptListItem, Step } from '@/lib/types';
 import type { ScenarioTab } from './ScenarioForm';
 
-export interface Check { level: 'error' | 'warn' | 'info'; text: string; tab: ScenarioTab }
+export type CheckArea = 'description' | 'intents' | 'prompts' | 'dependencies' | 'logic';
+export interface Check { level: 'error' | 'warn' | 'info'; text: string; tab: ScenarioTab; area: CheckArea }
 
 /** Проверка готовности сценария перед экспортом. Замечания по вкладкам помечаются именем вкладки, если их несколько. */
 export function buildChecks(p: {
-  description: string; parts: { name: string; steps: Step[]; analysis: Analysis }[]; intents: IntentListItem[]; prompts: PromptListItem[];
+  description: string; dependencies?: { name: string; empty: boolean }[]; parts: { name: string; steps: Step[]; analysis: Analysis }[]; intents: IntentListItem[]; prompts: PromptListItem[];
 }): Check[] {
   const out: Check[] = [];
-  if (!p.description.trim()) out.push({ level: 'warn', text: 'Не заполнено описание сценария', tab: 'general' });
-  if (p.intents.length === 0) out.push({ level: 'warn', text: 'У сценария нет интентов', tab: 'intents' });
+  if (!p.description.trim()) out.push({ level: 'warn', text: 'Не заполнено описание сценария', tab: 'general', area: 'description' });
+  if (p.intents.length === 0) out.push({ level: 'warn', text: 'У сценария нет интентов', tab: 'intents', area: 'intents' });
   for (const i of p.intents) {
-    if (i.enabled && i.phrase_count === 0) out.push({ level: 'error', text: `Интент «${i.name}» включён, но в нём нет фраз`, tab: 'intents' });
+    if (i.enabled && i.phrase_count === 0) out.push({ level: 'error', text: `Интент «${i.name}» включён, но в нём нет фраз`, tab: 'intents', area: 'intents' });
+  }
+  for (const d of p.dependencies ?? []) {
+    if (d.empty) out.push({ level: 'warn', text: `Зависимость «${d.name}» без значений`, tab: 'general', area: 'dependencies' });
   }
   for (const pr of p.prompts) {
-    if (!pr.has_answer) out.push({ level: 'warn', text: `Промпт «${pr.name}»: не заполнен полный ответ`, tab: 'prompts' });
-    if (pr.step_count === 0) out.push({ level: 'info', text: `Промпт «${pr.name}» нигде не используется в таблицах`, tab: 'prompts' });
+    if (!pr.has_answer) out.push({ level: 'warn', text: `Промпт «${pr.name}»: не заполнен полный ответ`, tab: 'prompts', area: 'prompts' });
+    if (pr.step_count === 0) out.push({ level: 'info', text: `Промпт «${pr.name}» нигде не используется в таблицах`, tab: 'prompts', area: 'prompts' });
   }
   const usedIntents = new Set(p.parts.flatMap((x) => x.steps.map((s) => s.intent_id)));
   for (const i of p.intents) {
-    if (!usedIntents.has(i.id)) out.push({ level: 'info', text: `Интент «${i.name}» не используется в сценарной логике`, tab: 'logic' });
+    if (!usedIntents.has(i.id)) out.push({ level: 'info', text: `Интент «${i.name}» не используется в сценарной логике`, tab: 'logic', area: 'logic' });
+  }
+  const globalUsed = new Set(p.parts.flatMap((x) => x.steps.filter((s) => s.kind === 'global').map((s) => s.intent_id)));
+  for (const i of p.intents) {
+    if (i.is_global && !globalUsed.has(i.id)) out.push({ level: 'info', text: `У глобального интента «${i.name}» нет глобальных переходов`, tab: 'logic', area: 'logic' });
   }
   for (const part of p.parts) {
     const at = (level: Check['level'], text: string) =>
-      out.push({ level, text: p.parts.length > 1 ? `[${part.name}] ${text}` : text, tab: 'logic' });
+      out.push({ level, text: p.parts.length > 1 ? `[${part.name}] ${text}` : text, tab: 'logic', area: 'logic' });
     const { analysis } = part;
+    const globals = part.steps.filter((s) => s.kind === 'global');
+    if (globals.some((s) => s.intent_id === null)) at('error', 'Есть глобальный переход без интента');
+    if (globals.some((s) => !s.next_states.trim())) at('warn', 'У глобального перехода не указано следующее состояние');
     if (!part.steps.some((s) => s.kind === 'transition')) at('error', 'В таблице переходов нет ни одной строки');
     for (const d of analysis.dangling) at('warn', `У состояния «${d}» нет исходящих переходов (если оно не конечное, добавьте их)`);
     for (const u of analysis.unreachable) at('warn', `Состояние «${u}» недостижимо: на него никто не ссылается`);
@@ -49,52 +57,44 @@ export function buildChecks(p: {
   return out.sort((a, b) => order[a.level] - order[b.level]);
 }
 
-const ICON = {
-  error: <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />,
-  warn: <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />,
-  info: <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />,
-};
+export interface Criterion { area: CheckArea; ok: boolean; text: string; problems: Check[]; tab: ScenarioTab }
 
-export function ScenarioChecks({ scenarioId, checks }: { scenarioId: number; checks: Check[] }) {
-  const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
+/** Критерии готовности для панели: критерий выполнен, если по его области нет замечаний уровня error/warn. */
+export function buildCriteria(checks: Check[], counts: { intents: number; prompts: number; dependencies: number }): Criterion[] {
+  const of = (area: CheckArea) => checks.filter((c) => c.area === area && c.level !== 'info');
+  const make = (area: CheckArea, tab: ScenarioTab, ok: string): Criterion => {
+    const problems = of(area);
+    return { area, ok: problems.length === 0, text: ok, problems, tab };
+  };
+  return [
+    make('description', 'general', 'Описание заполнено'),
+    make('intents', 'intents', `Интенты с фразами: ${counts.intents}`),
+    make('prompts', 'prompts', `Промпты с ответами: ${counts.prompts}`),
+    make('dependencies', 'general', counts.dependencies ? 'Зависимости со значениями' : 'Зависимости не заданы'),
+    make('logic', 'logic', 'Сценарная логика без ошибок'),
+  ];
+}
+
+
+/** Пилюля статуса в шапке сценария; при замечаниях ведёт на первую вкладку с ними. */
+export function ReadinessPill({ scenarioId, criteria }: { scenarioId: number; criteria: Criterion[] }) {
   const path = usePath();
-  const problems = checks.filter((c) => c.level !== 'info').length;
-  const hasErrors = checks.some((c) => c.level === 'error');
+  const failed = criteria.filter((c) => !c.ok);
+  const ready = failed.length === 0;
+  const title = ready
+    ? 'Все проверки пройдены'
+    : failed.flatMap((c) => c.problems.slice(0, 2).map((p) => p.text)).slice(0, 6).join('\n');
   return (
-    <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className={cn(hasErrors && 'border-destructive/50 text-destructive')}>
-        {problems === 0 ? <CheckCircle2 className="size-4 text-emerald-600" /> : <ClipboardCheck className="size-4" />}
-        {problems === 0 ? 'Готов к экспорту' : `Проверка: ${problems}`}
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Готовность сценария</DialogTitle>
-          </DialogHeader>
-          {checks.length === 0 ? (
-            <p className="flex items-center gap-2 text-sm"><CheckCircle2 className="size-4 text-emerald-600" /> Замечаний нет — сценарий можно экспортировать.</p>
-          ) : (
-            <ul className="max-h-[60vh] space-y-1 overflow-y-auto">
-              {checks.map((c, i) => (
-                <li key={i}>
-                  <button
-                    type="button"
-                    className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-                    onClick={() => {
-                      setOpen(false);
-                      navigate(path(`/scenarios/${scenarioId}/${c.tab}`));
-                    }}
-                  >
-                    {ICON[c.level]}
-                    <span>{c.text}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+    <Link
+      to={path(`/scenarios/${scenarioId}/${ready ? 'general' : failed[0].tab}`)}
+      title={title}
+      className={cn(
+        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        ready ? 'bg-success-bg text-success' : 'bg-warning-bg text-warning',
+      )}
+    >
+      {ready ? <Check className="size-3.5" /> : <TriangleAlert className="size-3.5" />}
+      {ready ? <>Готов<span className="max-sm:hidden"> к экспорту</span></> : 'Не готов'}
+    </Link>
   );
 }

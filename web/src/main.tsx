@@ -4,8 +4,9 @@ import { createRoot } from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AuthGate } from '@/components/AuthGate';
 import { Toaster } from '@/components/ui/sonner';
-import { initBackend } from '@/lib/backend';
+import { AuthProvider } from '@/hooks/useAuth';
 import App from './App';
 
 const onError = (e: Error) => toast.error(e.message);
@@ -15,15 +16,17 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: false } },
 });
 
-initBackend().then(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <HashRouter>
-          <App />
-          <Toaster />
-        </HashRouter>
-      </QueryClientProvider>
-    </StrictMode>,
-  );
-});
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AuthGate>
+          <HashRouter>
+            <App />
+          </HashRouter>
+        </AuthGate>
+        <Toaster />
+      </AuthProvider>
+    </QueryClientProvider>
+  </StrictMode>,
+);

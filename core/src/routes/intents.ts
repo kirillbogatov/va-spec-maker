@@ -1,11 +1,12 @@
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
+import { assertSameProject, connect, disconnect, setGlobal } from '../links';
 import { assertUniqueName } from '../unique';
 import { cleanStrings, optString, parseId, requireString } from '../validate';
 
 interface IntentRow {
-  id: number; project_id: number; scenario_id: number | null; name: string; enabled: number; comment: string;
+  id: number; project_id: number; name: string; enabled: number; comment: string;
 }
 
 export function intentsRouter(db: Db): RouterT {
@@ -13,7 +14,7 @@ export function intentsRouter(db: Db): RouterT {
 
   const load = (id: number) => {
     const row = db
-      .prepare('SELECT id, project_id, scenario_id, name, enabled, comment FROM intents WHERE id = ?')
+      .prepare('SELECT id, project_id, name, enabled, comment FROM intents WHERE id = ?')
       .get(id) as IntentRow | undefined;
     if (!row) throw notFound('Интент');
     return {
@@ -25,42 +26,85 @@ export function intentsRouter(db: Db): RouterT {
     };
   };
 
-  const list = (where: string, param: number) =>
-    (
-      db
-        .prepare(
-          `SELECT i.id, i.name, i.enabled, i.scenario_id,
-                  (SELECT COUNT(*) FROM intent_phrases p WHERE p.intent_id = i.id) AS phrase_count
-           FROM intents i WHERE ${where} ORDER BY i.name`,
-        )
-        .all(param) as { id: number; name: string; enabled: number; scenario_id: number | null; phrase_count: number }[]
-    ).map((x) => ({ ...x, enabled: !!x.enabled }));
+  const scenariosOf = (id: number) =>
+    db
+      .prepare('SELECT s.id, s.name FROM scenario_intents si JOIN scenarios s ON s.id = si.scenario_id WHERE si.intent_id = ? ORDER BY s.id')
+      .all(id) as { id: number; name: string }[];
 
-  const create = (pid: number, scenarioId: number | null, body: any) => {
-    const name = requireString(body?.name, 'Название');
-    assertUniqueName(db, 'intents', pid, name, 'Интент');
-    const info = db.prepare('INSERT INTO intents(project_id, scenario_id, name) VALUES (?, ?, ?)').run(pid, scenarioId, name);
-    return { id: Number(info.lastInsertRowid), name };
-  };
+  type ListRow = { id: number; name: string; enabled: number; phrase_count: number; hint: string; is_global?: number };
+  const decorate = (rows: ListRow[]) =>
+    rows.map(({ is_global, ...x }) => ({
+      ...x,
+      enabled: !!x.enabled,
+      ...(is_global === undefined ? {} : { is_global: !!is_global }),
+      scenarios: scenariosOf(x.id),
+    }));
+
+  const PHRASES = '(SELECT COUNT(*) FROM intent_phrases p WHERE p.intent_id = i.id)';
+  /** Краткое описание для выпадающих списков: комментарий, иначе первая фраза (как в меню). */
+  const HINT = `COALESCE(NULLIF(TRIM(i.comment), ''), (SELECT p.text FROM intent_phrases p WHERE p.intent_id = i.id AND TRIM(p.text) <> '' ORDER BY p.position, p.id LIMIT 1), '')`;
 
   r.get('/projects/:pid/intents', (req, res) => {
-    res.json(list('i.project_id = ?', parseId(req.params.pid)));
+    const rows = db
+      .prepare(`SELECT i.id, i.name, i.enabled, ${PHRASES} AS phrase_count, ${HINT} AS hint FROM intents i WHERE i.project_id = ? ORDER BY i.name`)
+      .all(parseId(req.params.pid)) as ListRow[];
+    res.json(decorate(rows));
   });
 
+  /** Интенты, подключённые к сценарию, в порядке подключения. */
   r.get('/scenarios/:sid/intents', (req, res) => {
-    res.json(list('i.scenario_id = ?', parseId(req.params.sid)));
+    const rows = db
+      .prepare(
+        `SELECT i.id, i.name, i.enabled, si.is_global, ${PHRASES} AS phrase_count, ${HINT} AS hint
+         FROM scenario_intents si JOIN intents i ON i.id = si.intent_id
+         WHERE si.scenario_id = ? ORDER BY si.position, si.id`,
+      )
+      .all(parseId(req.params.sid)) as ListRow[];
+    res.json(decorate(rows));
   });
+
+  const create = (pid: number, body: any) => {
+    const name = requireString(body?.name, 'Название');
+    assertUniqueName(db, 'intents', pid, name, 'Интент');
+    const info = db.prepare('INSERT INTO intents(project_id, name) VALUES (?, ?)').run(pid, name);
+    return { id: Number(info.lastInsertRowid), name };
+  };
 
   r.post('/projects/:pid/intents', (req, res) => {
     const pid = parseId(req.params.pid);
     if (!db.prepare('SELECT 1 FROM projects WHERE id = ?').get(pid)) throw notFound('Проект');
-    res.status(201).json(create(pid, null, req.body));
+    res.status(201).json(create(pid, req.body));
   });
 
+  /** Создаёт интент в проекте и сразу подключает его к сценарию. */
   r.post('/scenarios/:sid/intents', (req, res) => {
-    const s = db.prepare('SELECT project_id FROM scenarios WHERE id = ?').get(parseId(req.params.sid)) as { project_id: number } | undefined;
+    const sid = parseId(req.params.sid);
+    const s = db.prepare('SELECT project_id FROM scenarios WHERE id = ?').get(sid) as { project_id: number } | undefined;
     if (!s) throw notFound('Сценарий');
-    res.status(201).json(create(s.project_id, parseId(req.params.sid), req.body));
+    const created = db.transaction(() => {
+      const c = create(s.project_id, req.body);
+      connect(db, 'intent', sid, c.id);
+      return c;
+    })();
+    res.status(201).json(created);
+  });
+
+  /** Подключает существующий интент (если ещё не подключён) и, если передан is_global, меняет флаг. */
+  r.put('/scenarios/:sid/intents/:iid', (req, res) => {
+    const sid = parseId(req.params.sid);
+    const iid = parseId(req.params.iid);
+    assertSameProject(db, 'intent', sid, iid);
+    db.transaction(() => {
+      connect(db, 'intent', sid, iid);
+      if (typeof req.body?.is_global === 'boolean') setGlobal(db, sid, iid, req.body.is_global);
+    })();
+    const row = db.prepare('SELECT is_global FROM scenario_intents WHERE scenario_id = ? AND intent_id = ?').get(sid, iid) as { is_global: number };
+    res.json({ id: iid, is_global: !!row.is_global });
+  });
+
+  r.delete('/scenarios/:sid/intents/:iid', (req, res) => {
+    disconnect(db, 'intent', parseId(req.params.sid), parseId(req.params.iid));
+    res.status(204).end();
   });
 
   r.get('/intents/:id', (req, res) => {
@@ -101,6 +145,7 @@ export function intentsRouter(db: Db): RouterT {
   r.delete('/intents/:id', (req, res) => {
     const id = parseId(req.params.id);
     load(id);
+    db.prepare("DELETE FROM scenario_steps WHERE kind = 'global' AND intent_id = ?").run(id);
     db.prepare('DELETE FROM intents WHERE id = ?').run(id);
     res.status(204).end();
   });

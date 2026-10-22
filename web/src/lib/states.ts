@@ -30,7 +30,9 @@ const conditionSignature = (s: Step) =>
   JSON.stringify([s.conditions.map((c) => `${c.entity_id !== undefined ? `#${c.entity_id}` : c.dep}${c.op ?? '='}${c.value}`).sort(), s.condition.trim()]);
 const hasNoConditions = (s: Step) => s.conditions.length === 0 && !s.condition.trim();
 
-export function analyzeSteps(steps: Step[], intentName: (id: number | null) => string | null, info: Layout = {}): Analysis {
+export function analyzeSteps(all: Step[], intentName: (id: number | null) => string | null, info: Layout = {}): Analysis {
+  // Глобальные строки — не часть графа состояний: у них нет исходного состояния
+  const steps = all.filter((s) => s.kind !== 'global');
   const states: string[] = [];
   for (const s of steps) {
     const st = s.state.trim();
@@ -61,17 +63,23 @@ export function analyzeSteps(steps: Step[], intentName: (id: number | null) => s
         }
       }
       if (s.kind === 'transition' && from) {
-        edges.push({ id: `${s.key ?? index}|${t}`, stepKey: s.key, from, to: t, label: s.any_intent ? 'Любой интент' : intentName(s.intent_id) ?? '' });
+        edges.push({ id: `${s.key ?? index}|${t}`, stepKey: s.key, from, to: t, label: intentName(s.intent_id) ?? '' });
       }
     }
   });
+
+  // Цель глобального перехода достижима из любого состояния
+  for (const g of all) {
+    if (g.kind !== 'global') continue;
+    for (const t of splitNext(g.next_states)) if (STATE_LIKE.test(t)) referenced.add(t);
+  }
 
   // Детерминизм: из одного состояния по одному интенту условия должны различаться,
   // а переход без условий (запасной) — стоять последним.
   const groups = new Map<string, Step[]>();
   for (const s of steps) {
-    if (s.kind !== 'transition' || !s.state.trim() || (s.intent_id === null && !s.any_intent)) continue;
-    const k = `${s.state.trim()}\u0000${s.any_intent ? 'any' : s.intent_id}`;
+    if (s.kind !== 'transition' || !s.state.trim() || s.intent_id === null) continue;
+    const k = `${s.state.trim()}\u0000${s.intent_id}`;
     groups.set(k, [...(groups.get(k) ?? []), s]);
   }
   for (const group of groups.values()) {
@@ -96,6 +104,21 @@ export function analyzeSteps(steps: Step[], intentName: (id: number | null) => s
     stateIssues.set(name, [{ level: 'warn', text: 'Не выбран ответ ассистента' }]);
   }
   return { states, edges, unreachable, dangling: [...dangling], issues, stateIssues };
+}
+
+/** Замечания по строкам глобальных переходов; known — состояния схемы. Ключ — step.key. */
+export function globalIssues(steps: Step[], known: string[]): Map<string, StepIssue[]> {
+  const out = new Map<string, StepIssue[]>();
+  for (const s of steps) {
+    if (s.kind !== 'global' || !s.key) continue;
+    const list: StepIssue[] = [];
+    if (s.intent_id === null) list.push({ level: 'error', text: 'Не выбран интент' });
+    const targets = splitNext(s.next_states);
+    if (targets.length === 0) list.push({ level: 'warn', text: 'Не указано следующее состояние' });
+    for (const t of targets) if (!TERMINAL.test(t) && !known.includes(t)) list.push({ level: 'warn', text: `Состояния «${t}» нет в схеме` });
+    if (list.length) out.set(s.key, list);
+  }
+  return out;
 }
 
 export interface Placed { name: string; x: number; y: number; layer: number }

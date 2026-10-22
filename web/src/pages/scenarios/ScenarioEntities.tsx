@@ -1,12 +1,19 @@
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { SearchSelect } from '@/components/SearchSelect';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Section, SectionAction } from '@/components/Section';
+import { CreateDialog } from '@/components/CreateDialog';
+import { TypeToken } from '@/components/TypeToken';
+import { useProjectId } from '@/hooks/project';
+import { api } from '@/lib/api';
+import { usePrefixes } from '@/lib/prefixes';
 import type { EntityListItem, ScenarioEntity } from '@/lib/types';
 import { cn, GHOST } from '@/lib/utils';
+import { AddButton, Card, HEAD, ROW } from './Card';
 
 interface Props {
   value: ScenarioEntity[];
@@ -14,83 +21,91 @@ interface Props {
   onChange: (value: ScenarioEntity[]) => void;
 }
 
+const COLS = 'md:grid-cols-[minmax(0,190px)_100px_130px_minmax(0,1fr)_32px]';
+
+const NEW = '__new__';
+
 export function ScenarioEntities({ value, entities, onChange }: Props) {
+  const projectId = useProjectId();
+  const prefixes = usePrefixes(projectId);
+  const qc = useQueryClient();
+  // Индекс строки, для которой создаётся новая сущность
+  const [creatingFor, setCreatingFor] = useState<number | null>(null);
   const patch = (i: number, p: Partial<ScenarioEntity>) => onChange(value.map((e, j) => (j === i ? { ...e, ...p } : e)));
   const options = entities.map((e) => ({ value: String(e.id), label: e.name }));
+  const label = (v: string | null) => options.find((o) => o.value === v)?.label;
 
   return (
-    <Section
-      title="Сущности"
+    <>
+    <Card
+      flush
+      title="Сущности сценария"
       action={
-        <SectionAction onClick={() => onChange([...value, { key: crypto.randomUUID(), entity_id: null, followup_prompt: '', required: false, is_array: false }])}>
-          Добавить сущность
-        </SectionAction>
+        <AddButton onClick={() => onChange([...value, { key: crypto.randomUUID(), entity_id: null, followup_prompt: '', required: false, is_array: false }])}>
+          Добавить
+        </AddButton>
       }
     >
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-72">Сущность</TableHead>
-            <TableHead className="w-40">Обязательно</TableHead>
-            <TableHead className="w-64">Массив (несколько значений в интенте)</TableHead>
-            <TableHead>Уточняющий вопрос</TableHead>
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {value.map((e, i) => (
-            <TableRow key={e.key ?? i}>
-              <TableCell>
-                <Select
-                  items={options}
-                  value={e.entity_id === null ? null : String(e.entity_id)}
-                  onValueChange={(v) => patch(i, { entity_id: v == null ? null : Number(v) })}
-                >
-                  <SelectTrigger className={cn(GHOST, 'w-64')}><SelectValue placeholder="Выберите сущность" /></SelectTrigger>
-                  <SelectContent>
-                    {options
-                      .filter((o) => o.value === String(e.entity_id) || !value.some((x) => String(x.entity_id) === o.value))
-                      .map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell className="px-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch checked={e.required} onCheckedChange={(required) => patch(i, { required })} />
-                  {e.required ? 'Да' : 'Нет'}
-                </label>
-              </TableCell>
-              <TableCell className="px-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch checked={e.is_array} onCheckedChange={(is_array) => patch(i, { is_array })} aria-label="Массив" />
-                  {e.is_array ? 'Да' : 'Нет'}
-                </label>
-              </TableCell>
-              <TableCell>
-                <Input
-                  className={GHOST}
-                  placeholder="Например: Для какого сиденья включить обогрев?"
-                  aria-label="Уточняющий вопрос"
-                  value={e.followup_prompt}
-                  onChange={(ev) => patch(i, { followup_prompt: ev.target.value })}
-                />
-              </TableCell>
-              <TableCell>
-                <Button variant="ghost" size="icon" aria-label="Убрать сущность" onClick={() => onChange(value.filter((_, j) => j !== i))}>
-                  <Trash2 className="size-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-          {value.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={5} className="px-3 text-sm text-muted-foreground">Сущностей нет</TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </Section>
+      <div className={cn(ROW, HEAD, COLS)}>
+        <span>Сущность</span>
+        <span>Обязательна</span>
+        <span>Несколько значений</span>
+        <span>Уточняющий вопрос</span>
+        <span />
+      </div>
+      {value.map((e, i) => (
+        <div key={e.key ?? i} className={cn(ROW, COLS)}>
+          <SearchSelect
+            options={[...options.filter((o) => o.value === String(e.entity_id) || !value.some((x) => String(x.entity_id) === o.value)), { value: NEW, label: '+ Новая сущность…' }]}
+            value={e.entity_id === null ? null : String(e.entity_id)}
+            onChange={(v) => (v === NEW ? setCreatingFor(i) : patch(i, { entity_id: v == null ? null : Number(v) }))}
+            label="Сущность"
+            className={cn(GHOST, 'w-full max-md:h-10 md:-ml-2.5 md:w-[calc(100%+0.625rem)]')}
+            renderValue={(o) => (o == null ? <span className="text-muted-foreground">Выберите сущность</span> : <TypeToken kind="entity">{o.label}</TypeToken>)}
+          />
+          <label className="flex min-h-8 items-center gap-2 px-2.5 text-sm max-md:min-h-10">
+            <Switch checked={e.required} onCheckedChange={(required) => patch(i, { required })} />
+            <span className="md:sr-only">Обязательна</span>
+          </label>
+          <label className="flex min-h-8 items-center gap-2 px-2.5 text-sm max-md:min-h-10">
+            <Switch checked={e.is_array} onCheckedChange={(is_array) => patch(i, { is_array })} />
+            <span className="md:sr-only">Несколько значений</span>
+          </label>
+          <Textarea
+            rows={1}
+            className={cn(GHOST, 'min-h-8 resize-none rounded-md py-1 text-sm max-md:min-h-10 md:text-sm')}
+            placeholder="Например: Для какого сиденья включить обогрев?"
+            aria-label="Уточняющий вопрос"
+            value={e.followup_prompt}
+            onChange={(ev) => patch(i, { followup_prompt: ev.target.value })}
+          />
+          <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label="Убрать сущность" onClick={() => onChange(value.filter((_, j) => j !== i))}>
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ))}
+      {value.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Сущностей нет. Добавьте параметры, которые ассистент должен узнать у пользователя.</p>}
+    </Card>
+    <CreateDialog
+      open={creatingFor !== null}
+      onOpenChange={(o) => !o && setCreatingFor(null)}
+      title="Новая сущность"
+      prefix={prefixes.entity}
+      withType
+      existingNames={entities.map((e) => e.name)}
+      onCreate={(name, kind) => {
+        // CreateDialog сам закрывается после onCreate и ждёт синхронный обработчик
+        const row = creatingFor;
+        setCreatingFor(null);
+        api.entities
+          .create(projectId, name, kind)
+          .then((created) => {
+            qc.invalidateQueries({ queryKey: ['entities'] });
+            if (row !== null) patch(row, { entity_id: created.id });
+          })
+          .catch((e: Error) => toast.error(e.message));
+      }}
+    />
+    </>
   );
 }

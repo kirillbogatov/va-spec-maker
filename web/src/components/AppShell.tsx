@@ -1,64 +1,189 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { BookOpen, Search, Workflow } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { BookOpen, LayoutGrid, MessageSquareText, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Settings, Shapes, SlidersHorizontal, Workflow, type LucideIcon } from 'lucide-react';
 import { CommandPalette } from '@/components/CommandPalette';
 import { GlobalSaveStatus } from '@/components/GlobalSaveStatus';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
-import { usePath } from '@/hooks/project';
-import { DICTIONARIES } from '@/pages/DictionariesLayout';
+import { UserMenu } from '@/components/UserMenu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { usePath, useProject, useProjectId } from '@/hooks/project';
+import { api } from '@/lib/api';
+import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
 
-const linkClass = (isActive: boolean) =>
+const DICTIONARY: { to: string; label: string; icon: LucideIcon; key: 'intents' | 'entities' | 'prompts' | 'deps' }[] = [
+  { to: '/lists/intents', label: 'Интенты', icon: MessageSquareText, key: 'intents' },
+  { to: '/entities', label: 'Сущности', icon: Shapes, key: 'entities' },
+  { to: '/lists/prompts', label: 'Промпты', icon: ScrollText, key: 'prompts' },
+  { to: '/dependencies', label: 'Зависимости', icon: SlidersHorizontal, key: 'deps' },
+];
+
+const itemClass = (active: boolean) =>
   cn(
-    'flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
-    isActive && 'bg-brand/10 text-brand hover:bg-brand/10 hover:text-brand',
+    'flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+    active && 'bg-accent font-medium text-foreground hover:bg-accent',
   );
+
+function useCounts() {
+  const projectId = useProjectId();
+  const scenarios = useQuery({ queryKey: ['scenarios', projectId], queryFn: () => api.scenarios.list(projectId) });
+  const intents = useQuery({ queryKey: ['intents', projectId], queryFn: () => api.intents.list(projectId) });
+  const entities = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId) });
+  const prompts = useQuery({ queryKey: ['prompts', projectId], queryFn: () => api.prompts.list(projectId) });
+  const deps = useQuery({ queryKey: ['dependency-dictionary', projectId], queryFn: () => api.dependencyDictionary.list(projectId) });
+  return {
+    scenarios: scenarios.data ?? [],
+    counts: { intents: intents.data?.length, entities: entities.data?.length, prompts: prompts.data?.length, deps: deps.data?.length },
+  };
+}
 
 export function AppShell() {
   const path = usePath();
+  const { project } = useProject();
   const { pathname } = useLocation();
-  const isActive = (m: string) => pathname === m || pathname.startsWith(`${m}/`);
+  const navigate = useNavigate();
+  const { scenarios, counts } = useCounts();
   const [searching, setSearching] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sidebar-collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggle = () =>
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem('sidebar-collapsed', c ? '0' : '1');
+      } catch {
+        /* хранилище недоступно — состояние живёт до перезагрузки */
+      }
+      return !c;
+    });
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setSearching((s) => !s);
-      }
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      setSearching(true);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, []);
+  const on = (m: string) => pathname === m || pathname.startsWith(`${m}/`);
+  const onScenarios = on(path('/scenarios'));
+  const onDictionary = DICTIONARY.some((d) => on(path(d.to)));
+
   return (
-    <div className="flex h-screen flex-col md:flex-row">
-      <aside className="flex shrink-0 flex-col gap-4 border-b bg-background p-4 md:w-60 md:border-b-0 md:border-r">
-        <Link to="/" className="flex items-center gap-2 text-base font-semibold tracking-tight">
-          <span className="grid size-7 place-items-center rounded-lg bg-brand text-sm font-bold text-white">V</span>
-          VA Spec Maker
-        </Link>
-        <ProjectSwitcher />
-        <nav className="flex gap-1 md:flex-col" aria-label="Основная навигация">
-          <NavLink to={path('/scenarios')} className={linkClass(isActive(path('/scenarios')))}>
-            <Workflow className="size-4" /> Сценарии
-          </NavLink>
-          <NavLink to={path(DICTIONARIES[0].to)} className={linkClass(DICTIONARIES.some((d) => isActive(path(d.to))))}>
-            <BookOpen className="size-4" /> Справочники
-          </NavLink>
-        </nav>
-        <div className="mt-auto hidden flex-col gap-3 md:flex">
-          <GlobalSaveStatus />
+    <div className="flex h-dvh flex-col md:flex-row">
+      <aside className={cn('hidden shrink-0 flex-col gap-4 overflow-hidden border-r bg-background p-3 md:flex', collapsed ? 'w-16 items-center' : 'w-60')}>
+        <div className={cn('flex items-center gap-2', collapsed ? 'flex-col' : 'justify-between px-1')}>
+          <Link to="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight" title="Все проекты">
+            <Logo className="size-7" />
+            {!collapsed && 'VA Spec Maker'}
+          </Link>
           <button
             type="button"
-            onClick={() => setSearching(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border bg-background px-3 text-sm text-muted-foreground hover:bg-muted"
+            onClick={toggle}
+            aria-label={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
+            title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
+            className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <Search className="size-4" /> Поиск <kbd className="ml-auto rounded border bg-muted px-1 text-[11px]">Ctrl K</kbd>
+            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
           </button>
         </div>
+        {!collapsed && <ProjectSwitcher />}
+        <button
+          type="button"
+          onClick={() => setSearching(true)}
+          aria-label="Поиск"
+          title="Поиск"
+          className={cn(
+            'inline-flex h-8 items-center gap-2 rounded-md border bg-muted/50 text-sm text-muted-foreground hover:bg-muted',
+            collapsed ? 'w-8 justify-center' : 'px-2.5',
+          )}
+        >
+          <Search className="size-4" />
+          {!collapsed && (
+            <>
+              Поиск <kbd className="ml-auto rounded border bg-background px-1 font-mono text-[11px]">/</kbd>
+            </>
+          )}
+        </button>
+
+        <nav className="flex min-h-0 flex-1 flex-col gap-4" aria-label="Основная навигация">
+          <div className="flex shrink-0 flex-col gap-0.5">
+            {!collapsed && <span className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-faint">Словарь проекта</span>}
+            {DICTIONARY.map((d) => (
+              <NavLink key={d.to} to={path(d.to)} title={d.label} aria-label={d.label} className={({ isActive }) => cn(itemClass(isActive || on(path(d.to))), collapsed && 'w-8 justify-center px-0')}>
+                <d.icon className="size-4 shrink-0" />
+                {!collapsed && (
+                  <>
+                    {d.label}
+                    {counts[d.key] !== undefined && <span className="ml-auto text-xs tabular-nums text-faint">{counts[d.key]}</span>}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+
+          <div className="flex shrink-0 flex-col gap-0.5 border-t border-border pt-3">
+            <NavLink to={path('/scenarios')} title="Сценарии" aria-label="Сценарии" className={() => cn(itemClass(onScenarios), collapsed && 'w-8 justify-center px-0')}>
+              <Workflow className="size-4" />
+              {!collapsed && (
+                <>
+                  Сценарии
+                  <span className="ml-auto text-xs tabular-nums text-faint">{scenarios.length}</span>
+                </>
+              )}
+            </NavLink>
+          </div>
+
+          <div className="min-h-0 flex-1" />
+        </nav>
+
+        <div className="flex shrink-0 flex-col gap-2 px-1">
+          {!collapsed && <GlobalSaveStatus />}
+          <NavLink to={path('/settings')} title="Настройки" aria-label="Настройки" className={() => cn(itemClass(on(path('/settings'))), collapsed && 'w-8 justify-center px-0')}>
+            <Settings className="size-4" />
+            {!collapsed && 'Настройки'}
+          </NavLink>
+          <UserMenu variant="sidebar" collapsed={collapsed} />
+        </div>
       </aside>
+
       <main className="min-h-0 min-w-0 flex-1 bg-page">
         <Outlet />
       </main>
+
+      <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-5 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
+        <NavLink to={path('/scenarios')} className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground', onScenarios && 'font-medium text-brand')}>
+          <Workflow className="size-5" /> Сценарии
+        </NavLink>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<button type="button" className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground', onDictionary && 'font-medium text-brand')} />}>
+            <BookOpen className="size-5" /> Словарь
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" side="top">
+            {DICTIONARY.map((d) => (
+              <DropdownMenuItem key={d.to} onClick={() => navigate(path(d.to))}>
+                {d.label}
+                {counts[d.key] !== undefined && <span className="ml-auto pl-4 text-xs text-muted-foreground">{counts[d.key]}</span>}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <button type="button" onClick={() => setSearching(true)} className="flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground">
+          <Search className="size-5" /> Поиск
+        </button>
+        <Link to="/" className="flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground">
+          <LayoutGrid className="size-5" /> Проекты
+        </Link>
+        <UserMenu variant="tab" />
+      </nav>
+
       <CommandPalette open={searching} onOpenChange={setSearching} />
     </div>
   );

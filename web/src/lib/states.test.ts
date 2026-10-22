@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeSteps, layoutGraph, splitNext } from './states';
+import { analyzeSteps, globalIssues, layoutGraph, splitNext } from './states';
 import type { Step } from './types';
 
 const step = (p: Partial<Step>): Step => ({
@@ -26,6 +26,17 @@ describe('analyzeSteps', () => {
     expect(r.dangling).toEqual(['ST_MISSING']);
     expect(r.unreachable).toEqual(['ST_LONELY']);
     expect(r.issues.get(b.key!)?.[0].level).toBe('warn');
+  });
+  it('не считает глобальные строки переходами, но их цели достижимы', () => {
+    const a = step({ state: 'ST_A', next_states: 'ST_B' });
+    const b = step({ state: 'ST_B', next_states: 'END' });
+    const c = step({ state: 'ST_C', next_states: 'END' });
+    const g = step({ kind: 'global', state: '', intent_id: 7, next_states: 'ST_C' });
+    const r = analyzeSteps([a, b, c, g], name);
+    expect(r.states).toEqual(['ST_A', 'ST_B', 'ST_C']);
+    expect(r.unreachable).toEqual([]);
+    expect(r.issues.has(g.key!)).toBe(false);
+    expect(r.edges.some((e) => e.stepKey === g.key)).toBe(false);
   });
   it('не склеивает параллельные рёбра между одной парой состояний', () => {
     const a = step({ state: 'ST_A', next_states: 'ST_B', intent_id: 7, conditions: [{ dep: 'x', value: '1' }] });
@@ -67,5 +78,21 @@ describe('layoutGraph', () => {
     const { nodes } = layoutGraph(['A_1', 'B_2'], [{ id: '1', stepKey: '1', from: 'A_1', to: 'B_2', label: '' }]);
     expect(nodes.find((n) => n.name === 'A_1')!.layer).toBe(0);
     expect(nodes.find((n) => n.name === 'B_2')!.layer).toBe(1);
+  });
+});
+
+describe('globalIssues', () => {
+  it('требует интент и известное следующее состояние', () => {
+    const ok = step({ kind: 'global', intent_id: 7, next_states: 'ST_A' });
+    const noIntent = step({ kind: 'global', intent_id: null, next_states: 'ST_A' });
+    const noNext = step({ kind: 'global', intent_id: 7, next_states: '' });
+    const unknown = step({ kind: 'global', intent_id: 7, next_states: 'ST_X END' });
+    const local = step({ kind: 'transition', state: 'A' });
+    const r = globalIssues([ok, noIntent, noNext, unknown, local], ['ST_A']);
+    expect(r.has(ok.key!)).toBe(false);
+    expect(r.get(noIntent.key!)?.[0]).toEqual({ level: 'error', text: 'Не выбран интент' });
+    expect(r.get(noNext.key!)?.[0].level).toBe('warn');
+    expect(r.get(unknown.key!)?.map((i) => i.text)).toEqual(['Состояния «ST_X» нет в схеме']);
+    expect(r.has(local.key!)).toBe(false);
   });
 });

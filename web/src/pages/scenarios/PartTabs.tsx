@@ -12,12 +12,13 @@ interface TabsProps {
   onAdd?: () => void;
 }
 
-/** Вкладки подсценариев: у каждой свои состояния и переходы. Название и описание правятся в панели справа. */
+/** Вкладки подсценариев: у каждой свои состояния и переходы. Одна вкладка без кнопки «+» не показывается. */
 export function PartTabs({ parts, activeKey, onSelect, onAdd }: TabsProps) {
   const active = parts.find((p) => p.key === activeKey) ?? parts[0];
+  if (parts.length <= 1 && !onAdd) return null;
   return (
-    <div role="tablist" aria-label="Вкладки сценария" className="mb-4 flex flex-wrap items-center gap-1 border-b">
-      {parts.map((p) => (
+    <div role="tablist" aria-label="Вкладки сценария" className="flex flex-wrap items-center gap-1">
+      {parts.length > 1 && parts.map((p) => (
         <button
           key={p.key}
           type="button"
@@ -25,16 +26,16 @@ export function PartTabs({ parts, activeKey, onSelect, onAdd }: TabsProps) {
           aria-selected={p.key === active.key}
           onClick={() => onSelect(p.key!)}
           className={cn(
-            '-mb-px max-w-60 truncate border-b-2 px-3 py-1.5 text-sm font-medium',
-            p.key === active.key ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+            'inline-flex min-h-8 max-w-48 items-center truncate rounded-md px-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring',
+            p.key === active.key ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
           )}
         >
           {p.name.trim() || 'Без названия'}
         </button>
       ))}
       {onAdd && (
-        <Button variant="ghost" size="icon" className="size-7" aria-label="Добавить вкладку" title="Добавить вкладку" onClick={onAdd}>
-          <Plus className="size-4" />
+        <Button variant="ghost" size="sm" aria-label="Добавить вкладку" title="Добавить вкладку (подсценарий)" onClick={onAdd}>
+          <Plus className="size-4" /> {parts.length > 1 ? '' : 'Подсценарий'}
         </Button>
       )}
     </div>

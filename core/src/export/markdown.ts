@@ -1,6 +1,6 @@
 import type { ProjectSpec, ScenarioDoc } from './model';
 import {
-  entitiesTable, intentsTable, promptsTable, transitionsTable,
+  entitiesTable, globalsTable, intentsTable, promptsTable, transitionsTable,
   type Cell, type TableDef,
 } from './tables';
 
@@ -34,6 +34,14 @@ function section(spec: ProjectSpec, date: string | null, parts?: ScenarioDoc['pa
   out.push('## Интенты', table(intentsTable(spec)));
   out.push('## Сущности', table(entitiesTable(spec)));
   out.push('## Промпты', table(promptsTable(spec)));
+  const globals = parts ? parts.filter((p) => p.globals.length) : spec.globals?.length ? [{ title: '', globals: spec.globals }] : [];
+  if (globals.length) {
+    out.push('## Глобальные переходы');
+    for (const g of globals) {
+      if (parts && parts.length > 1) out.push(`### ${g.title}`);
+      out.push(table(globalsTable(g.globals)));
+    }
+  }
   out.push('## Переходы между состояниями');
   if (!parts || parts.length === 1) out.push(table(transitionsTable(parts ? parts[0].transitions : spec.transitions)));
   else {

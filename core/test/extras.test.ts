@@ -29,7 +29,7 @@ describe('предпросмотр, экспорт проекта, исполь�
     const p = await request(app).post(`/api/scenarios/${s.body.id}/prompts`).send({ name: 'PRM' });
     let list = await request(app).get(`/api/scenarios/${s.body.id}/prompts`);
     expect(list.body[0]).toMatchObject({ has_answer: false, step_count: 0 });
-    await request(app).put(`/api/prompts/${p.body.id}`).send({ name: 'PRM', full_answers: ['Готово'], short_answers: [] });
+    await request(app).put(`/api/prompts/${p.body.id}`).send({ name: 'PRM', full_answers: ['Готово'] });
     list = await request(app).get(`/api/scenarios/${s.body.id}/prompts`);
     expect(list.body[0].has_answer).toBe(true);
   });

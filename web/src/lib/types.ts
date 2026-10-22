@@ -1,16 +1,32 @@
-export interface Project { id: number; name: string; description: string }
-export interface ProjectListItem extends Project { scenario_count: number; created_at: string }
+import type { EntityType } from './entityTypes';
 
-export type UsedBy = { id: number; name: string; scenario_id: number | null }[];
+export interface Project { id: number; name: string; description: string }
+export interface ProjectListItem extends Project {
+  scenario_count: number; created_at: string;
+  intent_count: number; entity_count: number; prompt_count: number; ready_count: number;
+}
+
+export type UsedBy = { id: number; name: string; scenario_ids: number[] }[];
 export interface EntityListItem extends Entity { value_count: number }
 export interface EntityValue { value: string; synonyms: string[] }
 export interface Entity {
   id: number; project_id: number; name: string; description: string;
   multiple_values: boolean;
-  values: EntityValue[]; used_by: { id: number; name: string; scenario_id: number | null }[];
+  type: EntityType; range_min: string; range_max: string;
+  values: EntityValue[]; used_by: UsedBy;
 }
 
-export interface IntentListItem { id: number; name: string; enabled: boolean; phrase_count: number; scenario_id: number | null }
+/** Сценарий, к которому подключён интент или промпт. */
+export interface ScenarioLink { id: number; name: string }
+export interface IntentListItem {
+  id: number; name: string; enabled: boolean; phrase_count: number;
+  /** Комментарий или первая фраза: краткое описание в списках выбора. */
+  hint: string;
+  /** Сценарии, к которым подключён интент. */
+  scenarios: ScenarioLink[];
+  /** Только в списке сценария: глобальный интент срабатывает в любом состоянии. */
+  is_global?: boolean;
+}
 export interface IntentEntity { entity_id: number; required: boolean }
 export interface Intent {
   id: number; project_id: number; name: string; enabled: boolean; comment: string; phrases: string[]; entities: IntentEntity[];
@@ -19,10 +35,12 @@ export interface Intent {
 export interface DictionaryDependency { id: number; name: string; values: string[]; used_by: { id: number; name: string }[] }
 
 export interface PromptListItem {
-  id: number; name: string; scenario_id: number | null; has_answer: boolean; step_count: number;
+  id: number; name: string; has_answer: boolean; step_count: number; scenarios: ScenarioLink[];
+  /** Первый непустой ответ: краткое описание в списках выбора. */
+  hint: string;
 }
 export interface Prompt {
-  id: number; project_id: number; name: string; full_answers: string[]; short_answers: string[];
+  id: number; project_id: number; name: string; full_answers: string[];
 }
 
 export interface ScenarioListItem { id: number; name: string; step_count: number }
@@ -34,17 +52,22 @@ export interface Dependency {
 /** Значение зависимости сценария (dep) или значение сущности проекта (entity_id, dep пуст). */
 export type ConditionOp = '=' | '!=' | '<' | '>';
 export interface StepCondition { dep: string; value: string; entity_id?: number; op?: ConditionOp }
-/** Строка Transition table (kind = transition) или Errors (kind = error). */
+/**
+ * Строка Transition table (kind = transition), Errors (kind = error) или переход глобального интента
+ * из любого состояния (kind = global, state пуст). У ошибки без интента — «по любому интенту».
+ */
 export interface Step {
   key?: string;
-  kind: 'transition' | 'error';
+  /** Название правила (у ошибок и глобальных переходов). */
+  name?: string;
+  kind: 'transition' | 'error' | 'global';
   state: string;
   intent_id: number | null;
-  /** Переход срабатывает по любому интенту сценария; тогда intent_id пуст. */
-  any_intent?: boolean;
   request_params: string;
   condition: string;
   conditions: StepCondition[];
+  /** Как объединяются условия: все сразу (по умолчанию) или хотя бы одно. */
+  cond_mode?: 'all' | 'any';
   prompt_id: number | null;
   system_action: string;
   next_states: string;

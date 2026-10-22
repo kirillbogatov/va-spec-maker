@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { splitTags } from '@/lib/parse';
 
 interface Props {
@@ -19,17 +18,22 @@ export function TagInput({ value, onChange, placeholder, commaSplit = true }: Pr
     setText('');
   };
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-none border border-transparent px-2 py-1 hover:bg-muted focus-within:border-ring focus-within:bg-background">
+    <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 hover:bg-muted focus-within:border-ring focus-within:bg-background">
       {value.map((t, i) => (
-        <Badge key={`${t}-${i}`} variant="secondary" className="gap-1 font-normal">
+        <span key={`${t}-${i}`} className="inline-flex min-h-7 items-center gap-1 rounded-md bg-secondary pl-2 pr-0.5 text-[13px] text-secondary-foreground">
           {t}
-          <button type="button" aria-label={`Удалить ${t}`} onClick={() => onChange(value.filter((_, j) => j !== i))}>
+          <button
+            type="button"
+            aria-label={`Удалить ${t}`}
+            className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:text-destructive focus-visible:outline-2 focus-visible:outline-ring"
+            onClick={() => onChange(value.filter((_, j) => j !== i))}
+          >
             <X className="size-3" />
           </button>
-        </Badge>
+        </span>
       ))}
-      <input
-        className="min-w-24 flex-1 bg-transparent py-0.5 text-sm outline-none"
+      <input spellCheck={false}
+        className="min-h-7 min-w-24 flex-1 bg-transparent py-0.5 text-sm outline-none placeholder:text-muted-foreground"
         value={text}
         placeholder={value.length ? '' : placeholder}
         onChange={(e) => {
