@@ -148,13 +148,11 @@ export function ProjectsPage() {
                 </li>
               );
             })}
-            <li className="flex min-h-52 flex-col rounded-xl border border-dashed bg-background transition-colors duration-300 hover:border-foreground/30 hover:bg-muted/40">
-              <button type="button" aria-label="Новый проект" onClick={() => setDialog({ project: null })} className="group/add grid flex-1 place-items-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <span className="grid size-12 place-items-center rounded-full bg-brand text-primary-foreground transition-transform duration-300 ease-in-out group-hover/add:scale-105 motion-reduce:transition-none">
-                  <Plus className="size-6" />
-                </span>
+            <li className="relative min-h-52 rounded-xl border bg-background transition-[box-shadow,border-color] duration-300 ease-in-out hover:border-foreground/20 hover:shadow-md motion-reduce:transition-none">
+              <button type="button" onClick={() => setDialog({ project: null })} className="flex size-full flex-col items-center justify-center gap-2 rounded-xl p-5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                <Plus className="size-8" aria-hidden />
+                Добавить проект
               </button>
-              <Button variant="link" className="mb-2 h-9 self-center" onClick={loadDemo}>Добавить демо «Умный дом»</Button>
             </li>
           </ul>
         )}
