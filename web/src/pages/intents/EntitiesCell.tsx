@@ -44,7 +44,6 @@ export function EntitiesCell({ value, entities, onChange }: Props) {
           ))}
         </ul>
       )}
-      {value.length === 0 && <p className="text-sm text-muted-foreground">Сущности не заданы: фразы разбираются без слотов.</p>}
       {options.length > 0 && (
         <Select items={options} value={null} onValueChange={(v) => v != null && onChange([...value, { entity_id: Number(v), required: false }])}>
           <SelectTrigger className="h-10 w-auto gap-1.5 border-transparent bg-transparent px-2 text-[13px] text-brand shadow-none hover:bg-muted md:h-8 dark:bg-transparent [&_svg:last-child]:hidden">

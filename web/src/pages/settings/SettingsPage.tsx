@@ -37,8 +37,8 @@ export function SettingsPage() {
             <span>
               <span className="block text-sm font-semibold">Нормализовать слова</span>
               <span className="mt-1 block text-[13px] text-muted-foreground">
-                Слова тренировочных фраз и значений сущностей приводятся к начальной форме (основе): «заказать» и «заказал» считаются одним словом.
-                Влияет на поиск дубликатов фраз и распознавание сущностей во фразах.
+                Тренировочные фразы и значения сущностей приводятся к начальной форме: «заказать» и «заказал» считаются одним словом.
+                Влияет на поиск дубликатов и распознавание сущностей во фразах.
               </span>
             </span>
             <Switch checked={normalize} onCheckedChange={(v) => writeNormalize(projectId, v)} aria-label="Нормализовать слова" />
