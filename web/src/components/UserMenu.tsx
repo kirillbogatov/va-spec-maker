@@ -72,7 +72,7 @@ export function UserMenu({ variant, collapsed = false, settingsTo }: Props) {
               <Users className="size-4" /> Пользователи
             </DropdownMenuItem>
           )}
-          <DropdownMenuSeparator />
+          {(settingsTo || !DEMO) && <DropdownMenuSeparator />}
           {DEMO ? (
             <DropdownMenuItem className="min-h-9" onClick={resetDemo}>
               <RotateCcw className="size-4" /> Начать демо заново

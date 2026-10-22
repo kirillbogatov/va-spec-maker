@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { Copy, Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/UserMenu';
@@ -66,7 +66,6 @@ function ProjectDialog({ project, open, onOpenChange, onSubmit }: {
 
 export function ProjectsPage() {
   const qc = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [dialog, setDialog] = useState<{ project: ProjectListItem | null } | null>(null);
   const [deleting, setDeleting] = useState<ProjectListItem | null>(null);
   const [, bump] = useState(0);
@@ -92,16 +91,6 @@ export function ProjectsPage() {
     await refresh();
     toast.success('Демо-проект добавлен');
   };
-  const importFile = async (file: File) => {
-    try {
-      const r = await api.projects.import(JSON.parse(await file.text()));
-      await refresh();
-      toast.success(`Проект «${r.name}» импортирован`);
-    } catch (e) {
-      toast.error(e instanceof SyntaxError ? 'Файл не является корректным JSON' : (e as Error).message);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-page">
       <header className="border-b bg-background">
@@ -115,16 +104,14 @@ export function ProjectsPage() {
       </header>
       <main className="mx-auto max-w-[1100px] px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="mb-6 text-balance text-3xl font-semibold tracking-tight">Проекты</h1>
-        <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importFile(f); }} />
 
         {!isLoading && projects.length === 0 && (
           <div className="grid place-items-center rounded-xl border border-dashed bg-background px-6 py-16 text-center">
             <FolderOpen className="mb-3 size-10 text-muted-foreground" aria-hidden />
             <h2 className="text-balance text-lg font-semibold">Проектов пока нет</h2>
-            <p className="mb-5 mt-1 max-w-md text-sm text-muted-foreground">Создайте пустой проект, импортируйте ранее скачанный JSON или посмотрите готовый пример «Умный дом».</p>
+            <p className="mb-5 mt-1 max-w-md text-sm text-muted-foreground">Создайте пустой проект или посмотрите готовый пример «Умный дом».</p>
             <div className="flex flex-wrap justify-center gap-2">
               <Button className="h-10 sm:h-9" onClick={() => setDialog({ project: null })}><Plus className="size-4" /> Новый проект</Button>
-              <Button variant="outline" className="h-10 sm:h-9" onClick={() => fileRef.current?.click()}>Импорт JSON</Button>
               <Button variant="outline" className="h-10 sm:h-9" onClick={loadDemo}>Добавить демо</Button>
             </div>
           </div>
@@ -134,7 +121,7 @@ export function ProjectsPage() {
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {projects.map((p) => {
               return (
-                <li key={p.id} className="group relative flex flex-col gap-3 rounded-xl border bg-background p-5 transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+                <li key={p.id} className="group relative flex flex-col gap-3 rounded-xl border bg-background p-5 transition-[box-shadow,border-color] duration-300 ease-in-out hover:border-foreground/20 hover:shadow-md motion-reduce:transition-none">
                   <div className="flex items-start gap-2">
                     <h2 className="min-w-0 flex-1 text-balance pt-1 text-base font-semibold leading-snug">
                       <Link to={`/p/${p.id}/scenarios`} className="rounded-sm outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-ring">{p.name}</Link>
@@ -161,12 +148,13 @@ export function ProjectsPage() {
                 </li>
               );
             })}
-            <li className="grid min-h-52 place-items-center rounded-xl border border-dashed bg-background p-5 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <Button className="h-10 sm:h-9" onClick={() => setDialog({ project: null })}><Plus className="size-4" /> Новый проект</Button>
-                <Button variant="outline" className="h-10 sm:h-9" onClick={() => fileRef.current?.click()}><Upload className="size-4" /> Импорт JSON</Button>
-                <Button variant="link" className="h-10 sm:h-9" onClick={loadDemo}>Добавить демо «Умный дом»</Button>
-              </div>
+            <li className="flex min-h-52 flex-col rounded-xl border border-dashed bg-background transition-colors duration-300 hover:border-foreground/30 hover:bg-muted/40">
+              <button type="button" aria-label="Новый проект" onClick={() => setDialog({ project: null })} className="group/add grid flex-1 place-items-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="grid size-12 place-items-center rounded-full bg-brand text-primary-foreground transition-transform duration-300 ease-in-out group-hover/add:scale-105 motion-reduce:transition-none">
+                  <Plus className="size-6" />
+                </span>
+              </button>
+              <Button variant="link" className="mb-2 h-9 self-center" onClick={loadDemo}>Добавить демо «Умный дом»</Button>
             </li>
           </ul>
         )}
