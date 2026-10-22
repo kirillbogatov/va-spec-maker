@@ -1,5 +1,6 @@
 import { createApp, openDb, seedDemo, type App, type AppResponse, type Db } from '@va/core';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
+import { DEMO } from '@/lib/demoMode';
 
 const IDB = 'va-spec-maker';
 const KEY = 'db';
@@ -19,13 +20,48 @@ const idb = <T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest
     };
   });
 
-const load = (): Promise<Uint8Array | undefined> => idb<Uint8Array | undefined>('readonly', (s) => s.get(KEY)).catch(() => undefined);
+// В демо база живёт в sessionStorage: переживает перезагрузку, но не закрытие вкладки.
+const DEMO_KEY = 'va-demo-db';
+const toB64 = (b: Uint8Array) => {
+  let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+const loadDemo = (): Uint8Array | undefined => {
+  try {
+    const v = sessionStorage.getItem(DEMO_KEY);
+    return v ? Uint8Array.from(atob(v), (c) => c.charCodeAt(0)) : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const load = (): Promise<Uint8Array | undefined> =>
+  DEMO ? Promise.resolve(loadDemo()) : idb<Uint8Array | undefined>('readonly', (s) => s.get(KEY)).catch(() => undefined);
 const persist = () => {
   clearTimeout(timer);
   timer = setTimeout(() => {
-    idb('readwrite', (s) => s.put(db.serialize(), KEY)).catch(() => {});
+    if (!DEMO) {
+      idb('readwrite', (s) => s.put(db.serialize(), KEY)).catch(() => {});
+      return;
+    }
+    try {
+      sessionStorage.setItem(DEMO_KEY, toB64(db.serialize()));
+    } catch {
+      /* хранилище недоступно или переполнено — данные живут до перезагрузки */
+    }
   }, 300);
 };
+
+/** Демо: стирает данные сессии и открывает свежий демо-проект. */
+export function resetDemo(): void {
+  try {
+    sessionStorage.removeItem(DEMO_KEY);
+  } catch {
+    /* нечего стирать */
+  }
+  location.reload();
+}
 
 /** Открывает БД из IndexedDB (или создаёт новую с демо-проектом). */
 export async function initBackend(): Promise<void> {

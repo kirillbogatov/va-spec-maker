@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { KeyRound, LogOut, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { KeyRound, LogOut, RotateCcw, Settings, Users } from 'lucide-react';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 import { UsersDialog } from '@/components/UsersDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth, useUser } from '@/hooks/useAuth';
+import { resetDemo } from '@/lib/backend';
+import { DEMO } from '@/lib/demoMode';
 import { cn } from '@/lib/utils';
 
 const ROLE_LABEL = { admin: 'Администратор', user: 'Пользователь' } as const;
@@ -11,10 +14,13 @@ const ROLE_LABEL = { admin: 'Администратор', user: 'Пользов�
 interface Props {
   variant: 'sidebar' | 'tab' | 'header';
   collapsed?: boolean;
+  /** Адрес настроек проекта; пункт показывается, только когда проект открыт. */
+  settingsTo?: string;
 }
 
-/** Аватар с инициалами и меню профиля: смена пароля, пользователи (админ), выход. */
-export function UserMenu({ variant, collapsed = false }: Props) {
+/** Аватар с инициалами и меню профиля: настройки, смена пароля, пользователи (админ), выход. */
+export function UserMenu({ variant, collapsed = false, settingsTo }: Props) {
+  const navigate = useNavigate();
   const user = useUser();
   const { signOut } = useAuth();
   const [password, setPassword] = useState(false);
@@ -51,17 +57,31 @@ export function UserMenu({ variant, collapsed = false }: Props) {
             </DropdownMenuLabel>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="min-h-9" onClick={() => setPassword(true)}>
-            <KeyRound className="size-4" /> Сменить пароль
-          </DropdownMenuItem>
-          {user.role === 'admin' && (
+          {settingsTo && (
+            <DropdownMenuItem className="min-h-9" onClick={() => navigate(settingsTo)}>
+              <Settings className="size-4" /> Настройки
+            </DropdownMenuItem>
+          )}
+          {!DEMO && (
+            <DropdownMenuItem className="min-h-9" onClick={() => setPassword(true)}>
+              <KeyRound className="size-4" /> Сменить пароль
+            </DropdownMenuItem>
+          )}
+          {!DEMO && user.role === 'admin' && (
             <DropdownMenuItem className="min-h-9" onClick={() => setUsers(true)}>
               <Users className="size-4" /> Пользователи
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem className="min-h-9" onClick={() => void signOut()}>
-            <LogOut className="size-4" /> Выйти
-          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {DEMO ? (
+            <DropdownMenuItem className="min-h-9" onClick={resetDemo}>
+              <RotateCcw className="size-4" /> Начать демо заново
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem className="min-h-9" onClick={() => void signOut()}>
+              <LogOut className="size-4" /> Выйти
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <ChangePasswordDialog open={password} onOpenChange={setPassword} />

@@ -20,7 +20,7 @@ const entityDep = (ref: string, entity_id: number) => ({ ref, entity_id, name: '
 const node = (x: number, y: number, description: string, prompt_id: number | null = null, system_action = '') =>
   ({ x, y, description, prompt_id, system_action });
 
-/** Демо-проект «умный дом»: три сценария с сущностями, интентами, промптами, схемами состояний и ошибками. */
+/** Демо-проект «умный дом»: три сценария с сущностями разных типов, общими интентом и промптом, схемами состояний и ошибками. */
 export async function seedDemo(app: App): Promise<number> {
   const { id: pid } = await call(app, 'POST', '/api/projects', {
     name: 'Демо: умный дом',
@@ -60,6 +60,22 @@ export async function seedDemo(app: App): Promise<number> {
     await call(app, 'PUT', `/api/dependency-dictionary/${id}`, { name, values });
   }
 
+  // Объекты проекта, которые подключаются сразу к нескольким сценариям.
+  const stop = (await call(app, 'POST', `/api/projects/${pid}/intents`, { name: 'STOP' })).id as number;
+  await call(app, 'PUT', `/api/intents/${stop}`, {
+    name: 'STOP', enabled: true, comment: 'Глобальный интент: срабатывает в любом состоянии сценария.',
+    phrases: ['стоп', 'отмена', 'хватит', 'забудь'], entities: [],
+  });
+  const offline = (await call(app, 'POST', `/api/projects/${pid}/prompts`, { name: 'PRM_ERR_DEVICE' })).id as number;
+  await call(app, 'PUT', `/api/prompts/${offline}`, {
+    name: 'PRM_ERR_DEVICE', full_answers: ['Устройство не отвечает. Проверьте питание и попробуйте ещё раз.'],
+  });
+  const useShared = async (sid: number) => {
+    await call(app, 'PUT', `/api/scenarios/${sid}/intents/${stop}`, { is_global: true });
+    await call(app, 'PUT', `/api/scenarios/${sid}/prompts/${offline}`, {});
+  };
+  const cancelStep = (): Step => ({ kind: 'global', state: '', intent_id: stop, next_states: 'START', ...base });
+
   const scenario = async (name: string) => (await call(app, 'POST', `/api/projects/${pid}/scenarios`, { name })).id as number;
   const intent = async (sid: number, name: string, phrases: string[], entities: { entity_id: number; required: boolean }[] = []) => {
     const { id } = await call(app, 'POST', `/api/scenarios/${sid}/intents`, { name });
@@ -85,7 +101,7 @@ export async function seedDemo(app: App): Promise<number> {
   const lightOn = await prompt(light, 'PRM_LIGHT_ON', ['Свет включён.']);
   const lightOff = await prompt(light, 'PRM_LIGHT_OFF', ['Свет выключен.']);
   const noRoom = await prompt(light, 'PRM_ERR_UNKNOWN_ROOM', ['Не знаю такой комнаты. Назовите кухню, спальню или коридор.']);
-  const lampFail = await prompt(light, 'PRM_ERR_LAMP', ['Не получилось связаться с лампой. Попробуйте ещё раз позже.']);
+  await useShared(light);
   await fill(light, {
     description: 'Пользователь просит включить или выключить свет; если комната не названа, ассистент уточняет.',
     entities: [{ entity_id: room, followup_prompt: 'В какой комнате?', required: true, is_array: false }],
@@ -100,7 +116,8 @@ export async function seedDemo(app: App): Promise<number> {
         step('START', 'LIGHT_OFF', off),
         step('ASK_ROOM', 'LIGHT_ON', roomAnswer),
         error('ASK_ROOM', 'ASK_ROOM', 'Комната не распознана', noRoom),
-        error('LIGHT_ON', 'START', 'Устройство не отвечает', lampFail, 'Записать сбой устройства в журнал', [{ dep: 'lamp_online', op: '=', value: 'false' }]),
+        cancelStep(),
+        error('LIGHT_ON', 'START', 'Устройство не отвечает', offline, 'Записать сбой устройства в журнал', [{ dep: 'lamp_online', op: '=', value: 'false' }]),
       ],
       layout: {
         START: node(0, 0, 'Вход в сценарий'),
@@ -121,7 +138,7 @@ export async function seedDemo(app: App): Promise<number> {
   const tempShift = await prompt(climate, 'PRM_TEMP_SHIFT', ['Изменила температуру на два градуса.']);
   const badTemp = await prompt(climate, 'PRM_ERR_TEMP_RANGE', ['Могу выставить от пятнадцати до тридцати градусов.']);
   const awayMsg = await prompt(climate, 'PRM_ERR_AWAY', ['Дома никого нет, температуру не меняю.']);
-  const heaterFail = await prompt(climate, 'PRM_ERR_HEATER', ['Термостат не отвечает. Проверьте, что он подключён к сети.']);
+  await useShared(climate);
   await fill(climate, {
     description: 'Пользователь задаёт температуру в комнате или просит сделать теплее/холоднее.',
     dependencies: [dep('home_mode', 'Режим дома', 'enum', ['home', 'away', 'night']), entityDep('temp_dep', temp)],
@@ -139,8 +156,9 @@ export async function seedDemo(app: App): Promise<number> {
         error('ASK_TEMP', 'ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '>', value: '30' }]),
         // Если дома никого нет, температуру не меняем.
         error('START', 'START', 'Никого нет дома', awayMsg, '', [{ dep: 'home_mode', op: '=', value: 'away' }]),
-        error('TEMP_SET', 'START', 'Термостат не отвечает', heaterFail, 'Повторить запрос к термостату через 10 секунд'),
-        error('TEMP_SHIFT', 'START', 'Термостат не отвечает', heaterFail),
+        error('TEMP_SET', 'START', 'Термостат не отвечает', offline, 'Повторить запрос к термостату через 10 секунд'),
+        error('TEMP_SHIFT', 'START', 'Термостат не отвечает', offline),
+        cancelStep(),
       ],
       layout: {
         START: node(0, 0, 'Вход в сценарий'),
@@ -160,6 +178,7 @@ export async function seedDemo(app: App): Promise<number> {
   const alarmSet = await prompt(alarm, 'PRM_ALARM_SET', ['Будильник поставлен.']);
   const alarmOff = await prompt(alarm, 'PRM_ALARM_CANCEL', ['Будильник отменён.']);
   const badTime = await prompt(alarm, 'PRM_ERR_TIME', ['Не поняла время. Скажите, например, «в семь тридцать».']);
+  await useShared(alarm);
   const noAlarm = await prompt(alarm, 'PRM_ERR_NO_ALARM', ['У вас нет активных будильников.']);
   await fill(alarm, {
     description: 'Пользователь ставит или отменяет будильник; время уточняется, если не названо.',
@@ -177,6 +196,7 @@ export async function seedDemo(app: App): Promise<number> {
         step('ASK_TIME', 'ALARM_SET', timeAnswer),
         error('ASK_TIME', 'ASK_TIME', 'Время не распознано', badTime),
         error('START', 'START', 'Нет активных будильников', noAlarm, '', [{ dep: 'has_alarm', op: '=', value: 'false' }]),
+        cancelStep(),
       ],
       layout: {
         START: node(0, 0, 'Вход в сценарий'),

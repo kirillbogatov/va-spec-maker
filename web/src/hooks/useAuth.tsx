@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { PublicUser } from '@/lib/auth';
 import { auth } from '@/lib/authStores';
+import { DEMO, DEMO_USER } from '@/lib/demoMode';
 
 export type AuthState =
   | { status: 'loading' }
@@ -19,9 +20,10 @@ interface Ctx {
 const AuthCtx = createContext<Ctx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ status: 'loading' });
+  const [state, setState] = useState<AuthState>(DEMO ? { status: 'authed', user: DEMO_USER } : { status: 'loading' });
 
   useEffect(() => {
+    if (DEMO) return;
     let off = false;
     (async () => {
       const user = await auth.restoreSession();

@@ -59,7 +59,9 @@ describe('project duplicate / import', () => {
     expect(b).toHaveLength(a.length);
     const full = (await request(app).get(`/api/scenarios/${b[0].id}`)).body;
     expect(full.project_id).toBe(dup.id);
-    expect(full.parts[0].steps).toHaveLength(6);
+    expect(full.parts[0].steps).toHaveLength(7);
+    const connected = (await request(app).get(`/api/scenarios/${b[0].id}/intents`)).body as any[];
+    expect(connected.find((i) => i.name === 'STOP')).toMatchObject({ is_global: true });
     expect((await request(app).get(`/api/projects/${dup.id}/intents`)).body.length).toBeGreaterThan(0);
     await request(app).delete(`/api/projects/${src}`);
     expect((await request(app).get(`/api/scenarios/${b[0].id}`)).status).toBe(200);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, LayoutGrid, MessageSquareText, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Settings, Shapes, SlidersHorizontal, Workflow, type LucideIcon } from 'lucide-react';
+import { BookOpen, LayoutGrid, MessageSquareText, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Shapes, SlidersHorizontal, Workflow, type LucideIcon } from 'lucide-react';
 import { CommandPalette } from '@/components/CommandPalette';
 import { GlobalSaveStatus } from '@/components/GlobalSaveStatus';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
@@ -145,11 +145,7 @@ export function AppShell() {
 
         <div className="flex shrink-0 flex-col gap-2 px-1">
           {!collapsed && <GlobalSaveStatus />}
-          <NavLink to={path('/settings')} title="Настройки" aria-label="Настройки" className={() => cn(itemClass(on(path('/settings'))), collapsed && 'w-8 justify-center px-0')}>
-            <Settings className="size-4" />
-            {!collapsed && 'Настройки'}
-          </NavLink>
-          <UserMenu variant="sidebar" collapsed={collapsed} />
+          <UserMenu variant="sidebar" collapsed={collapsed} settingsTo={path('/settings')} />
         </div>
       </aside>
 
@@ -180,7 +176,7 @@ export function AppShell() {
         <Link to="/" className="flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground">
           <LayoutGrid className="size-5" /> Проекты
         </Link>
-        <UserMenu variant="tab" />
+        <UserMenu variant="tab" settingsTo={path('/settings')} />
       </nav>
 
       <CommandPalette open={searching} onOpenChange={setSearching} />
