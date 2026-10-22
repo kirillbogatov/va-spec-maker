@@ -88,7 +88,7 @@ export function DictCard({ title, count, action, children }: { title: string; co
     <section className="rounded-xl border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
         <h3 className="text-sm font-semibold">
-          {title} {count !== undefined && <span className="font-normal tabular-nums text-muted-foreground">{count}</span>}
+          {title} {!!count && <span className="font-normal tabular-nums text-muted-foreground">{count}</span>}
         </h3>
         {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
       </div>

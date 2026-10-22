@@ -27,7 +27,7 @@ export function Slotted({ text, words, owners }: { text: string; words: string[]
   let pos = 0;
   slots.forEach(({ from, to, word }, i) => {
     if (from > pos) parts.push(text.slice(pos, from));
-    parts.push(<span key={i} title={owners?.get(word.trim().toLowerCase())} className="rounded-[3px] bg-ent-bg px-0.5 text-ent">{text.slice(from, to)}</span>);
+    parts.push(<span key={i} title={owners?.has(word.trim().toLowerCase()) ? `Значение сущности (${owners.get(word.trim().toLowerCase())})` : undefined} className="rounded-[3px] bg-ent-bg px-0.5 text-ent">{text.slice(from, to)}</span>);
     pos = to;
   });
   if (pos < text.length) parts.push(text.slice(pos));
