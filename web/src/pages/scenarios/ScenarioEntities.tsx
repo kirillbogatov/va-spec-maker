@@ -33,7 +33,6 @@ export function ScenarioEntities({ value, entities, onChange }: Props) {
   const [creatingFor, setCreatingFor] = useState<number | null>(null);
   const patch = (i: number, p: Partial<ScenarioEntity>) => onChange(value.map((e, j) => (j === i ? { ...e, ...p } : e)));
   const options = entities.map((e) => ({ value: String(e.id), label: e.name }));
-  const label = (v: string | null) => options.find((o) => o.value === v)?.label;
 
   return (
     <>

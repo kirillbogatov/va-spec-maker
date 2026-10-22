@@ -252,7 +252,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   >
                     <span className="flex min-w-0 flex-1 items-center gap-2">
                       <HitIcon h={h} />
-                      {h.kind === 'scenario'
+                      {h.kind === 'scenario' || h.kind === 'command'
                         ? <span className="truncate font-medium">{h.name}</span>
                         : <TypeToken kind={h.kind}>{h.name}</TypeToken>}
                     </span>

@@ -97,7 +97,7 @@ interface ListItemProps {
 }
 
 /** Строка списка со ссылкой; слева тип, справа мета или счётчик. */
-export function ListItem({ to, children, count, dim, kind, meta, warn }: ListItemProps) {
+export function ListItem({ to, children, count, dim, meta, warn }: ListItemProps) {
   return (
     <NavLink
       to={to}

@@ -15,7 +15,7 @@ import { useAutosave } from '@/hooks/useAutosave';
 import { api } from '@/lib/api';
 import type { Dependency, Layout, Scenario, ScenarioPart, Step } from '@/lib/types';
 import { DependenciesTable } from './DependenciesTable';
-import { depLabel, reconcile } from './dependencies';
+import { reconcile } from './dependencies';
 import { ScenarioEntities } from './ScenarioEntities';
 import { ScenarioIntents } from './ScenarioIntents';
 import { ScenarioPrompts } from './ScenarioPrompts';

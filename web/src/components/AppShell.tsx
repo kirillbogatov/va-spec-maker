@@ -7,7 +7,7 @@ import { GlobalSaveStatus } from '@/components/GlobalSaveStatus';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
 import { UserMenu } from '@/components/UserMenu';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { usePath, useProject, useProjectId } from '@/hooks/project';
+import { usePath, useProjectId } from '@/hooks/project';
 import { api } from '@/lib/api';
 import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
@@ -40,7 +40,6 @@ function useCounts() {
 
 export function AppShell() {
   const path = usePath();
-  const { project } = useProject();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { scenarios, counts } = useCounts();
