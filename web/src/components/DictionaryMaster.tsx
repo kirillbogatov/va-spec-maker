@@ -260,7 +260,7 @@ function DictEditor<T extends DictItem>({ item, p, onRemoved }: { item: T; p: Pr
           <Textarea
             rows={1}
             className={cn(GHOST, 'min-h-9 resize-none px-2 py-1.5 text-sm')}
-            placeholder="Добавить комментарий для аналитика…"
+            placeholder="Добавить комментарий"
             aria-label="Комментарий"
             value={comment}
             onChange={(e) => patch({ [commentKey]: e.target.value } as unknown as Partial<T>)}

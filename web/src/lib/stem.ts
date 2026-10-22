@@ -81,13 +81,15 @@ export function phraseKey(p: string, normalize: boolean): string {
   return normalize ? normalizeText(k) : k;
 }
 
-/** Диапазоны [от, до) в `text`, где встречается любое из `words`; при `normalize` слова сравниваются по основам. */
-export function findSlots(text: string, words: string[], normalize: boolean): [number, number][] {
-  const ranges: [number, number][] = [];
+export interface SlotMatch { from: number; to: number; word: string }
+
+/** Диапазоны в `text`, где встречается любое из `words`, с найденным словом; при `normalize` слова сравниваются по основам. */
+export function findSlotMatches(text: string, words: string[], normalize: boolean): SlotMatch[] {
+  const ranges: SlotMatch[] = [];
   const lower = text.toLowerCase();
   for (const w of words) {
     const needle = w.toLowerCase();
-    for (let i = lower.indexOf(needle); i !== -1; i = lower.indexOf(needle, i + needle.length)) ranges.push([i, i + needle.length]);
+    for (let i = lower.indexOf(needle); i !== -1; i = lower.indexOf(needle, i + needle.length)) ranges.push({ from: i, to: i + needle.length, word: w });
   }
   if (normalize) {
     const tokens = (s: string) => [...s.matchAll(/[а-яёa-z0-9]+/gi)].map((m) => ({ stem: stem(m[0]), start: m.index!, end: m.index! + m[0].length }));
@@ -96,16 +98,21 @@ export function findSlots(text: string, words: string[], normalize: boolean): [n
       const wt = tokens(w).map((t) => t.stem);
       if (!wt.length) continue;
       for (let i = 0; i + wt.length <= textTokens.length; i++) {
-        if (wt.every((s, j) => textTokens[i + j].stem === s)) ranges.push([textTokens[i].start, textTokens[i + wt.length - 1].end]);
+        if (wt.every((s, j) => textTokens[i + j].stem === s)) ranges.push({ from: textTokens[i].start, to: textTokens[i + wt.length - 1].end, word: w });
       }
     }
   }
-  ranges.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
-  const merged: [number, number][] = [];
+  ranges.sort((a, b) => a.from - b.from || b.to - a.to);
+  const merged: SlotMatch[] = [];
   for (const r of ranges) {
     const last = merged[merged.length - 1];
-    if (last && r[0] < last[1]) last[1] = Math.max(last[1], r[1]);
-    else merged.push([...r]);
+    if (last && r.from < last.to) last.to = Math.max(last.to, r.to);
+    else merged.push({ ...r });
   }
   return merged;
+}
+
+/** Диапазоны [от, до) в `text`, где встречается любое из `words`; при `normalize` слова сравниваются по основам. */
+export function findSlots(text: string, words: string[], normalize: boolean): [number, number][] {
+  return findSlotMatches(text, words, normalize).map((m) => [m.from, m.to]);
 }

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useProjectId } from '@/hooks/project';
 import { useNormalize } from '@/lib/normalize';
 import { parsePhrases } from '@/lib/parse';
-import { findSlots } from '@/lib/stem';
+import { findSlotMatches } from '@/lib/stem';
 import { cn, GHOST } from '@/lib/utils';
 
 const COLLAPSED = 5;
@@ -14,18 +14,20 @@ interface Props {
   onChange: (value: string[]) => void;
   /** Значения сущностей интента: в фразах подсвечиваются как слоты. */
   highlight?: string[];
+  /** Слово (в нижнем регистре) → название сущности для подсказки при наведении. */
+  owners?: ReadonlyMap<string, string>;
 }
 
 /** Фраза с подсвеченными слотами значений сущностей (при включённой нормализации — и в других формах слова). */
-export function Slotted({ text, words }: { text: string; words: string[] }) {
+export function Slotted({ text, words, owners }: { text: string; words: string[]; owners?: ReadonlyMap<string, string> }) {
   const normalize = useNormalize(useProjectId());
-  const slots = words.length ? findSlots(text, words, normalize) : [];
+  const slots = words.length ? findSlotMatches(text, words, normalize) : [];
   if (!slots.length) return <>{text}</>;
   const parts: ReactNode[] = [];
   let pos = 0;
-  slots.forEach(([from, to], i) => {
+  slots.forEach(({ from, to, word }, i) => {
     if (from > pos) parts.push(text.slice(pos, from));
-    parts.push(<span key={i} className="rounded-[3px] bg-ent-bg px-0.5 text-ent">{text.slice(from, to)}</span>);
+    parts.push(<span key={i} title={owners?.get(word.trim().toLowerCase())} className="rounded-[3px] bg-ent-bg px-0.5 text-ent">{text.slice(from, to)}</span>);
     pos = to;
   });
   if (pos < text.length) parts.push(text.slice(pos));
@@ -33,7 +35,7 @@ export function Slotted({ text, words }: { text: string; words: string[] }) {
 }
 
 /** Тренировочные фразы вариации: поле добавления (Enter / вставка нескольких строк) и список, свёрнутый после 5 строк. */
-export function PhrasesCell({ value, onChange, highlight = [] }: Props) {
+export function PhrasesCell({ value, onChange, highlight = [], owners }: Props) {
   const [text, setText] = useState('');
   const [all, setAll] = useState(false);
   const add = (raw: string) => {
@@ -70,7 +72,7 @@ export function PhrasesCell({ value, onChange, highlight = [] }: Props) {
       <ul className="divide-y divide-border rounded-md border">
         {shown.map((p, i) => (
           <li key={i} className="group flex min-h-10 items-center gap-2 px-3 py-1.5 hover:bg-muted md:min-h-9">
-            <span className="min-w-0 flex-1 break-words font-mono text-[13px] leading-5"><Slotted text={p} words={words} /></span>
+            <span className="min-w-0 flex-1 break-words font-mono text-[13px] leading-5"><Slotted text={p} words={words} owners={owners} /></span>
             <button
               type="button"
               aria-label="Удалить фразу"

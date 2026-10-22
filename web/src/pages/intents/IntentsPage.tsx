@@ -47,14 +47,20 @@ export function IntentsPage() {
         </label>
       )}
       body={(d, patch) => {
-        const words = d.entities.flatMap((e) => {
+        const owners = new Map<string, string>();
+        for (const e of d.entities) {
           const ent = entities.find((x) => x.id === e.entity_id);
-          return ent ? ent.values.flatMap((v) => [v.value, ...v.synonyms]) : [];
-        });
+          for (const w of ent?.values.flatMap((v) => [v.value, ...v.synonyms]) ?? []) {
+            const key = w.trim().toLowerCase();
+            const names = owners.get(key)?.split(', ') ?? [];
+            if (!names.includes(ent!.name)) owners.set(key, [...names, ent!.name].join(', '));
+          }
+        }
+        const words = [...owners.keys()];
         return (
           <>
-            <DictCard title="Тренировочные фразы" count={d.phrases.length} action={words.length > 0 ? <span className="text-[13px] text-muted-foreground">Выделенное — значение сущности</span> : undefined}>
-              <PhrasesCell value={d.phrases} highlight={words} onChange={(phrases) => patch({ phrases })} />
+            <DictCard title="Тренировочные фразы" count={d.phrases.length}>
+              <PhrasesCell value={d.phrases} highlight={words} owners={owners} onChange={(phrases) => patch({ phrases })} />
             </DictCard>
             <DictCard title="Сущности в интенте" count={d.entities.length}>
               <EntitiesCell value={d.entities} entities={entities} onChange={(e) => patch({ entities: e })} />
