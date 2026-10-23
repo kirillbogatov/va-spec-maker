@@ -3,7 +3,6 @@ import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
 import { assertSameProject, connect, disconnect, setGlobal } from '../links';
 import { assertUniqueName } from '../unique';
-import { findPhraseConflicts, type IntentForCheck } from '../phrase-conflicts';
 import { cleanStrings, optString, parseId, requireString } from '../validate';
 
 interface IntentRow {
@@ -62,29 +61,6 @@ export function intentsRouter(db: Db): RouterT {
       )
       .all(parseId(req.params.sid)) as ListRow[];
     res.json(decorate(rows));
-  });
-
-  /** Пересечения фраз: пары включённых интентов проекта, где хотя бы один подключён к сценарию. */
-  r.get('/scenarios/:sid/intents/conflicts', (req, res) => {
-    const sid = parseId(req.params.sid);
-    const s = db.prepare('SELECT project_id FROM scenarios WHERE id = ?').get(sid) as { project_id: number } | undefined;
-    if (!s) throw notFound('Сценарий');
-    const rows = db.prepare('SELECT id, name FROM intents WHERE project_id = ? AND enabled = 1 ORDER BY name').all(s.project_id) as { id: number; name: string }[];
-    const phrases = db.prepare('SELECT text FROM intent_phrases WHERE intent_id = ? ORDER BY position, id');
-    const entities = db.prepare(
-      `SELECT e.id, e.name FROM intent_entities ie JOIN entities e ON e.id = ie.entity_id WHERE ie.intent_id = ? ORDER BY ie.position, ie.id`,
-    );
-    const values = db.prepare('SELECT value, synonyms FROM entity_values WHERE entity_id = ? ORDER BY position, id');
-    const intents: IntentForCheck[] = rows.map((i) => ({
-      ...i,
-      phrases: (phrases.all(i.id) as { text: string }[]).map((p) => p.text),
-      entities: (entities.all(i.id) as { id: number; name: string }[]).map((e) => ({
-        name: e.name,
-        words: (values.all(e.id) as { value: string; synonyms: string }[]).flatMap((v) => [v.value, ...(JSON.parse(v.synonyms) as string[])]),
-      })),
-      scenarios: scenariosOf(i.id),
-    }));
-    res.json(findPhraseConflicts(intents).filter((p) => [p.a, p.b].some((x) => x.scenarios.some((sc) => sc.id === sid))));
   });
 
   const create = (pid: number, body: any) => {

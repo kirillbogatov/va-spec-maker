@@ -130,30 +130,6 @@ describe('intents API', () => {
     expect((await request(app).put(`/api/scenarios/999/intents/${foreign.body.id}`).send({})).status).toBe(404);
   });
 
-  it('reports phrase conflicts of a scenario, including intents of other scenarios', async () => {
-    const { app, db, pid, entityId, s1, s2 } = await twoScenarios();
-    await request(app).put(`/api/entities/${entityId}`).send({ name: 'seat_position', values: [{ value: 'спальня', synonyms: ['кухня'] }] });
-    const make = async (sid: number, name: string, phrases: string[], enabled = true) => {
-      const id = (await request(app).post(`/api/scenarios/${sid}/intents`).send({ name })).body.id as number;
-      await request(app).put(`/api/intents/${id}`).send({ name, enabled, phrases, entities: [{ entity_id: entityId, required: false }] });
-      return id;
-    };
-    const a = await make(s1, 'A', ['включи свет', 'включи свет в спальня']);
-    const b = await make(s2, 'B', ['Включи свет', 'включи свет в кухня']);
-    await make(s2, 'OFF', ['включи свет'], false);
-    const s3 = Number(db.prepare('INSERT INTO scenarios(project_id, name) VALUES (?, ?)').run(pid, 'S3').lastInsertRowid);
-    const c = await make(s3, 'C', ['включи свет']);
-
-    const r = await request(app).get(`/api/scenarios/${s1}/intents/conflicts`);
-    expect(r.status).toBe(200);
-    expect(r.body.map((p: any) => [p.kind, p.a.id, p.b.id])).toEqual([['exact', a, b], ['exact', a, c], ['template', a, b]]);
-    expect(r.body[0].b.scenarios).toEqual([{ id: s2, name: 'S2' }]);
-
-    const other = await request(app).get(`/api/scenarios/${s3}/intents/conflicts`);
-    expect(other.body.map((p: any) => [p.a.id, p.b.id])).toEqual([[a, c], [b, c]]);
-    expect((await request(app).get('/api/scenarios/999/intents/conflicts')).status).toBe(404);
-  });
-
   it('deleting an intent removes its global rows', async () => {
     const { app, db, s1 } = await twoScenarios();
     const a = (await request(app).post(`/api/scenarios/${s1}/intents`).send({ name: 'INT_A' })).body.id as number;

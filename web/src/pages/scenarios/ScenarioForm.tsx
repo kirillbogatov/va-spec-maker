@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SaveIndicator } from '@/components/SaveIndicator';
 import { ExportMenu } from '@/components/ExportMenu';
-import { PhraseConflicts } from './PhraseConflicts';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn, GHOST } from '@/lib/utils';
 import { usePath, useProjectId } from '@/hooks/project';
@@ -191,7 +190,6 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
           />
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:gap-3">
             <SaveIndicator state={status} />
-            <PhraseConflicts scenarioId={scenario.id} />
             <ExportMenu scenarioId={scenario.id} />
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Действия со сценарием" className="max-md:size-10" />}>

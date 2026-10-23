@@ -1,5 +1,5 @@
 import type {
-  ConflictPair, DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
+  DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
 } from './types';
 import type { EntityKind } from './entityTypes';
 import type { SpecLang } from './specLang';
@@ -58,7 +58,6 @@ export const api = {
   intents: {
     list: (pid: number) => req<IntentListItem[]>('GET', `/api/projects/${pid}/intents`),
     listByScenario: (sid: number) => req<IntentListItem[]>('GET', `/api/scenarios/${sid}/intents`),
-    conflicts: (sid: number) => req<ConflictPair[]>('GET', `/api/scenarios/${sid}/intents/conflicts`),
     get: (id: number) => req<Intent>('GET', `/api/intents/${id}`),
     createInProject: (pid: number, name: string) => req<{ id: number; name: string }>('POST', `/api/projects/${pid}/intents`, { name }),
     create: (sid: number, name: string) => req<{ id: number; name: string }>('POST', `/api/scenarios/${sid}/intents`, { name }),
