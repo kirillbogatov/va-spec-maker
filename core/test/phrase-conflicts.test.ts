@@ -31,13 +31,12 @@ describe('findPhraseConflicts', () => {
     expect(r).toEqual([]);
   });
 
-  it('treats entity-only phrases as follow-up answers, even when verbatim', () => {
+  it('ignores entity-only phrases (follow-up answers), even when verbatim', () => {
     const r = findPhraseConflicts([
       intent(1, 'A', ['спальня', 'в спальне'], [room]),
       intent(2, 'B', ['на кухне', 'спальня'], [room]),
     ]);
-    expect(r.length).toBeGreaterThan(0);
-    expect(r.every((x) => x.kind === 'followup')).toBe(true);
+    expect(r).toEqual([]);
   });
 
   it('replaces multi-word values as a whole', () => {
@@ -59,11 +58,11 @@ describe('findPhraseConflicts', () => {
     expect(new Set(r.map((x) => x.phrase)).size).toBe(2);
   });
 
-  it('sorts exact before template before followup', () => {
+  it('sorts exact before template and drops follow-up pairs', () => {
     const r = findPhraseConflicts([
       intent(1, 'A', ['в спальне', 'включи свет в спальне', 'стоп'], [room]),
       intent(2, 'B', ['на кухне', 'включи свет в кухне', 'стоп'], [room]),
     ]);
-    expect(r.map((x) => x.kind)).toEqual(['exact', 'template', 'followup']);
+    expect(r.map((x) => x.kind)).toEqual(['exact', 'template']);
   });
 });

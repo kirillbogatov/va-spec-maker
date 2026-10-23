@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
 import { usePath } from '@/hooks/project';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -13,7 +12,6 @@ import type { ConflictKind, ConflictPair } from '@/lib/types';
 const KIND: Record<ConflictKind, { label: string; className: string }> = {
   exact: { label: 'дословно', className: 'text-destructive' },
   template: { label: 'по шаблону', className: 'text-warning' },
-  followup: { label: 'ответ на уточнение', className: 'text-muted-foreground' },
 };
 
 interface Group { key: string; a: ConflictPair['a']; b: ConflictPair['b']; pairs: ConflictPair[] }
@@ -31,20 +29,16 @@ export function groupConflicts(pairs: ConflictPair[], scenarioId: number): Group
   return [...groups.values()].sort((x, y) => Number(inside(y)) - Number(inside(x)));
 }
 
-const issues = (pairs: ConflictPair[]) => pairs.filter((p) => p.kind !== 'followup').length;
-
 /** Кнопка и диалог-отчёт «Пересечения фраз» сценария. */
 export function PhraseConflicts({ scenarioId }: { scenarioId: number }) {
   const path = usePath();
   const [open, setOpen] = useState(false);
-  const [showFollowups, setShowFollowups] = useState(false);
   const { data = [], isPending, isError, refetch } = useQuery({
     queryKey: ['phrase-conflicts', scenarioId],
     queryFn: () => api.intents.conflicts(scenarioId),
   });
-  const visible = data.filter((p) => showFollowups || p.kind !== 'followup');
-  const groups = groupConflicts(visible, scenarioId);
-  const count = issues(data);
+  const groups = groupConflicts(data, scenarioId);
+  const count = data.length;
   const where = (g: Group['a']) => {
     const others = g.scenarios.filter((s) => s.id !== scenarioId).map((s) => s.name);
     return g.scenarios.some((s) => s.id === scenarioId) ? (others.length ? `этот сценарий, ${others.join(', ')}` : 'этот сценарий') : others.join(', ');
@@ -65,10 +59,6 @@ export function PhraseConflicts({ scenarioId }: { scenarioId: number }) {
             <DialogTitle>Пересечения фраз</DialogTitle>
             <DialogDescription>Одинаковые тренировочные фразы у разных включённых интентов проекта. Экспорт они не блокируют.</DialogDescription>
           </DialogHeader>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Switch checked={showFollowups} onCheckedChange={setShowFollowups} aria-label="Показать ответы на уточнения" />
-            Показать ответы на уточнения
-          </label>
           {isPending && <p className="text-sm text-muted-foreground">Загрузка…</p>}
           {isError && (
             <div role="alert" className="flex items-center gap-3 text-sm text-destructive">

@@ -1,4 +1,4 @@
-export type ConflictKind = 'exact' | 'template' | 'followup';
+export type ConflictKind = 'exact' | 'template';
 
 export interface IntentForCheck {
   id: number;
@@ -19,7 +19,7 @@ export interface ConflictPair {
 }
 
 const SERVICE_WORDS = new Set(['в', 'во', 'на', 'для', 'по', 'к', 'ко', 'с', 'со', 'у', 'из', 'до', 'за']);
-const KIND_ORDER: Record<ConflictKind, number> = { exact: 0, template: 1, followup: 2 };
+const KIND_ORDER: Record<ConflictKind, number> = { exact: 0, template: 1 };
 
 const tokenize = (s: string) =>
   s.toLowerCase().replace(/ё/g, 'е').split(/[^\p{L}\p{N}]+/u).filter(Boolean);
@@ -45,7 +45,7 @@ function buildEntry(intent: IntentForCheck, phrase: string, dict: { tokens: stri
   return { intent, phrase, text: tokens.join(' '), template: (followup ? slots : out).join(' '), followup };
 }
 
-/** Пары интентов с совпадающими фразами: дословно, по шаблону с сущностями или как ответ на уточнение. */
+/** Пары интентов с совпадающими фразами: дословно или по шаблону с сущностями. Ответы на уточнение (только значение сущности) не учитываются. */
 export function findPhraseConflicts(intents: IntentForCheck[]): ConflictPair[] {
   const entries: Entry[] = [];
   for (const intent of intents) {
@@ -73,12 +73,12 @@ export function findPhraseConflicts(intents: IntentForCheck[]): ConflictPair[] {
       for (let i = 0; i < group.length; i++) {
         for (let j = i + 1; j < group.length; j++) {
           let [x, y] = [group[i], group[j]];
-          if (x.intent.id === y.intent.id) continue;
+          if (x.intent.id === y.intent.id || x.followup || y.followup) continue;
           if (order.get(x.intent.id)! > order.get(y.intent.id)!) [x, y] = [y, x];
           const id = `${x.intent.id}|${x.phrase}|${y.intent.id}|${y.phrase}`;
           if (seen.has(id)) continue;
           seen.add(id);
-          const kind: ConflictKind = x.followup || y.followup ? 'followup' : exact ? 'exact' : 'template';
+          const kind: ConflictKind = exact ? 'exact' : 'template';
           out.push({ kind, phrase: x.phrase, other_phrase: y.phrase, a: side(x.intent), b: side(y.intent) });
         }
       }

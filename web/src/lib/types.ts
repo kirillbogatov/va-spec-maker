@@ -27,7 +27,7 @@ export interface IntentListItem {
   /** Только в списке сценария: глобальный интент срабатывает в любом состоянии. */
   is_global?: boolean;
 }
-export type ConflictKind = 'exact' | 'template' | 'followup';
+export type ConflictKind = 'exact' | 'template';
 export interface ConflictSide { id: number; name: string; scenarios: ScenarioLink[] }
 /** Пара интентов с совпадающими фразами: phrase — у интента a, other_phrase — у интента b. */
 export interface ConflictPair { kind: ConflictKind; phrase: string; other_phrase: string; a: ConflictSide; b: ConflictSide }
