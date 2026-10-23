@@ -17,6 +17,7 @@ const spec: ProjectSpec = {
     {
       name: 'INT_SEAT_HEATING_SET',
       phrases: ['Обогрев сиденья на 3', 'Включи обогрев'],
+      patterns: ['* (включи/включить) обогрев *'],
       entities: [{ name: 'seat_position', required: false }, { name: 'heating_level', required: true }],
     },
   ],
@@ -60,9 +61,18 @@ describe('renderMarkdown', () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
+  it('shows phrase and pattern columns only for data present in the project', () => {
+    const withIntent = (phrases: string[], patterns: string[]) =>
+      renderMarkdown({ ...spec, intents: [{ ...spec.intents[0], phrases, patterns }] }, '2026-10-17');
+    expect(withIntent(['a'], [])).toContain('| Интент | Фразы для обучения | Сущности |');
+    expect(withIntent([], ['* a *'])).toContain('| Интент | Паттерны | Сущности |');
+    expect(withIntent(['a'], ['* a *'])).toContain('| Интент | Фразы для обучения | Паттерны | Сущности |');
+    expect(withIntent([], [])).toContain('| Интент | Фразы для обучения | Сущности |');
+  });
+
   it('renders intents with numbered lists and required entities', () => {
-    expect(md).toContain('| Интент | Фразы для обучения | Сущности |');
-    expect(md).toContain('| INT_SEAT_HEATING_SET | 1. Обогрев сиденья на 3<br>2. Включи обогрев | 1. [seat_position]<br>2. [heating_level] (обязательно) |');
+    expect(md).toContain('| Интент | Фразы для обучения | Паттерны | Сущности |');
+    expect(md).toContain('| INT_SEAT_HEATING_SET | 1. Обогрев сиденья на 3<br>2. Включи обогрев | 1. * (включи/включить) обогрев * | 1. [seat_position]<br>2. [heating_level] (обязательно) |');
     expect(md).toContain('| Из состояния | В состояние | Запрос пользователя | Условия | Действие системы | Ответ ассистента |');
     expect(md).not.toMatch(/Result code|Relative adjustment|\(required\)/);
   });

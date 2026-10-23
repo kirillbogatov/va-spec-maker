@@ -1,4 +1,5 @@
 import type { EntityType } from './entityTypes';
+import type { ValueItem } from './values';
 
 export interface Project { id: number; name: string; description: string }
 export interface ProjectListItem extends Project {
@@ -29,7 +30,7 @@ export interface IntentListItem {
 }
 export interface IntentEntity { entity_id: number; required: boolean }
 export interface Intent {
-  id: number; project_id: number; name: string; enabled: boolean; comment: string; phrases: string[]; entities: IntentEntity[];
+  id: number; project_id: number; name: string; enabled: boolean; comment: string; phrases: string[]; patterns: string[]; values: ValueItem[]; entities: IntentEntity[];
 }
 
 export interface DictionaryDependency { id: number; name: string; values: string[]; used_by: { id: number; name: string }[] }

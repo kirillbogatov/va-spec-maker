@@ -1,6 +1,7 @@
 import { useProjectId } from '@/hooks/project';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { INTENT_MODES, useIntentMode, writeIntentMode } from '@/lib/intentMode';
 import { useNormalize, writeNormalize } from '@/lib/normalize';
 import { SPEC_LANGS, useSpecLang, writeSpecLang } from '@/lib/specLang';
 import { PREFIX_FIELDS, usePrefixes, writePrefix } from '@/lib/prefixes';
@@ -11,6 +12,7 @@ export function SettingsPage() {
   const prefixes = usePrefixes(projectId);
   const normalize = useNormalize(projectId);
   const specLang = useSpecLang(projectId);
+  const intentMode = useIntentMode(projectId);
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8">
       <div className="mx-auto max-w-xl">
@@ -30,6 +32,26 @@ export function SettingsPage() {
                   autoComplete="off"
                   onChange={(e) => writePrefix(projectId, f.key, e.target.value.replace(/\s/g, ''))}
                 />
+              </label>
+            ))}
+          </div>
+        </section>
+        <section className="mt-4 rounded-xl border bg-card p-4">
+          <h2 className="text-sm font-semibold">Как описывать интенты</h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Тренировочные фразы используются для обучения классификатора на основе ИИ. Паттерны — для создания строгих правил (rule-based модель).
+          </p>
+          <div role="radiogroup" aria-label="Как описывать интенты" className="mt-4 flex flex-col gap-1">
+            {INTENT_MODES.map((m) => (
+              <label key={m.value} className="flex min-h-9 cursor-pointer items-center gap-3 text-sm max-md:min-h-11">
+                <input
+                  type="radio"
+                  name="intent-mode"
+                  className="size-4 shrink-0 cursor-pointer accent-primary"
+                  checked={intentMode === m.value}
+                  onChange={() => writeIntentMode(projectId, m.value)}
+                />
+                {m.label}
               </label>
             ))}
           </div>

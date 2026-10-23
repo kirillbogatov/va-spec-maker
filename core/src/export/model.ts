@@ -17,6 +17,7 @@ export interface ProjectSpec {
   intents: {
     name: string;
     phrases: string[];
+    patterns: string[];
     entities: { name: string; required: boolean }[];
   }[];
   entities: {
@@ -123,6 +124,7 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
   ).map((i) => ({
     name: i.name,
     phrases: (db.prepare('SELECT text FROM intent_phrases WHERE intent_id = ? ORDER BY position, id').all(i.id) as { text: string }[]).map((p) => p.text),
+    patterns: (db.prepare('SELECT text FROM intent_patterns WHERE intent_id = ? ORDER BY position, id').all(i.id) as { text: string }[]).map((p) => p.text),
     entities: (
       db
         .prepare(

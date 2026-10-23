@@ -36,6 +36,29 @@ describe('intents API', () => {
     expect(again.body).toMatchObject({ phrases: [], entities: [], enabled: true });
   });
 
+  it('PUT stores patterns separately from phrases', async () => {
+    const { app, pid } = await setup();
+    const c = await request(app).post(`/api/projects/${pid}/intents`).send({ name: 'INT_PAT' });
+    const put = await request(app).put(`/api/intents/${c.body.id}`).send({
+      name: 'INT_PAT', phrases: ['вернись'], patterns: [' * (вернуться/вернись) в игру * ', ''],
+    });
+    expect(put.body).toMatchObject({ phrases: ['вернись'], patterns: ['* (вернуться/вернись) в игру *'] });
+    const again = await request(app).put(`/api/intents/${c.body.id}`).send({ name: 'INT_PAT', phrases: ['вернись'] });
+    expect(again.body).toMatchObject({ phrases: ['вернись'], patterns: [] });
+  });
+
+  it('PUT keeps the order of mixed phrases and patterns', async () => {
+    const { app, pid } = await setup();
+    const c = await request(app).post(`/api/projects/${pid}/intents`).send({ name: 'INT_MIX' });
+    const values = [
+      { text: 'a', kind: 'phrase' }, { text: '* b *', kind: 'pattern' }, { text: 'c', kind: 'phrase' }, { text: '* d *', kind: 'pattern' },
+    ];
+    const put = await request(app).put(`/api/intents/${c.body.id}`).send({ name: 'INT_MIX', values });
+    expect(put.body.values).toEqual(values);
+    expect(put.body).toMatchObject({ phrases: ['a', 'c'], patterns: ['* b *', '* d *'] });
+    expect((await request(app).get(`/api/intents/${c.body.id}`)).body.values).toEqual(values);
+  });
+
   it('rejects an entity from another project', async () => {
     const { app, db, pid } = await setup();
     const other = createProject(db, 'Other');

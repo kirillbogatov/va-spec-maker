@@ -27,12 +27,21 @@ const list = (items: string[]): Cell => ({ list: items });
 
 const ref = (name: string) => `[${name}]`;
 
+/** Колонки «фразы» и «паттерны» появляются, только если в проекте есть соответствующие данные; стоят рядом. Пустой проект — с колонкой фраз. */
 export function intentsTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef {
+  const [nameHead, phrasesHead, patternsHead, entitiesHead] = STRINGS[lang].intentsHead;
+  const hasPatterns = spec.intents.some((i) => i.patterns.length > 0);
+  const hasPhrases = spec.intents.some((i) => i.phrases.length > 0) || !hasPatterns;
+  const values = [
+    ...(hasPhrases ? [{ head: phrasesHead, pick: (i: ProjectSpec['intents'][number]) => i.phrases }] : []),
+    ...(hasPatterns ? [{ head: patternsHead, pick: (i: ProjectSpec['intents'][number]) => i.patterns }] : []),
+  ];
+  const valuesWidth = 100 - 18 - 22;
   return {
-    head: STRINGS[lang].intentsHead,
-    widths: [20, 50, 30],
+    head: [nameHead, ...values.map((v) => v.head), entitiesHead],
+    widths: [18, ...values.map(() => valuesWidth / values.length), 22],
     rows: spec.intents.map((i): Row => ({
-      cells: [text(i.name), list(i.phrases), list(i.entities.map((e) => ref(e.name) + (e.required ? ` (${STRINGS[lang].required})` : '')))],
+      cells: [text(i.name), ...values.map((v) => list(v.pick(i))), list(i.entities.map((e) => ref(e.name) + (e.required ? ` (${STRINGS[lang].required})` : '')))],
     })),
   };
 }

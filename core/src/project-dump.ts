@@ -57,6 +57,7 @@ const TABLES: { name: string; where: string; fk: Record<string, string> }[] = [
   { name: 'scenario_parts', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios' } },
   { name: 'intents', where: IN_PROJECT, fk: {} },
   { name: 'intent_phrases', where: VIA_INTENT, fk: { intent_id: 'intents' } },
+  { name: 'intent_patterns', where: VIA_INTENT, fk: { intent_id: 'intents' } },
   { name: 'intent_entities', where: VIA_INTENT, fk: { intent_id: 'intents', entity_id: 'entities' } },
   { name: 'prompts', where: IN_PROJECT, fk: {} },
   { name: 'scenario_intents', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', intent_id: 'intents' } },

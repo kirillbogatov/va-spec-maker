@@ -12,6 +12,16 @@ interface IntentRow {
 export function intentsRouter(db: Db): RouterT {
   const r = Router();
 
+  /** Фразы и паттерны одним списком в порядке, заданном пользователем (позиции общие на обе таблицы). */
+  const valuesOf = (id: number) =>
+    db
+      .prepare(
+        `SELECT text, 'phrase' AS kind, position, id FROM intent_phrases WHERE intent_id = ?1
+         UNION ALL SELECT text, 'pattern' AS kind, position, id FROM intent_patterns WHERE intent_id = ?1
+         ORDER BY position, kind DESC, id`,
+      )
+      .all(id) as { text: string; kind: 'phrase' | 'pattern' }[];
+
   const load = (id: number) => {
     const row = db
       .prepare('SELECT id, project_id, name, enabled, comment FROM intents WHERE id = ?')
@@ -21,6 +31,8 @@ export function intentsRouter(db: Db): RouterT {
       ...row,
       enabled: !!row.enabled,
       phrases: (db.prepare('SELECT text FROM intent_phrases WHERE intent_id = ? ORDER BY position, id').all(id) as { text: string }[]).map((p) => p.text),
+      patterns: (db.prepare('SELECT text FROM intent_patterns WHERE intent_id = ? ORDER BY position, id').all(id) as { text: string }[]).map((p) => p.text),
+      values: valuesOf(id).map(({ text, kind }) => ({ text, kind })),
       entities: (db.prepare('SELECT entity_id, required FROM intent_entities WHERE intent_id = ? ORDER BY position, id').all(id) as { entity_id: number; required: number }[])
         .map((e) => ({ entity_id: e.entity_id, required: !!e.required })),
     };
@@ -126,17 +138,27 @@ export function intentsRouter(db: Db): RouterT {
     for (const e of entities) {
       if (!findEntity.get(e.entity_id, cur.project_id)) throw badRequest('Сущность не найдена в проекте');
     }
-    const phrases = cleanStrings(b.phrases);
+    // Значения приходят одним упорядоченным списком (values); отдельные phrases/patterns — запасной вариант
+    const values: { text: string; kind: 'phrase' | 'pattern' }[] = Array.isArray(b.values)
+      ? b.values
+          .filter((v: any) => typeof v?.text === 'string' && v.text.trim())
+          .map((v: any) => ({ text: v.text.trim(), kind: v.kind === 'pattern' ? 'pattern' : 'phrase' }))
+      : [
+          ...cleanStrings(b.phrases).map((text) => ({ text, kind: 'phrase' as const })),
+          ...cleanStrings(b.patterns).map((text) => ({ text, kind: 'pattern' as const })),
+        ];
 
     db.transaction(() => {
       db.prepare('UPDATE intents SET name = ?, enabled = ?, comment = ? WHERE id = ?').run(
         name, b.enabled === false ? 0 : 1, optString(b.comment), id,
       );
       db.prepare('DELETE FROM intent_phrases WHERE intent_id = ?').run(id);
+      db.prepare('DELETE FROM intent_patterns WHERE intent_id = ?').run(id);
       db.prepare('DELETE FROM intent_entities WHERE intent_id = ?').run(id);
+      const insPattern = db.prepare('INSERT INTO intent_patterns(intent_id, text, position) VALUES (?, ?, ?)');
       const insPhrase = db.prepare('INSERT INTO intent_phrases(intent_id, text, position) VALUES (?, ?, ?)');
       const insEntity = db.prepare('INSERT INTO intent_entities(intent_id, entity_id, required, position) VALUES (?, ?, ?, ?)');
-      phrases.forEach((t, i) => insPhrase.run(id, t, i));
+      values.forEach((v, i) => (v.kind === 'pattern' ? insPattern : insPhrase).run(id, v.text, i));
       entities.forEach((e: { entity_id: number; required: boolean }, i: number) => insEntity.run(id, e.entity_id, e.required ? 1 : 0, i));
     })();
     res.json(load(id));

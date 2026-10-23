@@ -7,18 +7,21 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { AddBar } from '@/components/AddBar';
+import { KindToggle } from '@/components/KindToggle';
 import { ADD_ROW, DeleteChoiceDialog, REMOVE_BTN } from '@/components/DeleteChoiceDialog';
 import { SearchSelect } from '@/components/SearchSelect';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { SaveNote } from '@/components/SaveIndicator';
 import { TypeToken } from '@/components/TypeToken';
-import { Slotted } from './PhrasesCell';
+import { PatternText, Slotted } from './PhrasesCell';
 import { useProjectId } from '@/hooks/project';
 import { useAutosave } from '@/hooks/useAutosave';
 import { api } from '@/lib/api';
 import { useNormalize } from '@/lib/normalize';
 import { parsePhrases } from '@/lib/parse';
+import { MODE_EMPTY, MODE_TITLE, modeKind, modeShows, useIntentMode, type IntentMode } from '@/lib/intentMode';
+import { valuesPatch, type ValueItem, type ValueKind } from '@/lib/values';
 import { phraseKey } from '@/lib/stem';
 import { cn, uniqueName } from '@/lib/utils';
 import type { EntityListItem, Intent, IntentEntity, IntentListItem } from '@/lib/types';
@@ -48,7 +51,8 @@ function EntityTokens({ value, entities }: { value: IntentEntity[]; entities: En
 
 interface PhraseOwner { name: string; phrases: string[] }
 
-const PHRASE_BOX = 'h-8 w-full min-w-0 rounded-md bg-background px-2.5 font-mono text-[12.5px] max-md:h-10 md:text-[12.5px]';
+/** Поле значения внутри общей рамки списка: без собственной рамки. */
+const PHRASE_BOX = 'h-9 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 font-mono text-[12.5px] shadow-none focus-visible:ring-0 max-md:h-11 md:text-[12.5px]';
 
 
 /** Сущности интента таблицей без заголовков: название, описание, обязательность, удаление; ниже выбор следующей. */
@@ -102,9 +106,15 @@ function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; 
   );
 }
 
-/** Все фразы как редактируемые строки, поле «фраза» и массовое добавление списком (по фразе в строке). */
-function PhrasesEditor({ value, others, words, onChange }: { value: string[]; others: PhraseOwner[]; words: string[]; onChange: (v: string[]) => void }) {
+/** Значения интента (тренировочные фразы и паттерны) редактируемыми строками со значком типа, поле добавления и массовое добавление списком. */
+function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { value: ValueItem[]; others: PhraseOwner[]; words: string[]; entityNames: string[]; mode: IntentMode; onChange: (v: ValueItem[]) => void }) {
   const [text, setText] = useState('');
+  // Тип новых значений, добавляемых полем или списком; в режиме «оба» выбирается значком
+  const [pickedKind, setAddKind] = useState<ValueKind>('phrase');
+  const both = mode === 'both';
+  const addKind = both ? pickedKind : modeKind(mode);
+  // Скрытые режимом значения остаются в данных, но не показываются; индексы — по полному списку
+  const visible = value.flatMap((v, i) => (modeShows(mode, v.kind) ? [{ v, i }] : []));
   // Редактируемая фраза показывается полем, остальные — с подсвеченными значениями сущностей
   const [editing, setEditing] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -117,21 +127,23 @@ function PhrasesEditor({ value, others, words, onChange }: { value: string[]; ot
   const [bulk, setBulk] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const bulkCount = parsePhrases(bulkText).length;
-  // Где фраза уже встречается: в соседнем интенте сценария или выше в этом же списке
+  // Где значение уже встречается: выше в этом же списке или (для фраз) в соседнем интенте сценария
   const normalize = useNormalize(useProjectId());
-  const conflict = (p: string, before: string[]) => {
-    const k = phraseKey(p, normalize);
-    if (before.some((x) => phraseKey(x, normalize) === k)) return 'повторяется в этом интенте';
+  const conflict = (v: ValueItem, before: ValueItem[]) => {
+    const k = phraseKey(v.text, normalize);
+    if (before.some((x) => x.kind === v.kind && phraseKey(x.text, normalize) === k)) return 'повторяется в этом интенте';
+    if (v.kind === 'pattern') return '';
     const o = others.find((x) => x.phrases.some((y) => phraseKey(y, normalize) === k));
     return o ? `уже есть в интенте ${o.name}` : '';
   };
   const add = (raw: string) => {
-    const accepted: string[] = [];
+    const accepted: ValueItem[] = [];
     const skipped: string[] = [];
-    for (const p of parsePhrases(raw)) {
-      const c = conflict(p, [...value, ...accepted]);
-      if (c) skipped.push(`«${p}» — ${c}`);
-      else accepted.push(p);
+    for (const t of parsePhrases(raw)) {
+      const item: ValueItem = { text: t, kind: addKind };
+      const c = conflict(item, [...value, ...accepted]);
+      if (c) skipped.push(`«${t}» — ${c}`);
+      else accepted.push(item);
     }
     if (accepted.length) onChange([...value, ...accepted]);
     setError(skipped.length ? `Не добавлено (дубликаты в сценарии): ${skipped.join('; ')}` : '');
@@ -142,39 +154,45 @@ function PhrasesEditor({ value, others, words, onChange }: { value: string[]; ot
     setBulkText('');
   };
   return (
-    <div className="flex min-h-0 flex-col gap-1.5">
-      <div ref={listRef} className="-mx-1 grid min-h-24 gap-1.5 overflow-y-auto px-1 py-px">
-      {value.map((p, i) => {
-        const dup = conflict(p, value.slice(0, i));
+    <div className="flex shrink-0 flex-col gap-1.5">
+      <div ref={listRef} className={cn('max-h-72 divide-y divide-input overflow-y-auto rounded-md bg-background', visible.length > 0 && 'border border-input')}>
+      {visible.map(({ v, i }, n) => {
+        const dup = conflict(v, value.slice(0, i));
+        const label = `${v.kind === 'phrase' ? 'Фраза' : 'Паттерн'} ${n + 1}`;
         return (
-        <div key={i} className="group flex items-center gap-1">
-          {words.length > 0 && editing !== i && p.trim() ? (
+        <div key={i} className={cn('group flex items-stretch focus-within:bg-muted/50', dup && 'bg-destructive/10')}>
+            {both && (
+              <span className="grid w-9 shrink-0 place-items-center border-r border-input max-md:w-11">
+                <KindToggle kind={v.kind} bare className="size-6 max-md:size-8" onChange={(kind) => onChange(value.map((x, j) => (j === i ? { ...x, kind } : x)))} />
+              </span>
+            )}
+          {(v.kind === 'phrase' ? words.length > 0 : entityNames.length > 0) && editing !== i && v.text.trim() ? (
             <div
               role="textbox"
               tabIndex={0}
-              aria-label={`Фраза ${i + 1}`}
+              aria-label={label}
               title={dup ? `Дубликат: ${dup}` : undefined}
-              className={cn(PHRASE_BOX, 'flex cursor-text items-center border border-input', dup && 'border-destructive')}
+              className={cn(PHRASE_BOX, 'flex cursor-text items-center')}
               onFocus={() => setEditing(i)}
             >
-              <span className="truncate"><Slotted text={p} words={words} /></span>
+              <span className="truncate">{v.kind === 'phrase' ? <Slotted text={v.text} words={words} /> : <PatternText text={v.text} names={entityNames} />}</span>
             </div>
           ) : (
             <Input
               autoFocus={editing === i}
-              className={cn(PHRASE_BOX, dup && 'border-destructive')}
-              aria-label={`Фраза ${i + 1}`}
+              className={PHRASE_BOX}
+              aria-label={label}
               aria-invalid={!!dup}
               title={dup ? `Дубликат: ${dup}` : undefined}
-              value={p}
-              onChange={(e) => onChange(value.map((x, j) => (j === i ? e.target.value : x)))}
+              value={v.text}
+              onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
               onBlur={() => {
                 setEditing((cur) => (cur === i ? null : cur));
-                if (!p.trim()) onChange(value.filter((_, j) => j !== i));
+                if (!v.text.trim()) onChange(value.filter((_, j) => j !== i));
               }}
             />
           )}
-          <button type="button" aria-label="Удалить фразу" className={REMOVE_BTN} onClick={() => onChange(value.filter((_, j) => j !== i))}>
+          <button type="button" aria-label="Удалить значение" className={cn(REMOVE_BTN, 'my-auto mr-1 size-7 max-md:size-9')} onClick={() => onChange(value.filter((_, j) => j !== i))}>
             <X className="size-3.5" />
           </button>
         </div>
@@ -188,24 +206,33 @@ function PhrasesEditor({ value, others, words, onChange }: { value: string[]; ot
             autoFocus
             rows={5}
             className="rounded-md bg-background font-mono text-[12.5px] md:text-[12.5px]"
-            aria-label="Фразы списком"
-            placeholder="По одной фразе в строке"
+            aria-label="Значения списком"
+            placeholder="По одному значению в строке"
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
           />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={closeBulk}>Отмена</Button>
-            <Button disabled={!bulkCount} onClick={() => { add(bulkText); closeBulk(); }}>Добавить{bulkCount ? ` · ${bulkCount}` : ''}</Button>
+          <div className="flex items-center justify-between gap-2">
+            {both ? <KindToggle kind={addKind} onChange={setAddKind} /> : <span />}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={closeBulk}>Отмена</Button>
+              <Button disabled={!bulkCount} onClick={() => { add(bulkText); closeBulk(); }}>Добавить{bulkCount ? ` · ${bulkCount}` : ''}</Button>
+            </div>
           </div>
         </div>
       ) : (
         <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-md border border-dashed border-input focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+            {both && (
+              <span className="grid w-9 shrink-0 place-items-center border-r border-dashed max-md:w-11">
+                <KindToggle kind={addKind} bare className="size-6 max-md:size-8" onChange={setAddKind} />
+              </span>
+            )}
           <div className="relative min-w-0 flex-1">
             <Plus className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className={cn(ADD_ROW, 'pl-8 font-mono text-[12.5px] placeholder:font-sans placeholder:text-sm md:text-[12.5px]')}
-              aria-label="Добавить тренировочную фразу"
-              placeholder="фраза"
+              className={cn(ADD_ROW, 'rounded-none border-0 pl-8 font-mono text-[12.5px] shadow-none focus-visible:ring-0 placeholder:font-sans placeholder:text-sm md:text-[12.5px]')}
+              aria-label={addKind === 'phrase' ? 'Добавить тренировочную фразу' : 'Добавить паттерн'}
+              placeholder={addKind === 'phrase' ? 'фраза' : 'паттерн'}
               value={text}
               onChange={(e) => { setText(e.target.value); setError(''); }}
               onBlur={() => text.trim() && add(text)}
@@ -224,6 +251,7 @@ function PhrasesEditor({ value, others, words, onChange }: { value: string[]; ot
               }}
             />
           </div>
+          </div>
           <Button variant="outline" className="h-8 max-md:h-10" onClick={() => setBulk(true)}>
             <ListPlus className="size-4" /> Добавить несколько
           </Button>
@@ -238,6 +266,7 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
   intent: Intent; link: IntentListItem; siblings: PhraseOwner[]; defaultOpen: boolean; focusName: boolean; onToggleGlobal: (v: boolean) => void; onDisconnect: () => void; onRemove: () => void;
 }) {
   const projectId = useProjectId();
+  const mode = useIntentMode(projectId);
   const qc = useQueryClient();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [draft, setDraft] = useState<Intent>(intent);
@@ -263,8 +292,10 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
     const words = draft.entities.flatMap((ie) => entities.find((e) => e.id === ie.entity_id)?.values.flatMap((v) => [v.value, ...v.synonyms]) ?? []);
     return [...new Set(words.map((w) => w.trim()).filter((w) => w.length > 1))].sort((a, b) => b.length - a.length);
   }, [draft.entities, entities]);
-  const shown = draft.phrases.slice(0, 2).join(' · ');
-  const more = draft.phrases.length - 2;
+  const entityNames = draft.entities.flatMap((ie) => entities.find((e) => e.id === ie.entity_id)?.name ?? []);
+  const shownValues = draft.values.filter((v) => modeShows(mode, v.kind));
+  const shown = shownValues.slice(0, 2).map((v) => v.text).join(' · ');
+  const more = shownValues.length - 2;
 
   return (
     <div ref={ref} className={cn('border-t first:border-t-0', target && 'bg-accent/50')}>
@@ -279,8 +310,8 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
           {link.scenarios.length > 1 && <span className="mt-0.5 block text-xs text-faint">также в: {link.scenarios.map((s) => s.name).join(', ')}</span>}
         </span>
         <span className={cn('col-span-2 row-start-2 flex min-w-0 font-mono text-[12.5px] text-muted-foreground xl:col-span-1 xl:col-start-2 xl:row-start-1', !draft.enabled && 'opacity-60')}>
-          {draft.phrases.length === 0 ? (
-            <span className="font-sans text-sm text-warning">Нет фраз</span>
+          {shownValues.length === 0 ? (
+            <span className="font-sans text-sm text-warning">{MODE_EMPTY[mode][0].toUpperCase() + MODE_EMPTY[mode].slice(1)}</span>
           ) : (
             <>
               <span className="truncate">{shown}</span>
@@ -322,9 +353,16 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
               Комментарий
               <Textarea rows={1} className="min-h-10 rounded-md bg-background text-sm md:text-sm" aria-label="Комментарий" value={draft.comment} onChange={(e) => patch({ comment: e.target.value })} />
             </label>
-            <div className="flex min-h-0 flex-col gap-1 border-t border-dashed border-border/60 pt-4">
-              <span className="shrink-0 text-xs text-muted-foreground">Фразы · {draft.phrases.length}</span>
-              <PhrasesEditor value={draft.phrases} others={siblings} words={slotWords} onChange={(phrases) => patch({ phrases })} />
+            <div className="flex shrink-0 flex-col gap-1 border-t border-dashed border-border/60 pt-4">
+              <span className="shrink-0 text-xs text-muted-foreground">{MODE_TITLE[mode]} · {shownValues.length}</span>
+              <PhrasesEditor
+                value={draft.values}
+                others={siblings}
+                words={slotWords}
+                entityNames={entityNames}
+                mode={mode}
+                onChange={(items) => patch(valuesPatch(items))}
+              />
             </div>
             <div className="grid shrink-0 content-start gap-1 border-t border-dashed border-border/60 pt-4">
               <span className="text-xs text-muted-foreground">Сущности</span>
@@ -366,6 +404,7 @@ function IntentRowLoader({ link, siblings, defaultOpen, focusName, onToggleGloba
 }
 
 export function IntentsTable({ scenarioId }: { scenarioId: number }) {
+  const mode = useIntentMode(useProjectId());
   const projectId = useProjectId();
   const qc = useQueryClient();
   const [created, setCreated] = useState<number | null>(null);
@@ -413,7 +452,7 @@ export function IntentsTable({ scenarioId }: { scenarioId: number }) {
       <section className="overflow-hidden rounded-xl border bg-card" aria-label="Интенты сценария">
         <div className={cn('hidden gap-x-3 px-4 py-2 text-xs font-medium text-muted-foreground xl:grid', COLS)}>
           <span>Интент</span>
-          <span>Фразы</span>
+          <span>{MODE_TITLE[mode]}</span>
           <span>Сущности</span>
           <span>Вкл.</span>
           <span title="Срабатывает из любого состояния">Глобальный</span>

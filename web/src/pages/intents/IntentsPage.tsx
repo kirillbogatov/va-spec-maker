@@ -4,6 +4,8 @@ import { Switch } from '@/components/ui/switch';
 import { useProjectId } from '@/hooks/project';
 import { usePrefixes } from '@/lib/prefixes';
 import { api } from '@/lib/api';
+import { MODE_EMPTY, MODE_TITLE, modeShows, useIntentMode } from '@/lib/intentMode';
+import { valuesPatch } from '@/lib/values';
 import { EntitiesCell } from './EntitiesCell';
 import { PhrasesCell } from './PhrasesCell';
 
@@ -11,6 +13,8 @@ import { PhrasesCell } from './PhrasesCell';
 export function IntentsPage() {
   const projectId = useProjectId();
   const prefixes = usePrefixes(projectId);
+  const mode = useIntentMode(projectId);
+  const shownValues = (i: { values: { text: string; kind: 'phrase' | 'pattern' }[] }) => i.values.filter((v) => modeShows(mode, v.kind));
   const qc = useQueryClient();
   const { data: list = [] } = useQuery({ queryKey: ['intents', projectId], queryFn: () => api.intents.list(projectId) });
   const { data: entities = [] } = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId) });
@@ -36,10 +40,10 @@ export function IntentsPage() {
       loading={loading}
       groupOf={(i) => (i.scenarios.length ? 'Подключены к сценариям' : null)}
       fallbackGroup="Не используются"
-      meta={(i) => (i.phrases.length ? null : { text: 'нет фраз', warn: true })}
+      meta={(i) => (shownValues(i).length ? null : { text: MODE_EMPTY[mode], warn: true })}
       usedIn={(i) => i.scenarios}
       commentKey="comment"
-      subtitle={(i) => i.comment?.trim() || i.phrases.find((x) => x.trim()) || ''}
+      subtitle={(i) => i.comment?.trim() || shownValues(i).find((x) => x.text.trim())?.text || ''}
       headerExtra={(d, patch) => (
         <label className="flex min-h-10 items-center gap-2 text-sm text-muted-foreground md:min-h-8">
           Включён
@@ -57,10 +61,18 @@ export function IntentsPage() {
           }
         }
         const words = [...owners.keys()];
+        const entityNames = d.entities.flatMap((e) => entities.find((x) => x.id === e.entity_id)?.name ?? []);
         return (
           <>
-            <DictCard title="Тренировочные фразы" count={d.phrases.length}>
-              <PhrasesCell value={d.phrases} highlight={words} owners={owners} onChange={(phrases) => patch({ phrases })} />
+            <DictCard title={MODE_TITLE[mode]} count={d.values.filter((v) => modeShows(mode, v.kind)).length}>
+              <PhrasesCell
+                mode={mode}
+                value={d.values}
+                highlight={words}
+                entityNames={entityNames}
+                owners={owners}
+                onChange={(items) => patch(valuesPatch(items))}
+              />
             </DictCard>
             <DictCard title="Сущности в интенте" count={d.entities.length}>
               <EntitiesCell value={d.entities} entities={entities} onChange={(e) => patch({ entities: e })} />
