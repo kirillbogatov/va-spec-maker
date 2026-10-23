@@ -2,6 +2,7 @@ import type {
   DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
 } from './types';
 import type { EntityKind } from './entityTypes';
+import type { SpecLang } from './specLang';
 
 import { request } from './backend';
 import { downloadResponse } from './download';
@@ -94,5 +95,5 @@ export const api = {
     remove: (id: number) => req<void>('DELETE', `/api/scenarios/${id}`),
   },
   exportFile: async (url: string, fallback: string) => downloadResponse(await request('GET', url), fallback),
-  preview: (scenarioId: number) => req<string>('GET', `/api/scenarios/${scenarioId}/preview`),
+  preview: (scenarioId: number, lang: SpecLang) => req<string>('GET', `/api/scenarios/${scenarioId}/preview?lang=${lang}`),
 };

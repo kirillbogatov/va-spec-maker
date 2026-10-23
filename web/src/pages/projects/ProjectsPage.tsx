@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { api } from '@/lib/api';
+import { readSpecLang } from '@/lib/specLang';
 import { backupProject } from '@/lib/backup';
 import { addDemo } from '@/lib/backend';
 import type { ProjectListItem } from '@/lib/types';
@@ -85,7 +86,7 @@ export function ProjectsPage() {
     bump((n) => n + 1);
   };
   const exportDocx = (p: ProjectListItem) =>
-    api.exportFile(`/api/projects/${p.id}/export?format=docx`, `${p.name}.docx`).catch((e: Error) => toast.error(e.message));
+    api.exportFile(`/api/projects/${p.id}/export?format=docx&lang=${readSpecLang(p.id)}`, `${p.name}.docx`).catch((e: Error) => toast.error(e.message));
   const loadDemo = async () => {
     await addDemo();
     await refresh();

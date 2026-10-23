@@ -3,6 +3,7 @@ import {
   entitiesTable, intentsTable, promptsTable, transitionsTable,
   type Cell, type TableDef,
 } from './tables';
+import { STRINGS, type SpecLang } from './i18n';
 
 const esc = (s: string) => s.replace(/\|/g, '\\|');
 
@@ -26,32 +27,33 @@ function table({ head, rows }: TableDef): string {
   ].join('\n');
 }
 
-function section(spec: ProjectSpec, date: string | null, parts?: ScenarioDoc['parts']): string[] {
+function section(spec: ProjectSpec, date: string | null, lang: SpecLang, parts?: ScenarioDoc['parts']): string[] {
+  const t = STRINGS[lang];
   const out: string[] = [`# ${spec.project.name}`];
-  if (date) out.push(`_Спецификация от ${date}_`);
+  if (date) out.push(`_${t.specFrom(date)}_`);
   if (spec.project.description) out.push(spec.project.description);
 
-  out.push('## Интенты', table(intentsTable(spec)));
-  out.push('## Сущности', table(entitiesTable(spec)));
-  out.push('## Промпты', table(promptsTable(spec)));
-  out.push('## Переходы между состояниями');
-  if (!parts || parts.length === 1) out.push(table(transitionsTable(parts ? parts[0].transitions : spec.transitions)));
+  out.push(`## ${t.intents}`, table(intentsTable(spec, lang)));
+  out.push(`## ${t.entities}`, table(entitiesTable(spec, lang)));
+  out.push(`## ${t.prompts}`, table(promptsTable(spec, lang)));
+  out.push(`## ${t.transitions}`);
+  if (!parts || parts.length === 1) out.push(table(transitionsTable(parts ? parts[0].transitions : spec.transitions, lang)));
   else {
     for (const p of parts) {
       out.push(`### ${p.title}`);
       if (p.description.trim()) out.push(p.description);
-      out.push(table(transitionsTable(p.transitions)));
+      out.push(table(transitionsTable(p.transitions, lang)));
     }
   }
-  out.push('## Ошибки', table(transitionsTable(spec.errors)));
+  out.push(`## ${t.errors}`, table(transitionsTable(spec.errors, lang)));
   return out;
 }
 
-export function renderMarkdown(spec: ProjectSpec, date: string): string {
-  return section(spec, date).join('\n\n') + '\n';
+export function renderMarkdown(spec: ProjectSpec, date: string, lang: SpecLang = 'ru'): string {
+  return section(spec, date, lang).join('\n\n') + '\n';
 }
 
 /** Общие таблицы сценария один раз; вкладки — только подразделы State transitions. */
-export function renderMarkdownScenario(doc: ScenarioDoc, date: string): string {
-  return section(doc.spec, date, doc.parts).join('\n\n') + '\n';
+export function renderMarkdownScenario(doc: ScenarioDoc, date: string, lang: SpecLang = 'ru'): string {
+  return section(doc.spec, date, lang, doc.parts).join('\n\n') + '\n';
 }

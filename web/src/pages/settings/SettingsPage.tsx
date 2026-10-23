@@ -2,6 +2,7 @@ import { useProjectId } from '@/hooks/project';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useNormalize, writeNormalize } from '@/lib/normalize';
+import { SPEC_LANGS, useSpecLang, writeSpecLang } from '@/lib/specLang';
 import { PREFIX_FIELDS, usePrefixes, writePrefix } from '@/lib/prefixes';
 
 /** Настройки проекта: с чего начинается название нового интента, сущности, промпта, зависимости и сценария. */
@@ -9,6 +10,7 @@ export function SettingsPage() {
   const projectId = useProjectId();
   const prefixes = usePrefixes(projectId);
   const normalize = useNormalize(projectId);
+  const specLang = useSpecLang(projectId);
   return (
     <div className="h-full overflow-y-auto p-4 md:p-8">
       <div className="mx-auto max-w-xl">
@@ -43,6 +45,26 @@ export function SettingsPage() {
             </span>
             <Switch checked={normalize} onCheckedChange={(v) => writeNormalize(projectId, v)} aria-label="Нормализовать слова" />
           </label>
+        </section>
+        <section className="mt-4 rounded-xl border bg-card p-4">
+          <h2 className="text-sm font-semibold">Язык спецификации</h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            На этом языке будут заголовки, названия колонок и служебные слова в предпросмотре и экспорте. Всё, что введено вами, остаётся как есть.
+          </p>
+          <div role="radiogroup" aria-label="Язык спецификации" className="mt-4 inline-flex rounded-lg border p-0.5">
+            {SPEC_LANGS.map((l) => (
+              <button
+                key={l.value}
+                type="button"
+                role="radio"
+                aria-checked={specLang === l.value}
+                onClick={() => writeSpecLang(projectId, l.value)}
+                className={`rounded-md px-4 py-1.5 text-sm transition-colors max-md:min-h-10 ${specLang === l.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
         </section>
       </div>
     </div>

@@ -30,11 +30,11 @@ function validBound(type: EntityType, s: string): boolean {
 /** Время и дата в каноническом виде сравниваются как строки. */
 const greater = (type: EntityType, a: string, b: string) => (type === 'number' ? Number(a) > Number(b) : a > b);
 
-export function rangeText(type: string, min: string, max: string): string {
+export function rangeText(type: string, min: string, max: string, words = { from: 'от', to: 'до' }): string {
   if (!RANGE_TYPES.includes(type as EntityType)) return '';
-  if (min && max) return `от ${min} до ${max}`;
-  if (min) return `от ${min}`;
-  if (max) return `до ${max}`;
+  if (min && max) return `${words.from} ${min} ${words.to} ${max}`;
+  if (min) return `${words.from} ${min}`;
+  if (max) return `${words.to} ${max}`;
   return '';
 }
 

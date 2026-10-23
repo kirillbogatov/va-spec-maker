@@ -1,5 +1,6 @@
 import type { Db } from '../sqlite';
 import { notFound } from '../errors';
+import { STRINGS, type SpecLang } from './i18n';
 
 export interface TransitionRow {
   state: string;
@@ -54,7 +55,7 @@ export interface ScenarioDoc {
  * Спецификация сценария: интенты, сущности, промпты и ошибки — общие для всех вкладок,
  * разбиение по вкладкам видно только в переходах. Единственная вкладка выводится без подзаголовка.
  */
-export function loadScenarioDoc(db: Db, scenarioId: number): ScenarioDoc {
+export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru'): ScenarioDoc {
   const scenario = db.prepare('SELECT id, project_id, name, description FROM scenarios WHERE id = ?').get(scenarioId) as
     | { id: number; project_id: number; name: string; description: string }
     | undefined;
@@ -86,12 +87,12 @@ export function loadScenarioDoc(db: Db, scenarioId: number): ScenarioDoc {
       entityIds.add(r.entity_id);
     }
   }
-  const spec = buildSpec(db, projectId, { ...project, name: scenario.name, description: scenario.description }, { scenarioId, partId: null, intentIds, promptIds, entityIds });
+  const spec = buildSpec(db, projectId, { ...project, name: scenario.name, description: scenario.description }, lang, { scenarioId, partId: null, intentIds, promptIds, entityIds });
   const single = parts.length === 1;
   return {
     spec: { ...spec, transitions: [] },
     parts: parts.map((part) => {
-      const ps = buildSpec(db, projectId, project, { scenarioId, partId: part.id, intentIds, promptIds, entityIds });
+      const ps = buildSpec(db, projectId, project, lang, { scenarioId, partId: part.id, intentIds, promptIds, entityIds });
       return { title: single ? scenario.name : part.name, description: part.description, transitions: ps.transitions, globals: ps.globals ?? [] };
     }),
   };
@@ -106,15 +107,15 @@ interface Scope {
   entityIds: Set<number>;
 }
 
-export function loadProjectSpec(db: Db, projectId: number): ProjectSpec {
+export function loadProjectSpec(db: Db, projectId: number, lang: SpecLang = 'ru'): ProjectSpec {
   const project = db.prepare('SELECT id, name, description FROM projects WHERE id = ?').get(projectId) as
     | ProjectSpec['project']
     | undefined;
   if (!project) throw notFound('Проект');
-  return buildSpec(db, projectId, project);
+  return buildSpec(db, projectId, project, lang);
 }
 
-function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], scope?: Scope): ProjectSpec {
+function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], lang: SpecLang, scope?: Scope): ProjectSpec {
   const intents = (
     (db.prepare('SELECT id, name FROM intents WHERE project_id = ? ORDER BY id').all(projectId) as { id: number; name: string }[]).filter(
       (i) => !scope || scope.intentIds.has(i.id),
@@ -204,14 +205,14 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], s
   type Raw = TransitionRow & { kind: string; conditions: string; cond_mode: string; part_id: number | null };
   const rows = db
     .prepare(
-      `SELECT t.part_id, t.kind, t.state, CASE WHEN t.kind = 'error' AND t.intent_id IS NULL THEN 'Любой интент сценария' ELSE i.name END AS intent, t.request_params, t.condition, t.conditions, t.cond_mode, p.name AS prompt, t.system_action, t.next_states
+      `SELECT t.part_id, t.kind, t.state, CASE WHEN t.kind = 'error' AND t.intent_id IS NULL THEN ? ELSE i.name END AS intent, t.request_params, t.condition, t.conditions, t.cond_mode, p.name AS prompt, t.system_action, t.next_states
        FROM scenario_steps t
        JOIN scenarios s ON s.id = t.scenario_id
        LEFT JOIN intents i ON i.id = t.intent_id
        LEFT JOIN prompts p ON p.id = t.prompt_id
        WHERE s.project_id = ? AND (? IS NULL OR t.scenario_id = ?) AND (? IS NULL OR t.part_id = ?) ORDER BY s.id, t.part_id, t.position, t.id`,
     )
-    .all(projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
+    .all(STRINGS[lang].anyScenarioIntent, projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
   const entityName = new Map((db.prepare('SELECT id, name FROM entities WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((e) => [e.id, e.name]));
   const strip = ({ kind, conditions, cond_mode, part_id, ...row }: Raw): TransitionRow => {
     const pairs = (JSON.parse(conditions) as { dep: string; value: string; entity_id?: number; op?: string }[])
@@ -219,7 +220,7 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], s
       .filter((c) => c.label !== undefined)
       .map((c) => `[${c.label}] ${c.op || '='} ${c.value}`);
     const all = [...pairs, ...row.condition.split('\n').map((l) => l.trim())].filter(Boolean);
-    const out = { ...row, condition: [...(cond_mode === 'any' && all.length > 1 ? ['Любое из:'] : []), ...all].join('\n') };
+    const out = { ...row, condition: [...(cond_mode === 'any' && all.length > 1 ? [STRINGS[lang].anyOf] : []), ...all].join('\n') };
     if (kind === 'error') return out;
     const targets = row.next_states.split(/[\s,;|]+|->|→/).map((x) => x.trim()).filter(Boolean).map((t) => stateInfo.get(`${part_id}|${t}`));
     const uniq = (xs: (string | null | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x && !!x.trim()))].join('\n');

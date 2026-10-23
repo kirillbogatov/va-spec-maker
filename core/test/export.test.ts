@@ -240,3 +240,24 @@ describe('export route', () => {
     expect(md).not.toContain('INT_LOOSE');
   });
 });
+
+describe('spec language', () => {
+  it('translates fixed texts to English and keeps user input', () => {
+    const md = renderMarkdown(spec, '2026-10-17', 'en');
+    for (const h of ['## Intents', '## Entities', '## Prompts', '## State transitions', '## Errors', 'Specification dated 2026-10-17', 'Training phrases', '(required)', 'Number', 'from 1 to 3', 'Multiple values']) {
+      expect(md).toContain(h);
+    }
+    expect(md).not.toContain('## Интенты');
+    expect(md).toContain('Обогрев сиденья на 3');
+    expect(md).toContain('INT_SEAT_HEATING_SET');
+  });
+
+  it('serves English preview and export by the lang parameter', async () => {
+    const { app, db } = await makeApp();
+    const pid = createProject(db);
+    const sid = (await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' })).body.id as number;
+    expect((await request(app).get(`/api/scenarios/${sid}/preview?lang=en`)).text).toContain('## Intents');
+    expect((await request(app).get(`/api/scenarios/${sid}/preview`)).text).toContain('## Интенты');
+    expect((await request(app).get(`/api/projects/${pid}/export?format=md&lang=en`)).text).toContain('## State transitions');
+  });
+});

@@ -4,6 +4,7 @@ import { badRequest } from '../errors';
 import { renderDocx, renderDocxScenario } from '../export/docx';
 import { renderMarkdown, renderMarkdownScenario } from '../export/markdown';
 import { loadProjectSpec, loadScenarioDoc } from '../export/model';
+import { parseLang } from '../export/i18n';
 import { parseId } from '../validate';
 
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -16,31 +17,34 @@ export function exportRouter(db: Db): RouterT {
     const format = req.query.format;
     if (format !== 'md' && format !== 'docx') throw badRequest('Параметр format должен быть md или docx');
     // Документ описывает один сценарий; вкладки отражаются только в State transitions
-    const doc = loadScenarioDoc(db, id);
+    const lang = parseLang(req.query.lang);
+    const doc = loadScenarioDoc(db, id, lang);
     const name = (db.prepare('SELECT name FROM scenarios WHERE id = ?').get(id) as { name: string }).name;
     const date = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name)}.${format}`);
     if (format === 'md') {
-      res.type('text/markdown; charset=utf-8').send(renderMarkdownScenario(doc, date));
+      res.type('text/markdown; charset=utf-8').send(renderMarkdownScenario(doc, date, lang));
     } else {
-      res.type(DOCX_TYPE).send(await renderDocxScenario(doc, name));
+      res.type(DOCX_TYPE).send(await renderDocxScenario(doc, name, lang));
     }
   });
 
   /** Markdown сценария для предпросмотра на странице (без заголовка attachment). */
   r.get('/scenarios/:id/preview', (req, res) => {
-    res.type('text/markdown; charset=utf-8').send(renderMarkdownScenario(loadScenarioDoc(db, parseId(req.params.id)), new Date().toISOString().slice(0, 10)));
+    const lang = parseLang(req.query.lang);
+    res.type('text/markdown; charset=utf-8').send(renderMarkdownScenario(loadScenarioDoc(db, parseId(req.params.id), lang), new Date().toISOString().slice(0, 10), lang));
   });
 
   /** Все сценарии проекта одним документом. */
   r.get('/projects/:pid/export', async (req, res) => {
-    const spec = loadProjectSpec(db, parseId(req.params.pid));
+    const lang = parseLang(req.query.lang);
+    const spec = loadProjectSpec(db, parseId(req.params.pid), lang);
     const format = req.query.format;
     if (format !== 'md' && format !== 'docx') throw badRequest('Параметр format должен быть md или docx');
     const date = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(spec.project.name)}.${format}`);
-    if (format === 'md') res.type('text/markdown; charset=utf-8').send(renderMarkdown(spec, date));
-    else res.type(DOCX_TYPE).send(await renderDocx(spec, date));
+    if (format === 'md') res.type('text/markdown; charset=utf-8').send(renderMarkdown(spec, date, lang));
+    else res.type(DOCX_TYPE).send(await renderDocx(spec, date, lang));
   });
 
   return r;

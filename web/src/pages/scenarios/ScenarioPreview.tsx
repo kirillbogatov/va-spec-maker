@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { MarkdownView } from '@/components/MarkdownView';
+import { useProjectId } from '@/hooks/project';
 import { api } from '@/lib/api';
+import { useSpecLang } from '@/lib/specLang';
 
 /** Как сценарий будет выглядеть в экспортируемом документе. Показывает последние сохранённые данные. */
 export function ScenarioPreview({ scenarioId, version }: { scenarioId: number; version: unknown }) {
+  const lang = useSpecLang(useProjectId());
   const { data, isLoading, error } = useQuery({
-    queryKey: ['preview', scenarioId, version],
-    queryFn: () => api.preview(scenarioId),
+    queryKey: ['preview', scenarioId, version, lang],
+    queryFn: () => api.preview(scenarioId, lang),
     gcTime: 0,
   });
 
