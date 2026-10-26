@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, TriangleAlert } from 'lucide-react';
 import { type ObjectKind } from '@/components/TypeToken';
@@ -15,18 +15,63 @@ interface MasterDetailProps {
   flush?: boolean;
 }
 
+const MIN_WIDTH = 272;
+const MAX_WIDTH = 720;
+const WIDTH_KEY = 'master-width';
+
+const clampWidth = (w: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, w));
+
+function useMasterWidth() {
+  const [width, setWidth] = useState(() => {
+    try {
+      return clampWidth(Number(localStorage.getItem(WIDTH_KEY)) || MIN_WIDTH);
+    } catch {
+      return MIN_WIDTH;
+    }
+  });
+  const startDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = width;
+    let last = startW;
+    const move = (ev: PointerEvent) => {
+      last = clampWidth(startW + ev.clientX - startX);
+      setWidth(last);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      try {
+        localStorage.setItem(WIDTH_KEY, String(last));
+      } catch {
+        /* хранилище недоступно — ширина живёт до перезагрузки */
+      }
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return { width, startDrag };
+}
+
 export function MasterDetail({ list, children, selected, onBack, flush }: MasterDetailProps) {
   const stacked = selected === undefined;
+  const { width, startDrag } = useMasterWidth();
   return (
     <div className={cn('flex h-full min-h-0 flex-col md:flex-row', stacked && 'overflow-y-auto md:overflow-visible')}>
       <aside
+        style={{ '--master-w': `${width}px` } as CSSProperties}
         className={cn(
-          'flex shrink-0 flex-col border-b bg-background text-foreground md:w-[272px] md:border-b-0 md:border-r',
+          'relative flex shrink-0 flex-col border-b bg-background text-foreground md:w-[var(--master-w)] md:border-b-0 md:border-r',
           stacked ? 'max-h-[45vh] md:max-h-none' : 'min-h-0 flex-1 md:flex-none',
           selected && 'hidden md:flex',
         )}
       >
         {list}
+        <div onPointerDown={startDrag} aria-hidden className="absolute -right-1 top-0 z-10 hidden h-full w-2 cursor-col-resize touch-none md:block" />
       </aside>
       <section
         className={cn(

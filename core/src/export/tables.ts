@@ -30,8 +30,9 @@ const ref = (name: string) => `[${name}]`;
 /** Колонки «фразы» и «паттерны» появляются, только если в проекте есть соответствующие данные; стоят рядом. Пустой проект — с колонкой фраз. */
 export function intentsTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef {
   const [nameHead, phrasesHead, patternsHead, entitiesHead] = STRINGS[lang].intentsHead;
-  const hasPatterns = spec.intents.some((i) => i.patterns.length > 0);
-  const hasPhrases = spec.intents.some((i) => i.phrases.length > 0) || !hasPatterns;
+  const mode = spec.intentMode ?? 'both';
+  const hasPatterns = mode === 'patterns' || (mode === 'both' && spec.intents.some((i) => i.patterns.length > 0));
+  const hasPhrases = mode === 'phrases' || (mode === 'both' && (spec.intents.some((i) => i.phrases.length > 0) || !hasPatterns));
   const values = [
     ...(hasPhrases ? [{ head: phrasesHead, pick: (i: ProjectSpec['intents'][number]) => i.phrases }] : []),
     ...(hasPatterns ? [{ head: patternsHead, pick: (i: ProjectSpec['intents'][number]) => i.patterns }] : []),

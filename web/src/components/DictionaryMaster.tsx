@@ -244,8 +244,8 @@ function DictEditor<T extends DictItem>({ item, p, onRemoved }: { item: T; p: Pr
           aria-label="Название"
         />
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 text-sm text-muted-foreground">
-          <span>Используется в</span>
-          {usedIn.length === 0 && <span className="text-faint">пока нигде</span>}
+          {usedIn.length > 0 && <span>Используется в</span>}
+          {usedIn.length === 0 && <span className="text-faint">Не используется в текущих сценариях</span>}
           {usedIn.map((s) => (
             <Link
               key={s.id}

@@ -3,14 +3,16 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useProjectId } from '@/hooks/project';
 import { api } from '@/lib/api';
+import { useIntentMode } from '@/lib/intentMode';
 import { useSpecLang } from '@/lib/specLang';
 
 /** Главная кнопка «Экспорт .docx» и меню с остальными форматами. */
 export function ExportMenu({ scenarioId }: { scenarioId: number }) {
   const projectId = useProjectId();
   const lang = useSpecLang(projectId);
-  const scenario = (format: 'md' | 'docx') => api.exportFile(`/api/scenarios/${scenarioId}/export?format=${format}&lang=${lang}`, `scenario.${format}`);
-  const project = (format: 'md' | 'docx') => api.exportFile(`/api/projects/${projectId}/export?format=${format}&lang=${lang}`, `project.${format}`);
+  const mode = useIntentMode(projectId);
+  const scenario = (format: 'md' | 'docx') => api.exportFile(`/api/scenarios/${scenarioId}/export?format=${format}&lang=${lang}&intentMode=${mode}`, `scenario.${format}`);
+  const project = (format: 'md' | 'docx') => api.exportFile(`/api/projects/${projectId}/export?format=${format}&lang=${lang}&intentMode=${mode}`, `project.${format}`);
   return (
     <div className="flex">
       <Button className="rounded-r-none max-md:h-10" onClick={() => scenario('docx')}>

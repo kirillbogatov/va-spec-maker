@@ -3,7 +3,7 @@ import type { Db } from '../sqlite';
 import { badRequest } from '../errors';
 import { renderDocx, renderDocxScenario } from '../export/docx';
 import { renderMarkdown, renderMarkdownScenario } from '../export/markdown';
-import { loadProjectSpec, loadScenarioDoc } from '../export/model';
+import { loadProjectSpec, loadScenarioDoc, parseIntentMode } from '../export/model';
 import { parseLang } from '../export/i18n';
 import { parseId } from '../validate';
 
@@ -19,6 +19,7 @@ export function exportRouter(db: Db): RouterT {
     // Документ описывает один сценарий; вкладки отражаются только в State transitions
     const lang = parseLang(req.query.lang);
     const doc = loadScenarioDoc(db, id, lang);
+    doc.spec.intentMode = parseIntentMode(req.query.intentMode);
     const name = (db.prepare('SELECT name FROM scenarios WHERE id = ?').get(id) as { name: string }).name;
     const date = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name)}.${format}`);
@@ -32,13 +33,16 @@ export function exportRouter(db: Db): RouterT {
   /** Markdown сценария для предпросмотра на странице (без заголовка attachment). */
   r.get('/scenarios/:id/preview', (req, res) => {
     const lang = parseLang(req.query.lang);
-    res.type('text/markdown; charset=utf-8').send(renderMarkdownScenario(loadScenarioDoc(db, parseId(req.params.id), lang), new Date().toISOString().slice(0, 10), lang));
+    const doc = loadScenarioDoc(db, parseId(req.params.id), lang);
+    doc.spec.intentMode = parseIntentMode(req.query.intentMode);
+    res.type('text/markdown; charset=utf-8').send(renderMarkdownScenario(doc, new Date().toISOString().slice(0, 10), lang));
   });
 
   /** Все сценарии проекта одним документом. */
   r.get('/projects/:pid/export', async (req, res) => {
     const lang = parseLang(req.query.lang);
     const spec = loadProjectSpec(db, parseId(req.params.pid), lang);
+    spec.intentMode = parseIntentMode(req.query.intentMode);
     const format = req.query.format;
     if (format !== 'md' && format !== 'docx') throw badRequest('Параметр format должен быть md или docx');
     const date = new Date().toISOString().slice(0, 10);

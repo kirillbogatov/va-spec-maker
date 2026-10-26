@@ -12,8 +12,15 @@ export interface TransitionRow {
   next_states: string;
 }
 
+/** Как описаны интенты в проекте (настройка хранится в браузере): определяет, какие колонки значений выводить. */
+export type IntentMode = 'phrases' | 'patterns' | 'both';
+
+export const parseIntentMode = (v: unknown): IntentMode => (v === 'phrases' || v === 'patterns' ? v : 'both');
+
 export interface ProjectSpec {
   project: { id: number; name: string; description: string };
+  /** Не задан — как «both»: колонки по наличию данных. */
+  intentMode?: IntentMode;
   intents: {
     name: string;
     phrases: string[];
