@@ -53,6 +53,7 @@ const TABLES: { name: string; where: string; fk: Record<string, string> }[] = [
   { name: 'entities', where: IN_PROJECT, fk: {} },
   { name: 'entity_values', where: VIA_ENTITY, fk: { entity_id: 'entities' } },
   { name: 'dependency_dictionary', where: IN_PROJECT, fk: {} },
+  { name: 'keywords', where: IN_PROJECT, fk: {} },
   { name: 'scenarios', where: IN_PROJECT, fk: {} },
   { name: 'scenario_parts', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios' } },
   { name: 'intents', where: IN_PROJECT, fk: {} },

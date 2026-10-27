@@ -69,6 +69,13 @@ CREATE TABLE IF NOT EXISTS dependency_dictionary (
   "values" TEXT NOT NULL DEFAULT '[]',
   UNIQUE (project_id, name)
 );
+CREATE TABLE IF NOT EXISTS keywords (
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  synonyms TEXT NOT NULL DEFAULT '[]',
+  UNIQUE (project_id, name)
+);
 CREATE TABLE IF NOT EXISTS scenarios (
   id INTEGER PRIMARY KEY,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

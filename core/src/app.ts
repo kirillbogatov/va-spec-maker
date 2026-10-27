@@ -5,6 +5,7 @@ import { dependencyDictionaryRouter } from './routes/dependency-dictionary';
 import { entitiesRouter } from './routes/entities';
 import { exportRouter } from './routes/export';
 import { intentsRouter } from './routes/intents';
+import { keywordsRouter } from './routes/keywords';
 import { projectsRouter } from './routes/projects';
 import { promptsRouter } from './routes/prompts';
 import { scenariosRouter } from './routes/scenarios';
@@ -15,7 +16,7 @@ export interface App { handle(r: AppRequest): Promise<AppResponse> }
 
 export function createApp(db: Db): App {
   const routers: RouterT[] = [
-    projectsRouter(db), entitiesRouter(db), intentsRouter(db), dependencyDictionaryRouter(db),
+    projectsRouter(db), entitiesRouter(db), intentsRouter(db), dependencyDictionaryRouter(db), keywordsRouter(db),
     promptsRouter(db), scenariosRouter(db), exportRouter(db),
   ];
   return {
