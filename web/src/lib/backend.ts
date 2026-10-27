@@ -1,4 +1,4 @@
-import { createApp, openDb, seedDemo, type App, type AppResponse, type Db } from '@va/core';
+import { createApp, DEMO_NAME, openDb, seedDemo, type App, type AppResponse, type Db } from '@va/core';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { DEMO } from '@/lib/demoMode';
 
@@ -70,8 +70,40 @@ export async function initBackend(): Promise<void> {
   app = createApp(db);
   if (!data) {
     await seedDemo(app);
+    storeDemoVersion();
+    persist();
+  } else if (!DEMO && readDemoVersion() !== __DEMO_VERSION__) {
+    await refreshDemo();
+  }
+}
+
+// Версия демо, с которой в этом браузере создан демо-проект; при выходе новой версии демо заменяется свежим.
+const VERSION_KEY = 'va-demo-version';
+const readDemoVersion = (): string | null => {
+  try {
+    return localStorage.getItem(VERSION_KEY);
+  } catch {
+    return null;
+  }
+};
+const storeDemoVersion = () => {
+  try {
+    localStorage.setItem(VERSION_KEY, __DEMO_VERSION__);
+  } catch {
+    /* хранилище недоступно — демо обновится при следующем запуске */
+  }
+};
+
+/** Заменяет демо-проекты (по названию) их актуальной версией; если демо в базе нет, ничего не добавляет. Правки пользователя в демо при этом теряются. */
+async function refreshDemo(): Promise<void> {
+  const list = await app.handle({ method: 'GET', url: '/api/projects' });
+  const old = (list.body as { id: number; name: string }[]).filter((p) => p.name === DEMO_NAME);
+  for (const p of old) await app.handle({ method: 'DELETE', url: `/api/projects/${p.id}` });
+  if (old.length) {
+    await seedDemo(app);
     persist();
   }
+  storeDemoVersion();
 }
 
 export async function request(method: string, url: string, body?: unknown): Promise<AppResponse> {

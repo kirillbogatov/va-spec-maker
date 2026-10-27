@@ -2,7 +2,7 @@ export { createApp } from './app';
 export type { App, AppRequest, AppResponse } from './app';
 export { openDb } from './db';
 export type { Db } from './sqlite';
-export { seedDemo } from './demo';
+export { seedDemo, DEMO_NAME } from './demo';
 export { dumpProject, importProject } from './project-dump';
 export { stem, normalizeText, phraseKey, findSlotMatches, findSlots } from './stem';
 export type { SlotMatch } from './stem';

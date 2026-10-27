@@ -20,10 +20,12 @@ const entityDep = (ref: string, entity_id: number) => ({ ref, entity_id, name: '
 const node = (x: number, y: number, description: string, prompt_id: number | null = null, system_action = '') =>
   ({ x, y, description, prompt_id, system_action });
 
+export const DEMO_NAME = 'Демо: умный дом';
+
 /** Демо-проект «умный дом»: три сценария с сущностями разных типов, общими интентом и промптом, схемами состояний и ошибками. */
 export async function seedDemo(app: App): Promise<number> {
   const { id: pid } = await call(app, 'POST', '/api/projects', {
-    name: 'Демо: умный дом',
+    name: DEMO_NAME,
     description: 'Пример проекта: управление светом, температурой и будильником голосом.',
   });
   const entity = async (
