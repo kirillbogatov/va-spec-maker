@@ -369,7 +369,7 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
             </label>
             <div className="flex shrink-0 flex-col gap-1 border-t border-dashed border-border/60 pt-4">
               <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-                {MODE_TITLE[mode]} · {shownValues.length}
+                {MODE_TITLE[mode]}
                 {mode === 'keywords' && <KeywordsHint />}
               </span>
               <PhrasesEditor

@@ -39,7 +39,6 @@ export function PromptsPage() {
       body={(d, patch) => (
         <DictCard
           title="Ответ ассистента"
-          count={d.full_answers.length}
           action={
             <button
               type="button"

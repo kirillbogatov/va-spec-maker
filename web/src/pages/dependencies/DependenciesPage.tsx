@@ -85,7 +85,7 @@ export function DependenciesPage() {
       meta={(i) => (i.values.length ? null : { text: 'нет значений', warn: true })}
       usedIn={(i) => i.used_by.map((s) => ({ id: s.id, name: s.name }))}
       body={(d, patch) => (
-        <DictCard title="Возможные значения" count={d.values.length}>
+        <DictCard title="Возможные значения">
           <ValuesList value={d.values} onChange={(values) => patch({ values })} />
         </DictCard>
       )}

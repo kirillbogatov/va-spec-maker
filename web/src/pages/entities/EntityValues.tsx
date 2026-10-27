@@ -65,7 +65,6 @@ export function EntityValues({ values, onChange }: { values: EntityValue[]; onCh
   return (
     <DictCard
       title="Значения"
-      count={values.length}
       action={
         <>
           <Button variant="outline" className="h-10 md:h-8" onClick={() => setBulk('')}>

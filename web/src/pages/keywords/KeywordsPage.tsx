@@ -95,7 +95,7 @@ export function KeywordsPage() {
       subtitle={(i) => i.synonyms.join(', ')}
       listActions={<TransferMenu accept=".txt,text/plain" format="TXT" onImport={importFile} onExport={() => api.keywords.exportTxt(projectId)} />}
       body={(d, patch) => (
-        <DictCard title="Синонимы" count={d.synonyms.length}>
+        <DictCard title="Синонимы">
           <SynonymsList value={d.synonyms} onChange={(synonyms) => patch({ synonyms })} />
         </DictCard>
       )}

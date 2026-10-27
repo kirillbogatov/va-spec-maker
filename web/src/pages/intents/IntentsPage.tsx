@@ -67,7 +67,7 @@ export function IntentsPage() {
         const entityNames = d.entities.flatMap((e) => entities.find((x) => x.id === e.entity_id)?.name ?? []);
         return (
           <>
-            <DictCard title={MODE_TITLE[mode]} hint={mode === 'keywords' ? <KeywordsHint /> : undefined} count={d.values.filter((v) => modeShows(mode, v.kind)).length}>
+            <DictCard title={MODE_TITLE[mode]} hint={mode === 'keywords' ? <KeywordsHint /> : undefined}>
               <PhrasesCell
                 mode={mode}
                 value={d.values}
@@ -77,7 +77,7 @@ export function IntentsPage() {
                 onChange={(items) => patch(valuesPatch(items))}
               />
             </DictCard>
-            <DictCard title="Сущности в интенте" count={d.entities.length}>
+            <DictCard title="Сущности в интенте">
               <EntitiesCell value={d.entities} entities={entities} onChange={(e) => patch({ entities: e })} />
             </DictCard>
           </>
