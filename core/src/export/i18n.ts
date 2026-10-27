@@ -19,6 +19,8 @@ export interface SpecStrings {
   from: string;
   to: string;
   intentsHead: string[];
+  keywordsHead: string;
+  examplePhrasesHead: string;
   entitiesHead: string[];
   promptsHead: string[];
   dependenciesHead: string[];
@@ -43,6 +45,8 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     from: 'от',
     to: 'до',
     intentsHead: ['Интент', 'Фразы для обучения', 'Паттерны', 'Сущности'],
+    keywordsHead: 'Ключевые слова',
+    examplePhrasesHead: 'Фразы для обучения',
     entitiesHead: ['Сущность', 'Тип', 'Значения', 'Несколько значений', 'Уточняющий вопрос'],
     promptsHead: ['Промпт', 'Ответ ассистента'],
     dependenciesHead: ['Сценарий', 'Зависимость', 'Тип', 'Значения'],
@@ -65,6 +69,8 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     from: 'from',
     to: 'to',
     intentsHead: ['Intent', 'Training phrases', 'Patterns', 'Entities'],
+    keywordsHead: 'Keywords',
+    examplePhrasesHead: 'Example phrases',
     entitiesHead: ['Entity', 'Type', 'Values', 'Multiple values', 'Follow-up question'],
     promptsHead: ['Prompt', 'Assistant response'],
     dependenciesHead: ['Scenario', 'Dependency', 'Type', 'Values'],

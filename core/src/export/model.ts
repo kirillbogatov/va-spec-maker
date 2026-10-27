@@ -1,6 +1,7 @@
 import type { Db } from '../sqlite';
 import { notFound } from '../errors';
 import { STRINGS, type SpecLang } from './i18n';
+import { matchKeywords } from '../keywords';
 
 export interface TransitionRow {
   state: string;
@@ -13,9 +14,9 @@ export interface TransitionRow {
 }
 
 /** Как описаны интенты в проекте (настройка хранится в браузере): определяет, какие колонки значений выводить. */
-export type IntentMode = 'phrases' | 'patterns' | 'both';
+export type IntentMode = 'phrases' | 'patterns' | 'both' | 'keywords';
 
-export const parseIntentMode = (v: unknown): IntentMode => (v === 'phrases' || v === 'patterns' ? v : 'both');
+export const parseIntentMode = (v: unknown): IntentMode => (v === 'phrases' || v === 'patterns' || v === 'keywords' ? v : 'both');
 
 export interface ProjectSpec {
   project: { id: number; name: string; description: string };
@@ -25,6 +26,8 @@ export interface ProjectSpec {
     name: string;
     phrases: string[];
     patterns: string[];
+    /** Ключевые слова каждой фразы (по порядку фраз). */
+    keywords?: string[][];
     entities: { name: string; required: boolean }[];
   }[];
   entities: {
@@ -124,13 +127,20 @@ export function loadProjectSpec(db: Db, projectId: number, lang: SpecLang = 'ru'
 }
 
 function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], lang: SpecLang, scope?: Scope): ProjectSpec {
+  const keywordDefs = (db.prepare('SELECT name, synonyms FROM keywords WHERE project_id = ? ORDER BY id').all(projectId) as { name: string; synonyms: string }[]).map((k) => ({
+    name: k.name,
+    synonyms: JSON.parse(k.synonyms) as string[],
+  }));
   const intents = (
     (db.prepare('SELECT id, name FROM intents WHERE project_id = ? ORDER BY id').all(projectId) as { id: number; name: string }[]).filter(
       (i) => !scope || scope.intentIds.has(i.id),
     )
-  ).map((i) => ({
+  ).map((i) => {
+    const phrases = (db.prepare('SELECT text FROM intent_phrases WHERE intent_id = ? ORDER BY position, id').all(i.id) as { text: string }[]).map((p) => p.text);
+    return {
     name: i.name,
-    phrases: (db.prepare('SELECT text FROM intent_phrases WHERE intent_id = ? ORDER BY position, id').all(i.id) as { text: string }[]).map((p) => p.text),
+    phrases,
+    keywords: phrases.map((p) => matchKeywords(p, keywordDefs)),
     patterns: (db.prepare('SELECT text FROM intent_patterns WHERE intent_id = ? ORDER BY position, id').all(i.id) as { text: string }[]).map((p) => p.text),
     entities: (
       db
@@ -140,7 +150,8 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
         )
         .all(i.id) as { name: string; required: number }[]
     ).map((e) => ({ name: e.name, required: !!e.required })),
-  }));
+    };
+  });
 
   const entities = (
     (db

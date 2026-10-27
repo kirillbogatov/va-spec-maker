@@ -5,6 +5,7 @@ import { renderDocx } from '../src/export/docx';
 import { renderMarkdown } from '../src/export/markdown';
 import type { ProjectSpec } from '../src/export/model';
 import { createProject, makeApp } from './helpers';
+import { intentsTable } from '../src/export/tables';
 
 const row = {
   state: 'ST_SEAT_HEATING', intent: 'INT_SEAT_HEATING', request_params: '', condition: 'Обогрев сидений выключен',
@@ -269,5 +270,28 @@ describe('spec language', () => {
     expect((await request(app).get(`/api/scenarios/${sid}/preview?lang=en`)).text).toContain('## Intents');
     expect((await request(app).get(`/api/scenarios/${sid}/preview`)).text).toContain('## Интенты');
     expect((await request(app).get(`/api/projects/${pid}/export?format=md&lang=en`)).text).toContain('## State transitions');
+  });
+});
+
+describe('intents table in keywords mode', () => {
+  const base = spec.intents[0];
+  it('выводит колонки Intent | Keywords | Example phrases | Entities с общей нумерацией', () => {
+    const s: ProjectSpec = { ...spec, intentMode: 'keywords', intents: [{ ...base, phrases: ['включи обогрев', 'привет'], patterns: ['* x *'], keywords: [['SET', 'HEATING'], []] }] };
+    const t = intentsTable(s, 'en');
+    expect(t.head).toEqual(['Intent', 'Keywords', 'Example phrases', 'Entities']);
+    expect(t.rows[0].cells[1]).toEqual({ list: ['SET, HEATING', '-'] });
+    expect(t.rows[0].cells[2]).toEqual({ list: ['включи обогрев', 'привет'] });
+    expect(t.widths.reduce((a, b) => a + b, 0)).toBe(100);
+  });
+  it('через API: preview считает ключевые слова из справочника', async () => {
+    const { app, db } = await makeApp();
+    const pid = createProject(db);
+    await request(app).post(`/api/projects/${pid}/keywords/import`).send({ text: 'OFF: выключить\nSOUND: звук\n' });
+    const sc = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Громкость' });
+    const it = await request(app).post(`/api/scenarios/${sc.body.id}/intents`).send({ name: 'MUTE' });
+    await request(app).put(`/api/intents/${it.body.id}`).send({ name: 'MUTE', comment: '', enabled: true, values: [{ text: 'выключи звук', kind: 'phrase' }], entities: [] });
+    const md = await request(app).get(`/api/scenarios/${sc.body.id}/preview?lang=en&intentMode=keywords`);
+    expect(md.text).toContain('Keywords');
+    expect(md.text).toContain('OFF, SOUND');
   });
 });

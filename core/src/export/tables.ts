@@ -31,6 +31,20 @@ const ref = (name: string) => `[${name}]`;
 export function intentsTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef {
   const [nameHead, phrasesHead, patternsHead, entitiesHead] = STRINGS[lang].intentsHead;
   const mode = spec.intentMode ?? 'both';
+  if (mode === 'keywords') {
+    return {
+      head: [nameHead, STRINGS[lang].keywordsHead, STRINGS[lang].examplePhrasesHead, entitiesHead],
+      widths: [18, 20, 40, 22],
+      rows: spec.intents.map((i): Row => ({
+        cells: [
+          text(i.name),
+          list(i.phrases.map((_, n) => (i.keywords?.[n]?.length ? i.keywords[n].join(', ') : '-'))),
+          list(i.phrases),
+          list(i.entities.map((e) => ref(e.name) + (e.required ? ` (${STRINGS[lang].required})` : ''))),
+        ],
+      })),
+    };
+  }
   const hasPatterns = mode === 'patterns' || (mode === 'both' && spec.intents.some((i) => i.patterns.length > 0));
   const hasPhrases = mode === 'phrases' || (mode === 'both' && (spec.intents.some((i) => i.phrases.length > 0) || !hasPatterns));
   const values = [
