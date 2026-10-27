@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, LayoutGrid, MessageSquareText, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Shapes, SlidersHorizontal, Tags, Workflow, type LucideIcon } from 'lucide-react';
+import { Anchor, BookOpen, LayoutGrid, MessageSquareText, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Shapes, SlidersHorizontal, Workflow, type LucideIcon } from 'lucide-react';
 import { CommandPalette } from '@/components/CommandPalette';
 import { GlobalSaveStatus } from '@/components/GlobalSaveStatus';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
@@ -18,7 +18,7 @@ const DICTIONARY: { to: string; label: string; icon: LucideIcon; key: 'intents' 
   { to: '/entities', label: 'Сущности', icon: Shapes, key: 'entities' },
   { to: '/lists/prompts', label: 'Промпты', icon: ScrollText, key: 'prompts' },
   { to: '/dependencies', label: 'Зависимости', icon: SlidersHorizontal, key: 'deps' },
-  { to: '/lists/keywords', label: 'Ключевые слова', icon: Tags, key: 'keywords' },
+  { to: '/lists/keywords', label: 'Ключевые слова', icon: Anchor, key: 'keywords' },
 ];
 
 const itemClass = (active: boolean) =>

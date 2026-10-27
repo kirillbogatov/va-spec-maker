@@ -38,20 +38,20 @@ export function SettingsPage() {
         </section>
         <section className="mt-4 rounded-xl border bg-card p-4">
           <h2 className="text-sm font-semibold">Как описывать интенты</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Тренировочные фразы используются для обучения классификатора на основе ИИ. Паттерны — для создания строгих правил (rule-based модель). Ключевые слова — слова из одноимённого справочника: вы пишете примеры фраз, а ключевые слова подставляются по ним автоматически. Справочник «Ключевые слова» появляется в словаре проекта только в этом режиме.
-          </p>
           <div role="radiogroup" aria-label="Как описывать интенты" className="mt-4 flex flex-col gap-1">
             {INTENT_MODES.map((m) => (
-              <label key={m.value} className="flex min-h-9 cursor-pointer items-center gap-3 text-sm max-md:min-h-11">
+              <label key={m.value} className="flex min-h-9 cursor-pointer items-start gap-3 py-1.5 text-sm max-md:min-h-11">
                 <input
                   type="radio"
                   name="intent-mode"
-                  className="size-4 shrink-0 cursor-pointer accent-primary"
+                  className="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary"
                   checked={intentMode === m.value}
                   onChange={() => writeIntentMode(projectId, m.value)}
                 />
-                {m.label}
+                <span>
+                  <span className="block">{m.label}</span>
+                  <span className="block text-[13px] text-muted-foreground">{m.hint}</span>
+                </span>
               </label>
             ))}
           </div>

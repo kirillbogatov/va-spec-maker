@@ -4,11 +4,11 @@ import type { ValueKind } from './values';
 /** Как описывать интенты: только тренировочными фразами, только паттернами или тем и другим. */
 export type IntentMode = 'phrases' | 'patterns' | 'both' | 'keywords';
 
-export const INTENT_MODES: { value: IntentMode; label: string }[] = [
-  { value: 'phrases', label: 'Тренировочные фразы' },
-  { value: 'patterns', label: 'Паттерны' },
-  { value: 'both', label: 'Тренировочные фразы + паттерны' },
-  { value: 'keywords', label: 'Ключевые слова' },
+export const INTENT_MODES: { value: IntentMode; label: string; hint: string }[] = [
+  { value: 'phrases', label: 'Тренировочные фразы', hint: 'Для обучения классификатора на основе ИИ' },
+  { value: 'patterns', label: 'Паттерны', hint: 'Для создания строгих правил (rule-based модель)' },
+  { value: 'both', label: 'Гибрид', hint: 'Использовать тренировочные фразы вместе с паттернами' },
+  { value: 'keywords', label: 'Ключевые слова', hint: 'Если важно только наличие определенных слов в запросе' },
 ];
 
 /** Название списка значений интента (и колонки) в выбранном режиме. */
