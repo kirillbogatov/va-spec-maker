@@ -6,6 +6,7 @@ import { usePrefixes } from '@/lib/prefixes';
 import { api } from '@/lib/api';
 import { MODE_EMPTY, MODE_TITLE, modeShows, useIntentMode } from '@/lib/intentMode';
 import { valuesPatch } from '@/lib/values';
+import { DictionaryTransfer } from '@/components/DictionaryTransfer';
 import { EntitiesCell } from './EntitiesCell';
 import { PhrasesCell } from './PhrasesCell';
 
@@ -40,6 +41,7 @@ export function IntentsPage() {
       loading={loading}
       groupOf={(i) => (i.scenarios.length ? 'Подключены к сценариям' : null)}
       fallbackGroup="Не используются"
+      listActions={<DictionaryTransfer kind="intents" />}
       meta={(i) => (shownValues(i).length ? null : { text: MODE_EMPTY[mode], warn: true })}
       usedIn={(i) => i.scenarios}
       commentKey="comment"

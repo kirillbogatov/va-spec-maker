@@ -9,6 +9,7 @@ import { UserMenu } from '@/components/UserMenu';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { usePath, useProjectId } from '@/hooks/project';
 import { api } from '@/lib/api';
+import { useIntentMode } from '@/lib/intentMode';
 import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
 
@@ -75,7 +76,10 @@ export function AppShell() {
   }, []);
   const on = (m: string) => pathname === m || pathname.startsWith(`${m}/`);
   const onScenarios = on(path('/scenarios'));
-  const onDictionary = DICTIONARY.some((d) => on(path(d.to)));
+  // Справочник ключевых слов нужен только в режиме «Ключевые слова»
+  const mode = useIntentMode(useProjectId());
+  const dictionary = DICTIONARY.filter((d) => d.key !== 'keywords' || mode === 'keywords');
+  const onDictionary = dictionary.some((d) => on(path(d.to)));
 
   return (
     <div className="flex h-dvh flex-col md:flex-row">
@@ -117,7 +121,7 @@ export function AppShell() {
         <nav className="flex min-h-0 flex-1 flex-col gap-4" aria-label="Основная навигация">
           <div className="flex shrink-0 flex-col gap-0.5">
             {!collapsed && <span className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-faint">Словарь проекта</span>}
-            {DICTIONARY.map((d) => (
+            {dictionary.map((d) => (
               <NavLink key={d.to} to={path(d.to)} title={d.label} aria-label={d.label} className={({ isActive }) => cn(itemClass(isActive || on(path(d.to))), collapsed && 'w-8 justify-center px-0')}>
                 <d.icon className="size-4 shrink-0" />
                 {!collapsed && (
@@ -164,7 +168,7 @@ export function AppShell() {
             <BookOpen className="size-5" /> Словарь
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" side="top">
-            {DICTIONARY.map((d) => (
+            {dictionary.map((d) => (
               <DropdownMenuItem key={d.to} onClick={() => navigate(path(d.to))}>
                 {d.label}
                 {counts[d.key] !== undefined && <span className="ml-auto pl-4 text-xs text-muted-foreground">{counts[d.key]}</span>}

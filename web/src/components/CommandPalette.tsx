@@ -5,6 +5,7 @@ import { Clock, Route, Search, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { TypeToken, type ObjectKind } from '@/components/TypeToken';
 import { usePath, useProjectId } from '@/hooks/project';
+import { useIntentMode } from '@/lib/intentMode';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -132,6 +133,7 @@ function HitIcon({ h }: { h: Hit }) {
 /** Глобальный поиск по «/»: сценарии, интенты, сущности, промпты и зависимости, в том числе по текстам фраз и ответов. */
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const projectId = useProjectId();
+  const mode = useIntentMode(projectId);
   const navigate = useNavigate();
   const path = usePath();
   const [q, setQ] = useState('');
@@ -170,10 +172,10 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         to: path(`/lists/prompts/${p.id}`),
       })),
       ...(deps.data ?? []).map((d): Hit => ({ key: `d${d.id}`, kind: 'dependency', name: d.name, hint: `${d.values.length} знач.`, to: path(`/dependencies/${d.id}`) })),
-      ...(keywords.data ?? []).map((k): Hit => ({ key: `k${k.id}`, kind: 'keyword', name: k.name, hint: `${k.synonyms.length} син.`, text: k.synonyms.join('\n'), to: path(`/lists/keywords/${k.id}`) })),
+      ...(mode === 'keywords' ? keywords.data ?? [] : []).map((k): Hit => ({ key: `k${k.id}`, kind: 'keyword', name: k.name, hint: `${k.synonyms.length} син.`, text: k.synonyms.join('\n'), to: path(`/lists/keywords/${k.id}`) })),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenarios.data, intents.data, prompts.data, entities.data, deps.data, keywords.data, dump.data]);
+  }, [scenarios.data, intents.data, prompts.data, entities.data, deps.data, keywords.data, mode, dump.data]);
 
   const tokens = useMemo(() => normalize(q.trim()).split(/\s+/).filter(Boolean).map(variants), [q]);
   const sections = useMemo(() => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { DictionaryTransfer } from '@/components/DictionaryTransfer';
 import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
 import { Input } from '@/components/ui/input';
 import { useProjectId } from '@/hooks/project';
@@ -77,6 +78,7 @@ export function DependenciesPage() {
   return (
     <DictionaryMaster
       kind="dependency"
+      listActions={<DictionaryTransfer kind="dependencies" />}
       base="/dependencies"
       items={items}
       loading={isPending}

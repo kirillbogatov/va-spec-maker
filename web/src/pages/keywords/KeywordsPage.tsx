@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
-import { Download, Plus, Upload, X } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, X } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
 import { Input } from '@/components/ui/input';
+import { TransferMenu } from '@/components/TransferMenu';
 import { useProjectId } from '@/hooks/project';
 import { api } from '@/lib/api';
 import { useKeywords } from '@/lib/keywords';
@@ -65,15 +66,11 @@ function SynonymsList({ value, onChange }: { value: string[]; onChange: (v: stri
   );
 }
 
-const ACTION =
-  'inline-flex h-8 items-center gap-1 rounded-sm px-1.5 text-[13px] font-medium text-muted-foreground hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
-
 /** Справочник ключевых слов проекта: код и синонимы, импорт и экспорт в txt. */
 export function KeywordsPage() {
   const projectId = useProjectId();
   const qc = useQueryClient();
   const items = useKeywords(projectId);
-  const fileRef = useRef<HTMLInputElement>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ['keywords', projectId] });
   const create = useMutation({ mutationFn: (name: string) => api.keywords.create(projectId, name), onSuccess: refresh });
   const remove = useMutation({ mutationFn: (id: number) => api.keywords.remove(id), onSuccess: refresh });
@@ -96,27 +93,7 @@ export function KeywordsPage() {
       items={items}
       meta={(i) => (i.synonyms.length ? { text: String(i.synonyms.length) } : { text: 'нет синонимов', warn: true })}
       subtitle={(i) => i.synonyms.join(', ')}
-      listActions={
-        <>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".txt,text/plain"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (f) void importFile(f);
-            }}
-          />
-          <button type="button" className={ACTION} onClick={() => fileRef.current?.click()}>
-            <Upload className="size-3.5" /> Импорт .txt
-          </button>
-          <button type="button" className={ACTION} onClick={() => void api.keywords.exportTxt(projectId)}>
-            <Download className="size-3.5" /> Экспорт .txt
-          </button>
-        </>
-      }
+      listActions={<TransferMenu accept=".txt,text/plain" format="TXT" onImport={importFile} onExport={() => api.keywords.exportTxt(projectId)} />}
       body={(d, patch) => (
         <DictCard title="Синонимы" count={d.synonyms.length}>
           <SynonymsList value={d.synonyms} onChange={(synonyms) => patch({ synonyms })} />

@@ -8,7 +8,7 @@ export const INTENT_MODES: { value: IntentMode; label: string }[] = [
   { value: 'phrases', label: 'Тренировочные фразы' },
   { value: 'patterns', label: 'Паттерны' },
   { value: 'both', label: 'Тренировочные фразы + паттерны' },
-  { value: 'keywords', label: 'Фразы + ключевые слова' },
+  { value: 'keywords', label: 'Ключевые слова' },
 ];
 
 /** Название списка значений интента (и колонки) в выбранном режиме. */

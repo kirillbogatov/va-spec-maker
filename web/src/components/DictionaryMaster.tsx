@@ -51,7 +51,7 @@ interface Props<T extends DictItem> {
   subtitle?: (i: T) => string;
   /** Элементы справа в шапке (например, тумблер «Включён»). */
   headerExtra?: (draft: T, patch: (p: Partial<T>) => void) => ReactNode;
-  /** Кнопки над списком (например, импорт и экспорт). */
+  /** Меню справа от «+ Новое…» над списком (импорт и экспорт). */
   listActions?: ReactNode;
   /** Основное содержимое детали. */
   body: (draft: T, patch: (p: Partial<T>) => void) => ReactNode;
@@ -147,8 +147,7 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
       onBack={() => navigate(path(p.base))}
       list={
         <>
-          {p.onCreate && <ListHeader onCreate={() => setCreating(true)} label={p.createTitle} />}
-          {p.listActions && <div className="flex flex-wrap items-center justify-end gap-1 border-b px-3 py-1.5">{p.listActions}</div>}
+          {p.onCreate && <ListHeader onCreate={() => setCreating(true)} label={p.createTitle} extra={p.listActions} />}
           {search}
           <ul className="flex-1 overflow-y-auto pb-2">
             {groups.map((g) => (

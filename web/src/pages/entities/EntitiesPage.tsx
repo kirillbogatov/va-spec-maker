@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { DictionaryTransfer } from '@/components/DictionaryTransfer';
 import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
 import { EntityTypeFields } from '@/components/EntityTypeFields';
 import { Switch } from '@/components/ui/switch';
@@ -68,6 +69,7 @@ export function EntitiesPage() {
   return (
     <DictionaryMaster
       kind="entity"
+      listActions={<DictionaryTransfer kind="entities" />}
       mono
       base="/entities"
       items={items}

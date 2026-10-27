@@ -1,5 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { DictionaryTransfer } from '@/components/DictionaryTransfer';
 import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
 import { Textarea } from '@/components/ui/textarea';
 import { useProjectId } from '@/hooks/project';
@@ -25,6 +26,7 @@ export function PromptsPage() {
   return (
     <DictionaryMaster
       kind="prompt"
+      listActions={<DictionaryTransfer kind="prompts" />}
       mono
       base="/lists/prompts"
       items={items}
