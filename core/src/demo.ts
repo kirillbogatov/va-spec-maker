@@ -48,7 +48,20 @@ export async function seedDemo(app: App): Promise<number> {
   const temp = await entity('TEMP_VALUE', 'Целевая температура', [], { type: 'number', range_min: '15', range_max: '30' });
   const time = await entity('TIME', 'Время', [], { type: 'time', range_min: '05:00', range_max: '23:00' });
   await call(app, 'POST', `/api/projects/${pid}/keywords/import`, {
-    text: 'ON: включи, включить, запусти\nOFF: выключи, выключить, отключи\nWARMER: теплее, потеплее, прибавь\nCOLDER: холоднее, прохладнее, убавь\nTEMPERATURE: температура, температуру, градус\n',
+    text: [
+      'ON: включи, включить, запусти, зажги',
+      'OFF: выключи, выключить, отключи, выруби, погаси',
+      'LIGHT: свет, освещение, лампа',
+      'SET: поставь, установи, заведи, задай',
+      'WARMER: теплее, потеплее, прибавь',
+      'COLDER: холоднее, прохладнее, попрохладнее, убавь',
+      'TEMPERATURE: температура, градус',
+      'ALARM: будильник, разбуди, буди',
+      'CANCEL: отмени, отмена, отменить, стоп, хватит, забудь',
+      'ROOM: комната, кухня, спальня, коридор',
+      'NUMBER: десять, двадцать, тридцать, шесть, семь',
+      'DAYTIME: утро, вечер, день, ночь',
+    ].join('\n') + '\n',
   });
   const alarmDate = await entity('ALARM_DATE', 'Дата будильника', [], { type: 'date' });
   const alarmRepeat = await entity('ALARM_REPEAT', 'Повторять будильник', [], { type: 'boolean' });

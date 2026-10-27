@@ -52,7 +52,7 @@ describe('project duplicate / import', () => {
   it('duplicates a project with content and keeps references consistent', async () => {
     const { app } = await makeApp();
     const src = await seedDemo(app);
-    expect((await request(app).get(`/api/projects/${src}/keywords`)).body).toHaveLength(5);
+    expect((await request(app).get(`/api/projects/${src}/keywords`)).body).toHaveLength(12);
     const dup = (await request(app).post(`/api/projects/${src}/duplicate`)).body;
     expect(dup.name).toMatch(/\(копия\)$/);
     const sc = (id: number) => request(app).get(`/api/projects/${id}/scenarios`);
