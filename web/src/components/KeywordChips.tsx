@@ -41,7 +41,7 @@ export function KeywordsHint() {
 /** Ключевые слова фразы чипами через запятую; пустое поле — заглушка, фраза без совпадений — пометка «не распознаны». */
 export function KeywordChips({ names, text }: { names: string[]; text: string }) {
   if (!names.length) {
-    return <span className="text-sm text-muted-foreground">{text.trim() ? 'Ключевые слова не распознаны' : 'Ключевые слова (появятся автоматически)'}</span>;
+    return <span className="truncate text-sm text-muted-foreground">{text.trim() ? 'Ключевые слова не распознаны' : 'Ключевые слова'}</span>;
   }
   return (
     <span className="flex flex-wrap items-center gap-x-1 gap-y-1">
