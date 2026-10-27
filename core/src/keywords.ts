@@ -26,3 +26,33 @@ export function matchKeywords(phrase: string, keywords: KeywordDef[]): string[] 
   }
   return found.sort((a, b) => a.at - b.at).map((f) => f.name);
 }
+
+export const cleanKeywordName = (v: string): string => v.replace(/^[\s$]+/, '').replace(/\s+/g, ' ').trim();
+
+/** Синонимы: без пустых и повторов (без учёта регистра), порядок сохраняется. */
+export function cleanSynonyms(list: string[]): string[] {
+  const seen = new Set<string>();
+  return list.map((s) => s.trim()).filter((s) => s && !seen.has(s.toLowerCase()) && !!seen.add(s.toLowerCase()));
+}
+
+/** Разбор txt: «КОД: синоним1, синоним2» по строке; пустые и «#…» пропускаются, строка без кода — в skipped, при дубле кода побеждает последняя. */
+export function parseKeywordsTxt(text: string): { items: KeywordDef[]; skipped: number } {
+  const byName = new Map<string, KeywordDef>();
+  let skipped = 0;
+  for (const raw of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const i = line.indexOf(':');
+    const name = cleanKeywordName(i === -1 ? line : line.slice(0, i));
+    if (!name) { skipped++; continue; }
+    const synonyms = cleanSynonyms(i === -1 ? [] : line.slice(i + 1).split(','));
+    const key = name.toLowerCase();
+    byName.delete(key);
+    byName.set(key, { name, synonyms });
+  }
+  return { items: [...byName.values()], skipped };
+}
+
+export function keywordsToTxt(items: KeywordDef[]): string {
+  return items.map((k) => `${k.name}:${k.synonyms.length ? ' ' + k.synonyms.join(', ') : ''}\n`).join('');
+}

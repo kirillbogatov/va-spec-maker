@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchKeywords } from '../src/keywords';
+import { cleanKeywordName, keywordsToTxt, matchKeywords, parseKeywordsTxt } from '../src/keywords';
 
 const kws = [
   { name: 'OFF', synonyms: ['выключить', 'отключить'] },
@@ -27,5 +27,26 @@ describe('matchKeywords', () => {
   it('пустая фраза и пустые синонимы дают пустой результат', () => {
     expect(matchKeywords('', kws)).toEqual([]);
     expect(matchKeywords('привет', [{ name: 'X', synonyms: ['', '  '] }])).toEqual([]);
+  });
+});
+
+describe('keywords txt', () => {
+  it('разбирает строки «КОД: синонимы»', () => {
+    const r = parseKeywordsTxt('OFF: выключи, отключи\r\n\r\n# комментарий\n$SOUND: звук , радио,звук\nBARE\nOFF: вырубить\n: без кода\n');
+    expect(r.items).toEqual([
+      { name: 'SOUND', synonyms: ['звук', 'радио'] },
+      { name: 'BARE', synonyms: [] },
+      { name: 'OFF', synonyms: ['вырубить'] },
+    ]);
+    expect(r.skipped).toBe(1);
+  });
+  it('собирает txt и разбирается обратно без потерь', () => {
+    const items = [{ name: 'OFF', synonyms: ['выключи', 'отключи'] }, { name: 'X', synonyms: [] }];
+    const txt = keywordsToTxt(items);
+    expect(txt).toBe('OFF: выключи, отключи\nX:\n');
+    expect(parseKeywordsTxt(txt).items).toEqual(items);
+  });
+  it('cleanKeywordName отбрасывает $ и лишние пробелы', () => {
+    expect(cleanKeywordName('  $$ OFF  ')).toBe('OFF');
   });
 });
