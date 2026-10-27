@@ -58,8 +58,8 @@ export function PromptsPage() {
               <div key={i} className="group relative">
                 {d.full_answers.length > 1 && <span className="mb-1 block text-[13px] text-muted-foreground">Вариант {i + 1}</span>}
                 <Textarea
-                  rows={2}
-                  className="min-h-16 resize-none rounded-md px-3 py-2 pr-10 text-[15px] leading-6 md:text-[15px]"
+                  rows={1}
+                  className="min-h-10 resize-none rounded-md px-3 py-2 pr-10 text-[15px] leading-6 md:text-[15px]"
                   aria-label={`Ответ ассистента, вариант ${i + 1}`}
                   placeholder="Устанавливаю температуру на Х градусов"
                   value={a}
