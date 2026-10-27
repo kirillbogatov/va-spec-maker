@@ -142,7 +142,7 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], entityNames
           </div>
           {kw && (
             <div aria-label="Ключевые слова новой фразы" className="hidden h-10 min-w-0 flex-1 items-center rounded-md border border-dashed bg-muted/40 px-3 md:flex md:h-9">
-              <KeywordChips names={matchKw(text)} placeholder="ключевые слова" />
+              <KeywordChips names={matchKw(text)} text={text} />
             </div>
           )}
           <Button variant="outline" className="h-10 md:h-9" onClick={() => setBulk(true)}>
@@ -166,11 +166,11 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], entityNames
             )}
             <span className="min-w-0 flex-1 self-center break-words px-3 py-2 font-mono text-[13px] leading-[18px]">
               {v.kind === 'phrase' ? <Slotted text={v.text} words={words} owners={owners} /> : <PatternText text={v.text} names={entityNames} />}
-              {kw && <span className="mt-1 block md:hidden"><KeywordChips names={matchKw(v.text)} /></span>}
+              {kw && <span className="mt-1 block md:hidden"><KeywordChips names={matchKw(v.text)} text={v.text} /></span>}
             </span>
             {kw && (
               <span className="hidden w-[40%] shrink-0 items-center border-l px-3 py-1 md:flex">
-                <KeywordChips names={matchKw(v.text)} />
+                <KeywordChips names={matchKw(v.text)} text={v.text} />
               </span>
             )}
             <button

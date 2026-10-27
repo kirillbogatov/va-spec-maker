@@ -87,12 +87,13 @@ const SEARCH_WHERE: Record<ObjectKind, string> = {
 };
 
 /** Карточка раздела внутри детали: заголовок со счётчиком, действия справа. */
-export function DictCard({ title, count, action, children }: { title: string; count?: number; action?: ReactNode; children: ReactNode }) {
+export function DictCard({ title, count, hint, action, children }: { title: string; count?: number; hint?: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
     <section className="rounded-xl border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
         <h3 className="text-sm font-semibold">
           {title} {!!count && <span className="font-normal tabular-nums text-muted-foreground">{count}</span>}
+          {hint && <span className="ml-1.5">{hint}</span>}
         </h3>
         {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
       </div>

@@ -1,5 +1,6 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
+import { KeywordsHint } from '@/components/KeywordChips';
 import { Switch } from '@/components/ui/switch';
 import { useProjectId } from '@/hooks/project';
 import { usePrefixes } from '@/lib/prefixes';
@@ -66,7 +67,7 @@ export function IntentsPage() {
         const entityNames = d.entities.flatMap((e) => entities.find((x) => x.id === e.entity_id)?.name ?? []);
         return (
           <>
-            <DictCard title={MODE_TITLE[mode]} count={d.values.filter((v) => modeShows(mode, v.kind)).length}>
+            <DictCard title={MODE_TITLE[mode]} hint={mode === 'keywords' ? <KeywordsHint /> : undefined} count={d.values.filter((v) => modeShows(mode, v.kind)).length}>
               <PhrasesCell
                 mode={mode}
                 value={d.values}

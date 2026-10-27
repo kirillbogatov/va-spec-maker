@@ -275,12 +275,12 @@ describe('spec language', () => {
 
 describe('intents table in keywords mode', () => {
   const base = spec.intents[0];
-  it('выводит колонки Intent | Keywords | Example phrases | Entities с общей нумерацией', () => {
+  it('выводит колонки Intent | Keywords | Example phrases | Entities с общей нумерацией; фразы без ключевых слов пропускает', () => {
     const s: ProjectSpec = { ...spec, intentMode: 'keywords', intents: [{ ...base, phrases: ['включи обогрев', 'привет'], patterns: ['* x *'], keywords: [['SET', 'HEATING'], []] }] };
     const t = intentsTable(s, 'en');
     expect(t.head).toEqual(['Intent', 'Keywords', 'Example phrases', 'Entities']);
-    expect(t.rows[0].cells[1]).toEqual({ list: ['SET, HEATING', '-'] });
-    expect(t.rows[0].cells[2]).toEqual({ list: ['включи обогрев', 'привет'] });
+    expect(t.rows[0].cells[1]).toEqual({ list: ['SET, HEATING'] });
+    expect(t.rows[0].cells[2]).toEqual({ list: ['включи обогрев'] });
     expect(t.widths.reduce((a, b) => a + b, 0)).toBe(100);
   });
   it('через API: preview считает ключевые слова из справочника', async () => {

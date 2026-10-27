@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { SaveNote } from '@/components/SaveIndicator';
 import { TypeToken } from '@/components/TypeToken';
-import { KeywordChips } from '@/components/KeywordChips';
+import { KeywordChips, KeywordsHint } from '@/components/KeywordChips';
 import { useKeywordMatcher } from '@/lib/keywords';
 import { PatternText, Slotted } from './PhrasesCell';
 import { useProjectId } from '@/hooks/project';
@@ -198,7 +198,7 @@ function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { 
           )}
           {kw && (
             <span className="hidden w-[38%] shrink-0 items-center border-l border-input px-2 md:flex">
-              <KeywordChips names={matchKw(v.text)} />
+              <KeywordChips names={matchKw(v.text)} text={v.text} />
             </span>
           )}
           <button type="button" aria-label="Удалить значение" className={cn(REMOVE_BTN, 'my-auto mr-1 size-7 max-md:size-9')} onClick={() => onChange(value.filter((_, j) => j !== i))}>
@@ -263,7 +263,7 @@ function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { 
           </div>
           {kw && (
             <div aria-label="Ключевые слова новой фразы" className="hidden h-8 w-[38%] shrink-0 items-center rounded-md border border-dashed bg-muted/40 px-2 md:flex">
-              <KeywordChips names={matchKw(text)} placeholder="ключевые слова" />
+              <KeywordChips names={matchKw(text)} text={text} />
             </div>
           )}
           <Button variant="outline" className="h-8 max-md:h-10" onClick={() => setBulk(true)}>
@@ -368,7 +368,10 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
               <Textarea rows={1} className="min-h-10 rounded-md bg-background text-sm md:text-sm" aria-label="Комментарий" value={draft.comment} onChange={(e) => patch({ comment: e.target.value })} />
             </label>
             <div className="flex shrink-0 flex-col gap-1 border-t border-dashed border-border/60 pt-4">
-              <span className="shrink-0 text-xs text-muted-foreground">{MODE_TITLE[mode]} · {shownValues.length}</span>
+              <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                {MODE_TITLE[mode]} · {shownValues.length}
+                {mode === 'keywords' && <KeywordsHint />}
+              </span>
               <PhrasesEditor
                 value={draft.values}
                 others={siblings}

@@ -35,14 +35,18 @@ export function intentsTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef
     return {
       head: [nameHead, STRINGS[lang].keywordsHead, STRINGS[lang].examplePhrasesHead, entitiesHead],
       widths: [18, 20, 40, 22],
-      rows: spec.intents.map((i): Row => ({
-        cells: [
-          text(i.name),
-          list(i.phrases.map((_, n) => (i.keywords?.[n]?.length ? i.keywords[n].join(', ') : '-'))),
-          list(i.phrases),
-          list(i.entities.map((e) => ref(e.name) + (e.required ? ` (${STRINGS[lang].required})` : ''))),
-        ],
-      })),
+      rows: spec.intents.map((i): Row => {
+        // Фразы без распознанных ключевых слов в документ не попадают
+        const recognized = i.phrases.flatMap((p, n) => (i.keywords?.[n]?.length ? [{ phrase: p, keywords: i.keywords[n].join(', ') }] : []));
+        return {
+          cells: [
+            text(i.name),
+            list(recognized.map((r) => r.keywords)),
+            list(recognized.map((r) => r.phrase)),
+            list(i.entities.map((e) => ref(e.name) + (e.required ? ` (${STRINGS[lang].required})` : ''))),
+          ],
+        };
+      }),
     };
   }
   const hasPatterns = mode === 'patterns' || (mode === 'both' && spec.intents.some((i) => i.patterns.length > 0));
