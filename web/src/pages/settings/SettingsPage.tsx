@@ -19,7 +19,7 @@ export function SettingsPage() {
         <h1 className="text-xl font-semibold tracking-tight">Настройки</h1>
         <section className="mt-6 rounded-xl border bg-card p-4">
           <h2 className="text-sm font-semibold">Префиксы названий</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">Подставляются в поле при создании нового объекта. Пустое поле — без префикса.</p>
+          <p className="mt-1 text-[13px] text-muted-foreground">Подставляются в поле при создании нового объекта.</p>
           <div className="mt-4 flex flex-col gap-3">
             {PREFIX_FIELDS.map((f) => (
               <label key={f.key} className="flex items-center gap-3 text-sm">
