@@ -9,6 +9,8 @@ import { useProjectId } from '@/hooks/project';
 import { useNormalize } from '@/lib/normalize';
 import { parsePhrases } from '@/lib/parse';
 import { findSlotMatches } from '@/lib/stem';
+import { KeywordChips } from '@/components/KeywordChips';
+import { useKeywordMatcher } from '@/lib/keywords';
 import { type ValueItem, type ValueKind } from '@/lib/values';
 import { cn, GHOST } from '@/lib/utils';
 
@@ -64,6 +66,8 @@ export function PatternText({ text, names }: { text: string; names: string[] }) 
 /** Значения интента (тренировочные фразы и паттерны): поле добавления (Enter / вставка нескольких строк) со значком типа и список, свёрнутый после 7 строк. */
 export function PhrasesCell({ value, onChange, mode, highlight = [], entityNames = [], owners }: Props) {
   const [text, setText] = useState('');
+  const matchKw = useKeywordMatcher(useProjectId());
+  const kw = mode === 'keywords';
   // Тип новых значений, добавляемых полем или списком; в режиме «оба» выбирается значком
   const [pickedKind, setAddKind] = useState<ValueKind>('phrase');
   const both = mode === 'both';
@@ -136,6 +140,11 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], entityNames
             }}
           />
           </div>
+          {kw && (
+            <div aria-label="Ключевые слова новой фразы" className="hidden h-10 min-w-0 flex-1 items-center rounded-md border border-dashed bg-muted/40 px-3 md:flex md:h-9">
+              <KeywordChips names={matchKw(text)} placeholder="ключевые слова" />
+            </div>
+          )}
           <Button variant="outline" className="h-10 md:h-9" onClick={() => setBulk(true)}>
             <ListPlus className="size-4" /> Добавить несколько
           </Button>
@@ -157,7 +166,13 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], entityNames
             )}
             <span className="min-w-0 flex-1 self-center break-words px-3 py-2 font-mono text-[13px] leading-[18px]">
               {v.kind === 'phrase' ? <Slotted text={v.text} words={words} owners={owners} /> : <PatternText text={v.text} names={entityNames} />}
+              {kw && <span className="mt-1 block md:hidden"><KeywordChips names={matchKw(v.text)} /></span>}
             </span>
+            {kw && (
+              <span className="hidden w-[40%] shrink-0 items-center border-l px-3 py-1 md:flex">
+                <KeywordChips names={matchKw(v.text)} />
+              </span>
+            )}
             <button
               type="button"
               aria-label="Удалить"

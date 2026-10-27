@@ -14,6 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { SaveNote } from '@/components/SaveIndicator';
 import { TypeToken } from '@/components/TypeToken';
+import { KeywordChips } from '@/components/KeywordChips';
+import { useKeywordMatcher } from '@/lib/keywords';
 import { PatternText, Slotted } from './PhrasesCell';
 import { useProjectId } from '@/hooks/project';
 import { useAutosave } from '@/hooks/useAutosave';
@@ -109,6 +111,8 @@ function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; 
 /** Значения интента (тренировочные фразы и паттерны) редактируемыми строками со значком типа, поле добавления и массовое добавление списком. */
 function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { value: ValueItem[]; others: PhraseOwner[]; words: string[]; entityNames: string[]; mode: IntentMode; onChange: (v: ValueItem[]) => void }) {
   const [text, setText] = useState('');
+  const matchKw = useKeywordMatcher(useProjectId());
+  const kw = mode === 'keywords';
   // Тип новых значений, добавляемых полем или списком; в режиме «оба» выбирается значком
   const [pickedKind, setAddKind] = useState<ValueKind>('phrase');
   const both = mode === 'both';
@@ -192,6 +196,11 @@ function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { 
               }}
             />
           )}
+          {kw && (
+            <span className="hidden w-[38%] shrink-0 items-center border-l border-input px-2 md:flex">
+              <KeywordChips names={matchKw(v.text)} />
+            </span>
+          )}
           <button type="button" aria-label="Удалить значение" className={cn(REMOVE_BTN, 'my-auto mr-1 size-7 max-md:size-9')} onClick={() => onChange(value.filter((_, j) => j !== i))}>
             <X className="size-3.5" />
           </button>
@@ -252,6 +261,11 @@ function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { 
             />
           </div>
           </div>
+          {kw && (
+            <div aria-label="Ключевые слова новой фразы" className="hidden h-8 w-[38%] shrink-0 items-center rounded-md border border-dashed bg-muted/40 px-2 md:flex">
+              <KeywordChips names={matchKw(text)} placeholder="ключевые слова" />
+            </div>
+          )}
           <Button variant="outline" className="h-8 max-md:h-10" onClick={() => setBulk(true)}>
             <ListPlus className="size-4" /> Добавить несколько
           </Button>
@@ -332,7 +346,7 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
         </span>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90dvh] flex flex-col gap-0 overflow-hidden p-5 sm:max-w-xl"
+        <DialogContent className={cn('max-h-[90dvh] flex flex-col gap-0 overflow-hidden p-5 sm:max-w-xl', mode === 'keywords' && 'sm:max-w-2xl')}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
