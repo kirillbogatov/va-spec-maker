@@ -4,3 +4,7 @@ export { openDb } from './db';
 export type { Db } from './sqlite';
 export { seedDemo } from './demo';
 export { dumpProject, importProject } from './project-dump';
+export { stem, normalizeText, phraseKey, findSlotMatches, findSlots } from './stem';
+export type { SlotMatch } from './stem';
+export { matchKeywords } from './keywords';
+export type { KeywordDef } from './keywords';

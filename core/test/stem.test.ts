@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findSlots, phraseKey, stem } from './stem';
+import { findSlots, phraseKey, stem } from '../src/stem';
 
 describe('stem', () => {
   it('сводит формы одного слова к одной основе', () => {
