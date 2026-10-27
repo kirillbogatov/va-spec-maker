@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { DependenciesPage } from '@/pages/dependencies/DependenciesPage';
+import { KeywordsPage } from '@/pages/keywords/KeywordsPage';
 import { EntitiesPage } from '@/pages/entities/EntitiesPage';
 import { IntentsPage } from '@/pages/intents/IntentsPage';
 import { PromptsPage } from '@/pages/prompts/PromptsPage';
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="lists/prompts/:itemId?" element={<PromptsPage />} />
         <Route path="entities/:itemId?" element={<EntitiesPage />} />
         <Route path="dependencies/:itemId?" element={<DependenciesPage />} />
+        <Route path="lists/keywords/:itemId?" element={<KeywordsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="scenarios/:id?/:tab?" element={<ScenariosPage />} />
       </Route>

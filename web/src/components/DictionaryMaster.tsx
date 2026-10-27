@@ -51,6 +51,8 @@ interface Props<T extends DictItem> {
   subtitle?: (i: T) => string;
   /** Элементы справа в шапке (например, тумблер «Включён»). */
   headerExtra?: (draft: T, patch: (p: Partial<T>) => void) => ReactNode;
+  /** Кнопки над списком (например, импорт и экспорт). */
+  listActions?: ReactNode;
   /** Основное содержимое детали. */
   body: (draft: T, patch: (p: Partial<T>) => void) => ReactNode;
   emptyText: string;
@@ -71,6 +73,7 @@ const CHIP: Record<ObjectKind, string> = {
   prompt: 'bg-prm-bg text-prm',
   state: 'bg-st-bg text-st',
   dependency: 'bg-dep-bg text-dep',
+  keyword: 'bg-kw-bg text-kw',
 };
 
 /** Подсказка поиска в списке: «Искать в …». */
@@ -80,6 +83,7 @@ const SEARCH_WHERE: Record<ObjectKind, string> = {
   prompt: 'промптах',
   state: 'состояниях',
   dependency: 'зависимостях',
+  keyword: 'ключевых словах',
 };
 
 /** Карточка раздела внутри детали: заголовок со счётчиком, действия справа. */
@@ -144,6 +148,7 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
       list={
         <>
           {p.onCreate && <ListHeader onCreate={() => setCreating(true)} label={p.createTitle} />}
+          {p.listActions && <div className="flex flex-wrap items-center justify-end gap-1 border-b px-3 py-1.5">{p.listActions}</div>}
           {search}
           <ul className="flex-1 overflow-y-auto pb-2">
             {groups.map((g) => (

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-export type ObjectKind = 'intent' | 'entity' | 'prompt' | 'state' | 'dependency';
+export type ObjectKind = 'intent' | 'entity' | 'prompt' | 'state' | 'dependency' | 'keyword';
 
 const TONE: Record<ObjectKind, string> = {
   intent: 'bg-int-bg text-int',
@@ -9,6 +9,7 @@ const TONE: Record<ObjectKind, string> = {
   prompt: 'bg-prm-bg text-prm',
   state: 'bg-st-bg text-st',
   dependency: 'bg-dep-bg text-dep',
+  keyword: 'bg-kw-bg text-kw',
 };
 const DOT: Record<ObjectKind, string> = {
   intent: 'bg-int',
@@ -16,6 +17,7 @@ const DOT: Record<ObjectKind, string> = {
   prompt: 'bg-prm',
   state: 'bg-st',
   dependency: 'bg-dep',
+  keyword: 'bg-kw',
 };
 
 export const KIND_LABEL: Record<ObjectKind, string> = {
@@ -24,6 +26,7 @@ export const KIND_LABEL: Record<ObjectKind, string> = {
   prompt: 'Промпт',
   state: 'Состояние',
   dependency: 'Зависимость',
+  keyword: 'Ключевое слово',
 };
 
 /** Жетон идентификатора: цвет задаёт тип объекта, шрифт моноширинный. Одинаков в списках, таблицах, схеме и поиске. */

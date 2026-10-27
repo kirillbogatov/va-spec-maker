@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, LayoutGrid, MessageSquareText, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Shapes, SlidersHorizontal, Workflow, type LucideIcon } from 'lucide-react';
+import { BookOpen, LayoutGrid, MessageSquareText, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Shapes, SlidersHorizontal, Tags, Workflow, type LucideIcon } from 'lucide-react';
 import { CommandPalette } from '@/components/CommandPalette';
 import { GlobalSaveStatus } from '@/components/GlobalSaveStatus';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
@@ -12,11 +12,12 @@ import { api } from '@/lib/api';
 import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
 
-const DICTIONARY: { to: string; label: string; icon: LucideIcon; key: 'intents' | 'entities' | 'prompts' | 'deps' }[] = [
+const DICTIONARY: { to: string; label: string; icon: LucideIcon; key: 'intents' | 'entities' | 'prompts' | 'deps' | 'keywords' }[] = [
   { to: '/lists/intents', label: 'Интенты', icon: MessageSquareText, key: 'intents' },
   { to: '/entities', label: 'Сущности', icon: Shapes, key: 'entities' },
   { to: '/lists/prompts', label: 'Промпты', icon: ScrollText, key: 'prompts' },
   { to: '/dependencies', label: 'Зависимости', icon: SlidersHorizontal, key: 'deps' },
+  { to: '/lists/keywords', label: 'Ключевые слова', icon: Tags, key: 'keywords' },
 ];
 
 const itemClass = (active: boolean) =>
@@ -32,9 +33,10 @@ function useCounts() {
   const entities = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId) });
   const prompts = useQuery({ queryKey: ['prompts', projectId], queryFn: () => api.prompts.list(projectId) });
   const deps = useQuery({ queryKey: ['dependency-dictionary', projectId], queryFn: () => api.dependencyDictionary.list(projectId) });
+  const keywords = useQuery({ queryKey: ['keywords', projectId], queryFn: () => api.keywords.list(projectId) });
   return {
     scenarios: scenarios.data ?? [],
-    counts: { intents: intents.data?.length, entities: entities.data?.length, prompts: prompts.data?.length, deps: deps.data?.length },
+    counts: { intents: intents.data?.length, entities: entities.data?.length, prompts: prompts.data?.length, deps: deps.data?.length, keywords: keywords.data?.length },
   };
 }
 

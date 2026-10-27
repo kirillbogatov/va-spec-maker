@@ -35,6 +35,8 @@
     --color-st-bg: var(--st-bg);
     --color-dep: var(--dep);
     --color-dep-bg: var(--dep-bg);
+    --color-kw: var(--kw);
+    --color-kw-bg: var(--kw-bg);
     --color-success-bg: var(--success-bg);
     --color-warning-bg: var(--warning-bg);
     --color-destructive-bg: var(--destructive-bg);
@@ -123,6 +125,8 @@
     --st-bg: #efe6fb;
     --dep: #b4325e;
     --dep-bg: #fbe3eb;
+    --kw: #1f7a3d;
+    --kw-bg: #e3f4e0;
     --chart-1: #2b55e0;
     --chart-2: #c0302b;
     --chart-3: #9a5b00;
@@ -180,6 +184,8 @@
     --st-bg: #2d2150;
     --dep: #ff8fb0;
     --dep-bg: #3d1b29;
+    --kw: #8fd6a0;
+    --kw-bg: #1d3a27;
     --chart-1: #86a3ff;
     --chart-2: #ff8a84;
     --chart-3: #f0b45a;

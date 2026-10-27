@@ -22,6 +22,7 @@ const GROUPS: { kind: HitKind; title: string }[] = [
   { kind: 'entity', title: 'Сущности' },
   { kind: 'prompt', title: 'Промпты' },
   { kind: 'dependency', title: 'Зависимости' },
+  { kind: 'keyword', title: 'Ключевые слова' },
 ];
 
 /** Корни русских слов и их латинские соответствия в идентификаторах: «свет» находит LIGHT, «будил» — ALARM. */
@@ -143,6 +144,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const prompts = useQuery({ queryKey: ['prompts', projectId], queryFn: () => api.prompts.list(projectId), ...enabled });
   const entities = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId), ...enabled });
   const deps = useQuery({ queryKey: ['dependency-dictionary', projectId], queryFn: () => api.dependencyDictionary.list(projectId), ...enabled });
+  const keywords = useQuery({ queryKey: ['keywords', projectId], queryFn: () => api.keywords.list(projectId), ...enabled });
   // Тексты фраз и ответов берём из выгрузки проекта: одним запросом вместо запроса на каждый объект
   const dump = useQuery({ queryKey: ['palette-dump', projectId], queryFn: () => api.projects.dump(projectId), ...enabled, gcTime: 0 });
 
@@ -168,9 +170,10 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         to: path(`/lists/prompts/${p.id}`),
       })),
       ...(deps.data ?? []).map((d): Hit => ({ key: `d${d.id}`, kind: 'dependency', name: d.name, hint: `${d.values.length} знач.`, to: path(`/dependencies/${d.id}`) })),
+      ...(keywords.data ?? []).map((k): Hit => ({ key: `k${k.id}`, kind: 'keyword', name: k.name, hint: `${k.synonyms.length} син.`, text: k.synonyms.join('\n'), to: path(`/lists/keywords/${k.id}`) })),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenarios.data, intents.data, prompts.data, entities.data, deps.data, dump.data]);
+  }, [scenarios.data, intents.data, prompts.data, entities.data, deps.data, keywords.data, dump.data]);
 
   const tokens = useMemo(() => normalize(q.trim()).split(/\s+/).filter(Boolean).map(variants), [q]);
   const sections = useMemo(() => {
