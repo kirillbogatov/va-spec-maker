@@ -1,5 +1,5 @@
 import type {
-  DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
+  DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Keyword, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
 } from './types';
 import type { EntityKind } from './entityTypes';
 import type { IntentMode } from './intentMode';
@@ -76,6 +76,14 @@ export const api = {
     save: (id: number, body: { name: string; values: string[] }) =>
       req<DictionaryDependency>('PUT', `/api/dependency-dictionary/${id}`, body),
     remove: (id: number) => req<void>('DELETE', `/api/dependency-dictionary/${id}`),
+  },
+  keywords: {
+    list: (pid: number) => req<Keyword[]>('GET', `/api/projects/${pid}/keywords`),
+    create: (pid: number, name: string) => req<Keyword>('POST', `/api/projects/${pid}/keywords`, { name }),
+    save: (id: number, body: { name: string; synonyms: string[] }) => req<Keyword>('PUT', `/api/keywords/${id}`, body),
+    remove: (id: number) => req<void>('DELETE', `/api/keywords/${id}`),
+    import: (pid: number, text: string) => req<{ added: number; updated: number; skipped: number }>('POST', `/api/projects/${pid}/keywords/import`, { text }),
+    exportTxt: async (pid: number) => downloadResponse(await request('GET', `/api/projects/${pid}/keywords/export`), 'keywords.txt'),
   },
   prompts: {
     list: (pid: number) => req<PromptListItem[]>('GET', `/api/projects/${pid}/prompts`),

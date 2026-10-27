@@ -2,22 +2,23 @@ import { useEffect, useState } from 'react';
 import type { ValueKind } from './values';
 
 /** Как описывать интенты: только тренировочными фразами, только паттернами или тем и другим. */
-export type IntentMode = 'phrases' | 'patterns' | 'both';
+export type IntentMode = 'phrases' | 'patterns' | 'both' | 'keywords';
 
 export const INTENT_MODES: { value: IntentMode; label: string }[] = [
   { value: 'phrases', label: 'Тренировочные фразы' },
   { value: 'patterns', label: 'Паттерны' },
   { value: 'both', label: 'Тренировочные фразы + паттерны' },
+  { value: 'keywords', label: 'Фразы + ключевые слова' },
 ];
 
 /** Название списка значений интента (и колонки) в выбранном режиме. */
-export const MODE_TITLE: Record<IntentMode, string> = { phrases: 'Тренировочные фразы', patterns: 'Паттерны', both: 'Значения' };
+export const MODE_TITLE: Record<IntentMode, string> = { phrases: 'Тренировочные фразы', patterns: 'Паттерны', both: 'Значения', keywords: 'Ключевые слова' };
 
 /** Пометка интента без значений в выбранном режиме. */
-export const MODE_EMPTY: Record<IntentMode, string> = { phrases: 'нет фраз', patterns: 'нет паттернов', both: 'нет значений' };
+export const MODE_EMPTY: Record<IntentMode, string> = { phrases: 'нет фраз', patterns: 'нет паттернов', both: 'нет значений', keywords: 'нет фраз' };
 
 /** Показывается ли значение этого типа в выбранном режиме. */
-export const modeShows = (mode: IntentMode, kind: ValueKind) => mode === 'both' || (mode === 'phrases') === (kind === 'phrase');
+export const modeShows = (mode: IntentMode, kind: ValueKind) => mode === 'both' || (mode === 'patterns' ? kind === 'pattern' : kind === 'phrase');
 
 /** Тип значений, добавляемых по умолчанию (в режиме «оба» пользователь выбирает сам). */
 export const modeKind = (mode: IntentMode): ValueKind => (mode === 'patterns' ? 'pattern' : 'phrase');
@@ -28,7 +29,7 @@ const storageKey = (projectId: number) => `intentMode:${projectId}`;
 export function readIntentMode(projectId: number): IntentMode {
   try {
     const v = localStorage.getItem(storageKey(projectId));
-    return v === 'patterns' || v === 'both' ? v : 'phrases';
+    return v === 'patterns' || v === 'both' || v === 'keywords' ? v : 'phrases';
   } catch {
     return 'phrases';
   }

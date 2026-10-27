@@ -34,6 +34,7 @@ export interface Intent {
 }
 
 export interface DictionaryDependency { id: number; name: string; values: string[]; used_by: { id: number; name: string }[] }
+export interface Keyword { id: number; project_id: number; name: string; synonyms: string[]; used_by: { id: number; name: string }[] }
 
 export interface PromptListItem {
   id: number; name: string; has_answer: boolean; step_count: number; scenarios: ScenarioLink[];
