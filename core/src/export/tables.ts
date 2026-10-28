@@ -68,10 +68,8 @@ export function intentsTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef
 export function entitiesTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef {
   return {
     head: STRINGS[lang].entitiesHead,
-    widths: [16, 16, 32, 12, 24],
+    widths: [20, 18, 46, 16],
     rows: spec.entities.map((e) => {
-      const uses = spec.scenario_entities.filter((s) => s.name === e.name);
-      const col = (f: (s: (typeof uses)[number]) => string): Cell => (uses.length ? text(uses.map(f).join('\n')) : dash(''));
       return {
         cells: [
           text(ref(e.name)),
@@ -84,8 +82,7 @@ export function entitiesTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDe
                   text: v.synonyms.map((s) => `"${s}"`).join(', '),
                 })),
               },
-          text(e.multiple_values || uses.some((s) => s.is_array) ? STRINGS[lang].yes : STRINGS[lang].no),
-          col((s) => s.followup_prompt.trim() || '-'),
+          text(e.multiple_values ? STRINGS[lang].yes : STRINGS[lang].no),
         ],
       };
     }),

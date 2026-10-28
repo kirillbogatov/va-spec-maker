@@ -10,6 +10,7 @@ import { usePath, useProjectId } from '@/hooks/project';
 import { useIntentMode } from '@/lib/intentMode';
 import { api } from '@/lib/api';
 import { useKeywords } from '@/lib/keywords';
+import { downloadDictionaryDoc } from '@/lib/dictionaryDoc';
 import { splitTags } from '@/lib/parse';
 
 /** Синонимы концепта: список с полем добавления. */
@@ -68,7 +69,7 @@ function SynonymsList({ value, onChange }: { value: string[]; onChange: (v: stri
   );
 }
 
-/** Справочник концептов проекта: код и синонимы, импорт и экспорт в txt. */
+/** Справочник концептов проекта: код и синонимы, импорт из txt, экспорт в txt и docx. */
 export function KeywordsPage() {
   const projectId = useProjectId();
   const path = usePath();
@@ -100,7 +101,18 @@ export function KeywordsPage() {
       items={items}
       meta={(i) => (i.synonyms.length ? { text: String(i.synonyms.length) } : { text: 'нет синонимов', warn: true })}
       subtitle={(i) => i.synonyms.join(', ')}
-      listActions={<TransferMenu accept=".txt,text/plain" format="TXT" onImport={importFile} onExport={() => api.keywords.exportTxt(projectId)} />}
+      usedIn={(i) => i.used_by}
+      listActions={
+        <TransferMenu
+          accept=".txt,text/plain"
+          format="TXT"
+          onImport={importFile}
+          exports={[
+            { format: 'TXT', run: () => api.keywords.exportTxt(projectId) },
+            { format: 'DOCX', run: () => downloadDictionaryDoc('keywords', projectId, 'docx') },
+          ]}
+        />
+      }
       body={(d, patch) => (
         <DictCard title="Синонимы">
           <SynonymsList value={d.synonyms} onChange={(synonyms) => patch({ synonyms })} />

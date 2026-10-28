@@ -86,6 +86,7 @@ const TABLES: { name: string; where: string; fk: Record<string, string>; remap?:
   { name: 'scenario_states', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', part_id: 'scenario_parts', prompt_id: 'prompts' } },
   { name: 'scenario_steps', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', part_id: 'scenario_parts', intent_id: 'intents', prompt_id: 'prompts' } },
   { name: 'scenario_history', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios' }, remap: remapHistory },
+  { name: 'scenario_changelog', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios' } },
 ];
 
 export function dumpProject(db: Db, id: number): ProjectDump {

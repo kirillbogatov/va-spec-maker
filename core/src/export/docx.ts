@@ -123,6 +123,9 @@ export function renderDocxScenario(doc: ScenarioDoc, name: string, lang: SpecLan
   return pack([...(description ? [new Paragraph({ children: [run(description)], spacing: { after: 120 } })] : []), ...sectionBlocks(doc.spec, lang, doc.parts)], name);
 }
 
+/** Одна таблица с заголовком: выгрузка справочника. */
+export const renderTableDocx = (title: string, table: TableDef): Promise<Blob> => pack([heading(title), tableBlock(table)], title);
+
 async function pack(c: Block[], name: string): Promise<Blob> {
   const doc = new Document({
     title: name,

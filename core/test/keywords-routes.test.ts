@@ -32,6 +32,23 @@ describe('keywords dictionary', () => {
     expect(exp.body).toBe('OFF: выключи, отключи\nSOUND: звук\n');
   });
 
+  it('used_by — сценарии, где концепт во фразах интента или в условии строки', async () => {
+    const { app, db } = await makeApp();
+    const pid = createProject(db);
+    await request(app).post(`/api/projects/${pid}/keywords/import`).send({ text: 'OFF: выключи\nSOUND: звук\nTEMP: температура\n' });
+    const kw = Object.fromEntries((await request(app).get(`/api/projects/${pid}/keywords`)).body.map((k: { name: string; id: number }) => [k.name, k.id]));
+    const a = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Свет' });
+    const b = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Климат' });
+    const intent = await request(app).post(`/api/scenarios/${a.body.id}/intents`).send({ name: 'INT_OFF' });
+    await request(app).put(`/api/intents/${intent.body.id}`).send({ name: 'INT_OFF', phrases: ['выключи свет'], entities: [] });
+    const scenario = (await request(app).get(`/api/scenarios/${b.body.id}`)).body;
+    const step = { kind: 'transition', state: 'VA_ACTIVATION', intent_id: null, request_params: '', condition: '', conditions: [{ dep: '', keyword_id: kw.SOUND, op: '=', value: '' }], prompt_id: null, system_action: '', next_states: 'ST_DONE' };
+    await request(app).put(`/api/scenarios/${b.body.id}`).send({ ...scenario, parts: [{ ...scenario.parts[0], steps: [step] }] });
+    const list = (await request(app).get(`/api/projects/${pid}/keywords`)).body as { name: string; used_by: { name: string }[] }[];
+    expect(Object.fromEntries(list.map((k) => [k.name, k.used_by.map((s) => s.name)]))).toEqual({ OFF: ['Свет'], SOUND: ['Климат'], TEMP: [] });
+    expect((await request(app).get(`/api/keywords/${kw.OFF}`)).body.used_by).toEqual([{ id: a.body.id, name: 'Свет' }]);
+  });
+
   it('входит в дамп и восстановление проекта', async () => {
     const { app, db } = await makeApp();
     const pid = createProject(db);

@@ -7,4 +7,6 @@ export { dumpProject, importProject } from './project-dump';
 export { stem, normalizeText, phraseKey, findSlotMatches, findSlots } from './stem';
 export type { SlotMatch } from './stem';
 export { matchKeywords } from './keywords';
+export { renderTableDocx } from './export/docx';
+export type { Cell, TableDef } from './export/tables';
 export type { KeywordDef } from './keywords';

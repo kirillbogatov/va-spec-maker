@@ -120,6 +120,18 @@ export function AppShell() {
 
         <nav className="flex min-h-0 flex-1 flex-col gap-4" aria-label="Основная навигация">
           <div className="flex shrink-0 flex-col gap-0.5">
+            <NavLink to={path('/scenarios')} title="Сценарии" aria-label="Сценарии" className={() => cn(itemClass(onScenarios), collapsed && 'w-8 justify-center px-0')}>
+              <Workflow className="size-4" />
+              {!collapsed && (
+                <>
+                  Сценарии
+                  <span className="ml-auto text-xs tabular-nums text-faint">{scenarios.length}</span>
+                </>
+              )}
+            </NavLink>
+          </div>
+
+          <div className="flex shrink-0 flex-col gap-0.5 border-t border-border pt-3">
             {!collapsed && <span className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-faint">Словарь проекта</span>}
             {dictionary.map((d) => (
               <NavLink key={d.to} to={path(d.to)} title={d.label} aria-label={d.label} className={({ isActive }) => cn(itemClass(isActive || on(path(d.to))), collapsed && 'w-8 justify-center px-0')}>
@@ -132,18 +144,6 @@ export function AppShell() {
                 )}
               </NavLink>
             ))}
-          </div>
-
-          <div className="flex shrink-0 flex-col gap-0.5 border-t border-border pt-3">
-            <NavLink to={path('/scenarios')} title="Сценарии" aria-label="Сценарии" className={() => cn(itemClass(onScenarios), collapsed && 'w-8 justify-center px-0')}>
-              <Workflow className="size-4" />
-              {!collapsed && (
-                <>
-                  Сценарии
-                  <span className="ml-auto text-xs tabular-nums text-faint">{scenarios.length}</span>
-                </>
-              )}
-            </NavLink>
           </div>
 
           <div className="min-h-0 flex-1" />

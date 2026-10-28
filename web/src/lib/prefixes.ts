@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export type PrefixKey = 'intent' | 'entity' | 'prompt' | 'dependency' | 'scenario';
+export type PrefixKey = 'intent' | 'entity' | 'prompt' | 'dependency' | 'scenario' | 'state';
 
 export const PREFIX_FIELDS: { key: PrefixKey; label: string; hint: string }[] = [
   { key: 'intent', label: 'Интенты', hint: 'INT_' },
@@ -8,9 +8,10 @@ export const PREFIX_FIELDS: { key: PrefixKey; label: string; hint: string }[] = 
   { key: 'prompt', label: 'Промпты', hint: 'PRM_' },
   { key: 'dependency', label: 'Зависимости', hint: 'DEP_' },
   { key: 'scenario', label: 'Сценарии', hint: 'SCN_' },
+  { key: 'state', label: 'Состояния', hint: 'ST_' },
 ];
 
-const DEFAULTS: Record<PrefixKey, string> = { intent: 'INT_', entity: '', prompt: 'PRM_', dependency: '', scenario: '' };
+const DEFAULTS: Record<PrefixKey, string> = { intent: 'INT_', entity: '', prompt: 'PRM_', dependency: '', scenario: '', state: 'ST_' };
 const EVENT = 'prefixes-changed';
 const storageKey = (projectId: number) => `prefixes:${projectId}`;
 

@@ -34,6 +34,7 @@ export interface Intent {
 }
 
 export interface DictionaryDependency { id: number; name: string; values: string[]; used_by: { id: number; name: string }[] }
+/** used_by — сценарии, где концепт стоит в условии строки или находится во фразах подключённого интента. */
 export interface Keyword { id: number; project_id: number; name: string; synonyms: string[]; used_by: { id: number; name: string }[] }
 
 export interface PromptListItem {
@@ -49,6 +50,8 @@ export interface Prompt {
 export interface HistoryRef { type: 'intent' | 'prompt' | 'state' | 'part' | 'dependency' | 'error'; name: string; id?: number; part?: string }
 /** Запись истории сценария: день (ГГГГ-ММ-ДД) и текст, в котором {0}, {1}… — места для ссылок. */
 export interface HistoryEntry { id: number; day: string; text: string; refs: HistoryRef[] }
+/** Строка журнала изменений, который ведут вручную. */
+export interface ChangelogRow { task: string; author: string; description: string }
 
 export interface ScenarioListItem { id: number; name: string; step_count: number }
 export type DependencyType = 'string' | 'enum' | 'bool';

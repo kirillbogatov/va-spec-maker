@@ -13,17 +13,20 @@ import { TypeToken } from '@/components/TypeToken';
 import { cn, FIELD, GHOST } from '@/lib/utils';
 import type { Dependency, EntityListItem, Layout, IntentListItem, PromptListItem, Step, StepCondition } from '@/lib/types';
 import { splitNext, type StepIssue } from '@/lib/states';
+import { useProjectId } from '@/hooks/project';
+import { usePrefixes } from '@/lib/prefixes';
 import { ConditionsCell } from './ConditionsCell';
 import { depLabel } from './dependencies';
 
 /** Поле следующего состояния с подсказками под ним: клик по состоянию подставляет его вместо введённого. */
 function NextStateCell({ value, states, label, onChange, className }: { value: string; states: string[]; label: string; onChange: (v: string) => void; className?: string }) {
   const [focused, setFocused] = useState(false);
+  const prefix = usePrefixes(useProjectId()).state;
   const q = value.trim().toLowerCase();
   const hints = states.filter((s) => s !== value.trim() && s.toLowerCase().includes(q)).slice(0, 8);
   return (
     <div>
-      <Input className={cn(className ?? GHOST, 'bg-background')} value={value} aria-label={label} placeholder="ST_…" autoComplete="off"
+      <Input className={cn(className ?? GHOST, 'bg-background')} value={value} aria-label={label} placeholder={`${prefix}…`} autoComplete="off"
         onChange={(e) => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 120)} />
       {focused && hints.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-1">
@@ -120,6 +123,7 @@ const MobileLabel = ({ children }: { children: string }) => <span className="mb-
 
 function StepRow({ step, index, intents, promptOptions, open, onOpenChange, dependencies, entities, allStates, issues, onPatch, onRemove, onDuplicate, onInsertBelow }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.key! });
+  const statePrefix = usePrefixes(useProjectId()).state;
   const intent = intents.find((i) => i.id === step.intent_id)?.name;
   const isGlobal = step.kind === 'global';
   const prompt = step.prompt_id === null ? undefined : promptOptions.find((o) => o.value === String(step.prompt_id))?.label;
@@ -218,7 +222,7 @@ function StepRow({ step, index, intents, promptOptions, open, onOpenChange, depe
             <h3 className="text-xs font-semibold uppercase tracking-wide text-brand">Если</h3>
             <div className={isGlobal ? 'hidden' : undefined}>
               <DialogLabel>Состояние</DialogLabel>
-              <Input className={cn(FIELD, 'font-mono text-[13px]')} list="scenario-states" value={step.state} onFocus={(e) => { if (!step.state.trim()) { onPatch({ state: 'ST_' }); const el = e.currentTarget; requestAnimationFrame(() => el.setSelectionRange(3, 3)); } }} onChange={(e) => onPatch({ state: e.target.value })} aria-label={`Состояние, строка ${index + 1}`} placeholder="ST_…" />
+              <Input className={cn(FIELD, 'font-mono text-[13px]')} list="scenario-states" value={step.state} onFocus={(e) => { if (!step.state.trim() && statePrefix) { onPatch({ state: statePrefix }); const el = e.currentTarget; requestAnimationFrame(() => el.setSelectionRange(statePrefix.length, statePrefix.length)); } }} onChange={(e) => onPatch({ state: e.target.value })} aria-label={`Состояние, строка ${index + 1}`} placeholder={`${statePrefix}…`} />
             </div>
             <div>
               <DialogLabel>Интент</DialogLabel>

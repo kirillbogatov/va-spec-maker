@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Background, MarkerType, ReactFlow, ReactFlowProvider, useReactFlow, useViewport, type Connection, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { LayoutDashboard, Maximize, Minus, Plus } from 'lucide-react';
+import { Download, Expand, LayoutDashboard, Maximize, Minus, Plus, Shrink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { layoutStateGraph, type LayoutResult } from '@/lib/elkLayout';
 import { ENTRY_STATE, newTransition, removeState, renameState, uniqueStateName } from '@/lib/fsm';
 import { splitNext, type Analysis } from '@/lib/states';
@@ -11,7 +12,9 @@ import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem
 import { conditionLabel } from '../dependencies';
 import { useProjectId } from '@/hooks/project';
 import { useKeywords } from '@/lib/keywords';
+import { usePrefixes } from '@/lib/prefixes';
 import { EdgePanel } from './EdgePanel';
+import { exportSchemeSvg } from './exportSvg';
 import { NodePanel } from './NodePanel';
 import { StateNode, TransitionEdge, type EdgeCard, type StateNodeData, type TransitionEdgeData } from './StateNode';
 
@@ -40,6 +43,8 @@ interface Props {
   focusState?: string | null;
   /** Выбран узел или переход — панель вкладки уступает место. */
   onSelectElement?: () => void;
+  /** Данные для экспорта в SVG: название, вкладка (если их несколько), ошибки и глобальные переходы вкладки. */
+  exportMeta?: { title: string; part: string | null; errors: Step[]; globals: Step[] };
 }
 
 /** Параметры «вписать»: небольшие поля, текст остаётся читаемым, пока схема помещается. */
@@ -64,8 +69,10 @@ function ZoomControls() {
   );
 }
 
-function StateEditorInner({ steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, focusState }: Props) {
-  const keywords = useKeywords(useProjectId());
+function StateEditorInner({ steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, focusState, exportMeta }: Props) {
+  const projectId = useProjectId();
+  const keywords = useKeywords(projectId);
+  const statePrefix = usePrefixes(projectId).state;
   const [selected, setSelectedRaw] = useState<Selection>(null);
   const setSelected = (s: Selection) => {
     setSelectedRaw(s);
@@ -194,7 +201,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   };
   const parent = selected?.type === 'node' && names.includes(selected.name) ? selected.name : null;
   const addNode = () => {
-    const name = uniqueStateName(names, names.length ? 'ST_NEW' : ENTRY_STATE);
+    const name = uniqueStateName(names, names.length ? `${statePrefix}NEW` : ENTRY_STATE);
     const nextLayout = { ...layout, [name]: { x: 0, y: 0 } };
     // Если выбрано состояние, новое становится дочерним: от выбранного к нему сразу ведёт переход.
     onChange({ steps: parent ? [...steps, newTransition(parent, name)] : steps, layout: nextLayout });
@@ -226,6 +233,35 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   const patchState = (name: string, p: Partial<StateInfo>) =>
     onChange({ steps, layout: { ...layout, [name]: { ...(layout[name] ?? { x: 0, y: 0 }), ...p } } });
   const patchEdge = (key: string, p: Partial<Step>) => commit(steps.map((s) => (s.key === key ? { ...s, ...p } : s)));
+
+  // Развёрнутая схема занимает весь экран: остаются только холст и панель свойств; Esc сворачивает.
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented) setExpanded(false); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [expanded]);
+  const firstExpand = useRef(true);
+  useEffect(() => {
+    if (firstExpand.current) { firstExpand.current = false; return; }
+    const id = requestAnimationFrame(() => fitView({ ...FIT, duration: 200 }));
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
+
+  const [exporting, setExporting] = useState(false);
+  const exportSvg = async () => {
+    if (!exportMeta) return;
+    setExporting(true);
+    try {
+      await exportSchemeSvg({ ...exportMeta, names, steps, layout, analysis, intents, prompts, dependencies, entities, keywords });
+    } catch {
+      toast.error('Не удалось выгрузить схему в SVG');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const selectedStep = selected?.type === 'edge' ? steps.find((s) => s.key === selected.key) : undefined;
   const orphans = steps.filter((s) => !s.state.trim());
@@ -292,13 +328,30 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   );
 
   return (
-    <div className="grid gap-3 lg:h-[calc(100dvh-10rem)] lg:min-h-[28rem] lg:grid-cols-[minmax(0,1fr)_290px]">
-      <div className="flex h-[65dvh] min-h-80 min-w-0 flex-col overflow-hidden rounded-xl border bg-card lg:h-full">
+    <div
+      className={cn(
+        'grid gap-3',
+        expanded
+          ? 'fixed inset-0 z-40 grid-rows-[minmax(0,1fr)_minmax(0,40dvh)] bg-page p-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-1'
+          : 'lg:h-[calc(100dvh-10rem)] lg:min-h-[28rem] lg:grid-cols-[minmax(0,1fr)_290px]',
+      )}
+    >
+      <div className={cn('flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card', expanded ? 'h-full min-h-0' : 'h-[65dvh] min-h-80 lg:h-full')}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-2 py-1.5">
           <Button size="sm" onClick={addNode}><Plus className="size-4" /> {parent ? 'Дочернее состояние' : 'Состояние'}</Button>
           <Button variant="outline" size="sm" onClick={() => setTick((t) => t + 1)}><LayoutDashboard className="size-4" /> Расставить</Button>
+          {exportMeta && (
+            <Button variant="outline" size="sm" onClick={exportSvg} disabled={exporting || names.length === 0} title="Скачать схему вкладки в SVG">
+              <Download className="size-4" /> SVG
+            </Button>
+          )}
           {tabs}
-          <div className="ml-auto"><ZoomControls /></div>
+          <div className="ml-auto flex items-center gap-2">
+            <ZoomControls />
+            <Button variant="outline" size="sm" onClick={() => setExpanded((v) => !v)} aria-pressed={expanded} title={expanded ? 'Свернуть схему (Esc)' : 'Развернуть схему на весь экран'}>
+              {expanded ? <Shrink className="size-4" /> : <Expand className="size-4" />} {expanded ? 'Свернуть' : 'Развернуть'}
+            </Button>
+          </div>
         </div>
         <div className="relative min-h-0 flex-1 bg-background">
           {placed ? <ReactFlow
@@ -322,7 +375,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
         </div>
         <p className="border-t px-3 py-1.5 text-xs text-muted-foreground md:hidden">Для редактирования схемы удобнее экран шире 900px; панорама и зум работают пальцами.</p>
       </div>
-      <aside aria-label="Свойства" className="min-w-0 overflow-y-auto rounded-xl border bg-card p-4 lg:h-full">{inspector}</aside>
+      <aside aria-label="Свойства" className={cn('min-w-0 overflow-y-auto rounded-xl border bg-card p-4 lg:h-full', expanded && 'h-full')}>{inspector}</aside>
     </div>
   );
 }

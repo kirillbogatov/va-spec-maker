@@ -12,7 +12,7 @@ const formatDay = (day: string) => {
   return `${d}.${m}.${y.slice(2)}`;
 };
 
-/** История изменений сценария: «дата — что изменилось», названия изменённых объектов — ссылки на них. */
+/** Все изменения сценария (записываются автоматически): «дата — что изменилось», названия изменённых объектов — ссылки на них. */
 export function ScenarioHistory({ scenarioId }: { scenarioId: number }) {
   const projectId = useProjectId();
   const path = usePath();
@@ -58,7 +58,7 @@ export function ScenarioHistory({ scenarioId }: { scenarioId: number }) {
     });
 
   return (
-    <Card title="История изменений" flush>
+    <Card title="Все изменения" flush>
       {isSuccess && entries.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Изменений пока нет.</p>}
       <ul>
         {entries.map((e) => (

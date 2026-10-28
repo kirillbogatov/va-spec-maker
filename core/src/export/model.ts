@@ -38,8 +38,6 @@ export interface ProjectSpec {
     multiple_values: boolean;
     values: { value: string; synonyms: string[] }[];
   }[];
-  /** Сущности сценария с его follow-up prompt. */
-  scenario_entities: { scenario: string; name: string; followup_prompt: string; required: boolean; is_array: boolean }[];
   prompts: { name: string; full_answers: string[] }[];
   dependencies: { scenario: string; name: string; type: string; values: string[] }[];
   transitions: TransitionRow[];
@@ -78,13 +76,8 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
   }[];
   if (!parts.length) parts.push({ id: -1, name: scenario.name, description: '' });
 
+  // Сущности сценария — те, что указаны у его интентов (вкладка «Интенты»)
   const entityIds = new Set<number>();
-  for (const r of db.prepare('SELECT entity_id FROM scenario_dependencies WHERE scenario_id = ? AND entity_id IS NOT NULL').all(scenarioId) as { entity_id: number }[]) {
-    entityIds.add(r.entity_id);
-  }
-  for (const r of db.prepare('SELECT entity_id FROM scenario_entities WHERE scenario_id = ?').all(scenarioId) as { entity_id: number }[]) {
-    entityIds.add(r.entity_id);
-  }
   const intentIds = new Set(
     (db.prepare('SELECT intent_id FROM scenario_intents WHERE scenario_id = ?').all(scenarioId) as { intent_id: number }[]).map((r) => r.intent_id),
   );
@@ -172,16 +165,6 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
     ).map((v) => ({ value: v.value, synonyms: JSON.parse(v.synonyms) as string[] })),
   }));
 
-  const scenario_entities = (db
-    .prepare(
-      `SELECT s.name AS scenario, e.name, se.followup_prompt, se.required, se.is_array
-       FROM scenario_entities se
-       JOIN scenarios s ON s.id = se.scenario_id
-       JOIN entities e ON e.id = se.entity_id
-       WHERE s.project_id = ? AND (? IS NULL OR s.id = ?) ORDER BY s.id, se.position, se.id`,
-    )
-    .all(projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null) as { scenario: string; name: string; followup_prompt: string; required: number; is_array: number }[]).map((e) => ({ ...e, required: !!e.required, is_array: !!e.is_array }));
-
   const prompts = (
     db
       .prepare('SELECT id, name, full_answers FROM prompts WHERE project_id = ? ORDER BY id')
@@ -252,7 +235,6 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
     project,
     intents,
     entities,
-    scenario_entities,
     prompts,
     dependencies,
     transitions: rows.filter((r) => r.kind === 'transition').map(strip),

@@ -252,6 +252,30 @@ export function scenariosRouter(db: Db): RouterT {
     res.json(listHistory(db, id));
   });
 
+  /** Журнал изменений, который ведут вручную: задача, автор, описание. В автоматическую историю не попадает. */
+  const changelog = (id: number) =>
+    db.prepare('SELECT task, author, description FROM scenario_changelog WHERE scenario_id = ? ORDER BY position, id').all(id) as { task: string; author: string; description: string }[];
+
+  r.get('/scenarios/:id/changelog', (req, res) => {
+    const id = parseId(req.params.id);
+    load(id);
+    res.json(changelog(id));
+  });
+
+  r.put('/scenarios/:id/changelog', (req, res) => {
+    const id = parseId(req.params.id);
+    load(id);
+    const rows = (Array.isArray(req.body?.rows) ? req.body.rows : []).map((x: any) => ({
+      task: optString(x?.task), author: optString(x?.author), description: optString(x?.description),
+    }));
+    db.transaction(() => {
+      db.prepare('DELETE FROM scenario_changelog WHERE scenario_id = ?').run(id);
+      const ins = db.prepare('INSERT INTO scenario_changelog(scenario_id, position, task, author, description) VALUES (?, ?, ?, ?, ?)');
+      rows.forEach((x: { task: string; author: string; description: string }, i: number) => ins.run(id, i, x.task, x.author, x.description));
+    })();
+    res.json(changelog(id));
+  });
+
   r.delete('/scenarios/:id/history', (req, res) => {
     const id = parseId(req.params.id);
     load(id);

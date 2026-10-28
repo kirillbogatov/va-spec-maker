@@ -10,6 +10,18 @@ async function setup() {
 }
 
 describe('scenarios API', () => {
+  it('журнал изменений: заменяется целиком, сохраняет порядок и не пишет автоматическую историю', async () => {
+    const { app, pid } = await setup();
+    const s = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Свет' });
+    expect((await request(app).get(`/api/scenarios/${s.body.id}/changelog`)).body).toEqual([]);
+    const rows = [{ task: 'VA-1', author: 'Иванов', description: 'Первая версия' }, { task: '', author: 'Петров', description: 'Ошибки' }];
+    const put = await request(app).put(`/api/scenarios/${s.body.id}/changelog`).send({ rows: [...rows, { task: 1, extra: 'x' }] });
+    expect(put.body).toEqual([...rows, { task: '', author: '', description: '' }]);
+    const history = (await request(app).get(`/api/scenarios/${s.body.id}/history`)).body as { text: string }[];
+    expect(history.every((h) => !h.text.includes('Иванов'))).toBe(true);
+    expect((await request(app).get(`/api/scenarios/999/changelog`)).status).toBe(404);
+  });
+
   it('creates, lists and loads an empty scenario', async () => {
     const { app, pid } = await setup();
     const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Обогрев сидений' });

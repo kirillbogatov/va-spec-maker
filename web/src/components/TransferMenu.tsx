@@ -1,15 +1,17 @@
 import { useRef } from 'react';
 import { Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-/** Меню «…» над списком справочника: импорт из файла и экспорт в файл. */
-export function TransferMenu({ accept, format, onImport, onExport }: {
+/** Меню «…» над списком справочника: импорт из файла и экспорт в файлы нескольких форматов. */
+export function TransferMenu({ accept, format, onImport, exports }: {
   accept: string;
-  /** Название формата для подписей, например «CSV». */
+  /** Название формата импорта для подписи, например «CSV». */
   format: string;
   onImport: (file: File) => void | Promise<void>;
-  onExport: () => void | Promise<void>;
+  /** Форматы экспорта: подпись («CSV», «TXT», «DOCX») и выгрузка. */
+  exports: { format: string; run: () => void | Promise<void> }[];
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   return (
@@ -33,9 +35,21 @@ export function TransferMenu({ accept, format, onImport, onExport }: {
           <DropdownMenuItem onClick={() => fileRef.current?.click()}>
             <Upload className="size-4" /> Импорт из {format}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void onExport()}>
-            <Download className="size-4" /> Экспорт в {format}
-          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {exports.map((x) => (
+            <DropdownMenuItem
+              key={x.format}
+              onClick={async () => {
+                try {
+                  await x.run();
+                } catch (e) {
+                  toast.error((e as Error).message);
+                }
+              }}
+            >
+              <Download className="size-4" /> Экспорт в {x.format}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

@@ -16,10 +16,10 @@ import { api } from '@/lib/api';
 import type { Dependency, Layout, Scenario, ScenarioPart, Step } from '@/lib/types';
 import { DependenciesTable } from './DependenciesTable';
 import { reconcile } from './dependencies';
+import { ScenarioChangelog } from './ScenarioChangelog';
 import { ScenarioHistory } from './ScenarioHistory';
 import { ScenarioIntents } from './ScenarioIntents';
 import { ScenarioPrompts } from './ScenarioPrompts';
-import { GlobalTransitions } from './GlobalTransitions';
 import { analyzeSteps } from '@/lib/states';
 import { StepsTable } from './StepsTable';
 import { Card } from './Card';
@@ -106,12 +106,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
     () => analyzeSteps(transitions, intentName, part.layout),
     [transitions, part.layout, intents],
   );
-  const globalIntents = intents.filter((i) => i.is_global);
   const globalSteps = part.steps.filter((s) => s.kind === 'global');
-  const knownStates = useMemo(
-    () => [...new Set([...fsm.states, ...Object.keys(part.layout), ...fsm.edges.map((e) => e.to)])],
-    [fsm, part.layout],
-  );
   const counts: Partial<Record<ScenarioTab, number>> = {
     intents: ownIntents.length,
     prompts: ownPrompts.length,
@@ -148,7 +143,6 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
   const setKind = (kind: Step['kind'], rows: Step[]) =>
     updatePart(part.key!, (p) => ({ ...p, steps: [...p.steps.filter((s) => s.kind !== kind), ...rows] }));
   const setErrors = (rows: Step[]) => setKind('error', rows);
-  const setGlobals = (rows: Step[]) => setKind('global', rows);
   const setTransitions = (rows: Step[], layout?: Layout) =>
     updatePart(part.key!, (p) => ({ ...p, layout: layout ?? p.layout, steps: [...rows, ...p.steps.filter((s) => s.kind !== 'transition')] }));
 
@@ -299,6 +293,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
             onChange={({ steps, layout }) => setTransitions(steps, layout)}
             showPart={showPart}
             onSelectElement={() => setShowPart(false)}
+            exportMeta={{ title: draft.name, part: draft.parts.length > 1 ? part.name : null, errors: stepsOf('error'), globals: globalSteps }}
             partPanel={
               <PartPanel
                 part={part}
@@ -309,16 +304,6 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
               />
             }
           />
-          {(globalIntents.length > 0 || globalSteps.length > 0) && (
-            <GlobalTransitions
-              steps={globalSteps}
-              intents={globalIntents}
-              dependencies={draft.dependencies}
-              entities={entities}
-              states={knownStates}
-              onChange={setGlobals}
-            />
-          )}
         </div>
       )}
       {tab === 'errors' && (
@@ -342,7 +327,8 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
       )}
       {tab === 'history' && (
         <div className={column}>
-          <div className={inner}>
+          <div className={cn(inner, 'grid min-w-0 gap-4')}>
+            <ScenarioChangelog scenarioId={scenario.id} />
             <ScenarioHistory scenarioId={scenario.id} />
           </div>
         </div>

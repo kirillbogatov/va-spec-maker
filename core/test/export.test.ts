@@ -29,7 +29,6 @@ const spec: ProjectSpec = {
     },
     { name: 'heating_level', type: 'number', range_min: '1', range_max: '3', multiple_values: false, values: [] },
   ],
-  scenario_entities: [{ scenario: 'Обогрев', name: 'seat_position', followup_prompt: 'Для какого сиденья включить обогрев?', required: true, is_array: false }],
   prompts: [
     { name: 'PRM_TEMPERATURE_SET', full_answers: ['Устанавливаю'] },
   ],
@@ -81,7 +80,7 @@ describe('renderMarkdown', () => {
   it('renders entities, prompts, transitions and errors', () => {
     expect(md).toContain('| [seat_position] | Строка | • **Driver:** "водитель", "левый"<br>• **All** | да |');
     expect(md).toContain('| [heating_level] | Число<br>от 1 до 3 | - | нет |');
-    expect(md).toContain('| да | Для какого сиденья включить обогрев? |');
+    expect(md).not.toContain('Уточняющий вопрос');
     expect(md).not.toContain('## Scenario entities');
     expect(md).toContain('| PRM_TEMPERATURE_SET | 1. Устанавливаю |');
     expect(md).toContain('| ST_SEAT_HEATING | - | INT_SEAT_HEATING | Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
