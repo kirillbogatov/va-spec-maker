@@ -48,8 +48,26 @@ function upgradeDump(tables: ProjectDump['tables']): ProjectDump['tables'] {
   };
 }
 
+/** В записях истории ссылки на интенты и промпты хранятся по id: после импорта id другие. */
+function remapHistory(row: Record<string, unknown>, maps: Record<string, Map<number, number>>): Record<string, unknown> {
+  let refs: { type?: string; id?: number }[] = [];
+  try {
+    refs = JSON.parse(String(row.refs));
+  } catch {
+    return row;
+  }
+  const next = refs.map((r) => {
+    const map = r.type === 'intent' ? maps.intents : r.type === 'prompt' ? maps.prompts : undefined;
+    if (!map || typeof r.id !== 'number') return r;
+    const { id, ...rest } = r;
+    const to = map.get(id);
+    return to === undefined ? rest : { ...rest, id: to };
+  });
+  return { ...row, refs: JSON.stringify(next) };
+}
+
 /** Порядок важен: родители раньше детей. fk — столбцы-ссылки на id других таблиц дампа. */
-const TABLES: { name: string; where: string; fk: Record<string, string> }[] = [
+const TABLES: { name: string; where: string; fk: Record<string, string>; remap?: (row: Record<string, unknown>, maps: Record<string, Map<number, number>>) => Record<string, unknown> }[] = [
   { name: 'entities', where: IN_PROJECT, fk: {} },
   { name: 'entity_values', where: VIA_ENTITY, fk: { entity_id: 'entities' } },
   { name: 'dependency_dictionary', where: IN_PROJECT, fk: {} },
@@ -67,6 +85,7 @@ const TABLES: { name: string; where: string; fk: Record<string, string> }[] = [
   { name: 'scenario_entities', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', entity_id: 'entities' } },
   { name: 'scenario_states', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', part_id: 'scenario_parts', prompt_id: 'prompts' } },
   { name: 'scenario_steps', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', part_id: 'scenario_parts', intent_id: 'intents', prompt_id: 'prompts' } },
+  { name: 'scenario_history', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios' }, remap: remapHistory },
 ];
 
 export function dumpProject(db: Db, id: number): ProjectDump {
@@ -95,7 +114,8 @@ export function importProject(db: Db, dump: ProjectDump, name?: string): number 
       const map = (maps[t.name] = new Map());
       const rows = tables[t.name];
       if (rows !== undefined && !Array.isArray(rows)) throw badRequest(`Некорректная таблица ${t.name}`);
-      for (const row of rows ?? []) {
+      for (const original of rows ?? []) {
+        const row = t.remap ? t.remap(original, maps) : original;
         const keys = Object.keys(row).filter((k) => k !== 'id' && !LEGACY[t.name]?.includes(k));
         if (keys.some((k) => !cols.has(k))) throw badRequest(`Неизвестное поле в таблице ${t.name}`);
         const values = keys.map((k) => {

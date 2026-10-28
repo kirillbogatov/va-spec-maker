@@ -135,6 +135,14 @@ CREATE TABLE IF NOT EXISTS scenario_states (
   system_action TEXT NOT NULL DEFAULT '',
   UNIQUE (part_id, name)
 );
+CREATE TABLE IF NOT EXISTS scenario_history (
+  id INTEGER PRIMARY KEY,
+  scenario_id INTEGER NOT NULL REFERENCES scenarios(id) ON DELETE CASCADE,
+  day TEXT NOT NULL,
+  key TEXT NOT NULL,
+  text TEXT NOT NULL,
+  refs TEXT NOT NULL DEFAULT '[]'
+);
 CREATE TABLE IF NOT EXISTS scenario_steps (
   id INTEGER PRIMARY KEY,
   scenario_id INTEGER NOT NULL REFERENCES scenarios(id) ON DELETE CASCADE,

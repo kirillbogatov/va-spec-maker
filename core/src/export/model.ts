@@ -234,11 +234,12 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
     )
     .all(STRINGS[lang].anyScenarioIntent, projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
   const entityName = new Map((db.prepare('SELECT id, name FROM entities WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((e) => [e.id, e.name]));
+  const keywordName = new Map((db.prepare('SELECT id, name FROM keywords WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((k) => [k.id, k.name]));
   const strip = ({ kind, conditions, cond_mode, part_id, ...row }: Raw): TransitionRow => {
-    const pairs = (JSON.parse(conditions) as { dep: string; value: string; entity_id?: number; op?: string }[])
-      .map((c) => ({ ...c, label: c.entity_id !== undefined ? entityName.get(c.entity_id) : depLabel.get(c.dep) }))
+    const pairs = (JSON.parse(conditions) as { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: string }[])
+      .map((c) => ({ ...c, label: c.keyword_id !== undefined ? keywordName.get(c.keyword_id) : c.entity_id !== undefined ? entityName.get(c.entity_id) : depLabel.get(c.dep) }))
       .filter((c) => c.label !== undefined)
-      .map((c) => `[${c.label}] ${c.op || '='} ${c.value}`);
+      .map((c) => (c.keyword_id !== undefined ? `${STRINGS[lang][c.op === '!=' ? 'conceptAbsent' : 'conceptPresent']}: ${c.label}` : `[${c.label}] ${c.op || '='} ${c.value}`));
     const all = [...pairs, ...row.condition.split('\n').map((l) => l.trim())].filter(Boolean);
     const out = { ...row, condition: [...(cond_mode === 'any' && all.length > 1 ? [STRINGS[lang].anyOf] : []), ...all].join('\n') };
     if (kind === 'error') return out;

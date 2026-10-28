@@ -2,13 +2,17 @@ import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
 import { connect } from '../links';
+import { clearHistory, listHistory, logCreated, logScenarioChanges, type ScenarioSnapshot } from '../history';
 import { optString, parseId, requireString } from '../validate';
 
 const DEP_TYPES = ['string', 'enum', 'bool'];
 
-/** Условие: значение зависимости сценария (dep) или значение сущности проекта (entity_id, dep пуст). */
+/**
+ * Условие: значение зависимости сценария (dep), значение сущности проекта (entity_id, dep пуст)
+ * или наличие концепта в запросе (keyword_id: «=» — есть, «!=» — нет; значение пустое).
+ */
 type ConditionOp = '=' | '!=' | '<' | '>';
-interface StepCondition { dep: string; value: string; entity_id?: number; op?: ConditionOp }
+interface StepCondition { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: ConditionOp }
 const parseOp = (v: unknown): ConditionOp => (v === '!=' || v === '<' || v === '>' ? v : '=');
 /**
  * Состояние схемы: точка раскладки плюс то, что происходит при входе в состояние —
@@ -98,6 +102,7 @@ export function scenariosRouter(db: Db): RouterT {
     const info = db.transaction(() => {
       const i = db.prepare('INSERT INTO scenarios(project_id, name) VALUES (?, ?)').run(pid, name);
       db.prepare('INSERT INTO scenario_parts(scenario_id, position, name) VALUES (?, 0, ?)').run(i.lastInsertRowid, name);
+      logCreated(db, Number(i.lastInsertRowid));
       return i;
     })();
     res.status(201).json({ id: Number(info.lastInsertRowid), name });
@@ -139,6 +144,7 @@ export function scenariosRouter(db: Db): RouterT {
         throw badRequest('Сущность зависимости не найдена в проекте');
       }
     }
+    const findKeyword = db.prepare('SELECT 1 FROM keywords WHERE id = ? AND project_id = ?');
     const findIntent = db.prepare('SELECT 1 FROM intents WHERE id = ? AND project_id = ?');
     const findPrompt = db.prepare('SELECT 1 FROM prompts WHERE id = ? AND project_id = ?');
     const isGlobalIntent = db.prepare('SELECT 1 FROM scenario_intents WHERE scenario_id = ? AND intent_id = ? AND is_global = 1');
@@ -151,9 +157,11 @@ export function scenariosRouter(db: Db): RouterT {
         request_params: optString(s?.request_params),
         condition: optString(s?.condition),
         conditions: (Array.isArray(s?.conditions) ? s.conditions : []).map((c: any) =>
-          c?.entity_id == null
-            ? { dep: optString(c?.dep), op: parseOp(c?.op), value: optString(c?.value) }
-            : { dep: '', entity_id: parseId(c.entity_id), op: parseOp(c?.op), value: optString(c?.value) },
+          c?.keyword_id != null
+            ? { dep: '', keyword_id: parseId(c.keyword_id), op: c?.op === '!=' ? '!=' : '=', value: '' }
+            : c?.entity_id == null
+              ? { dep: optString(c?.dep), op: parseOp(c?.op), value: optString(c?.value) }
+              : { dep: '', entity_id: parseId(c.entity_id), op: parseOp(c?.op), value: optString(c?.value) },
         ) as StepCondition[],
         cond_mode: s?.cond_mode === 'any' ? 'any' : 'all',
         prompt_id: s?.prompt_id == null ? null : parseId(s.prompt_id),
@@ -167,11 +175,14 @@ export function scenariosRouter(db: Db): RouterT {
       }
       const layout = cleanLayout(p?.layout);
       for (const s of steps) {
-        if (s.conditions.some((c: StepCondition) => c.entity_id === undefined && !refs.has(c.dep))) {
+        if (s.conditions.some((c: StepCondition) => c.entity_id === undefined && c.keyword_id === undefined && !refs.has(c.dep))) {
           throw badRequest('Условие ссылается на несуществующую зависимость');
         }
         if (s.conditions.some((c: StepCondition) => c.entity_id !== undefined && !findEntity.get(c.entity_id, cur.project_id))) {
           throw badRequest('Сущность условия не найдена в проекте');
+        }
+        if (s.conditions.some((c: StepCondition) => c.keyword_id !== undefined && !findKeyword.get(c.keyword_id, cur.project_id))) {
+          throw badRequest('Концепт условия не найден в проекте');
         }
         if (s.intent_id !== null && !findIntent.get(s.intent_id, cur.project_id)) {
           throw badRequest('Интент строки не найден в проекте');
@@ -230,8 +241,22 @@ export function scenariosRouter(db: Db): RouterT {
         }
         for (const st of Object.values(p.layout as Layout)) if (st.prompt_id !== null) connect(db, 'prompt', id, st.prompt_id);
       }
+      logScenarioChanges(db, id, cur as unknown as ScenarioSnapshot, load(id) as unknown as ScenarioSnapshot);
     })();
     res.json(load(id));
+  });
+
+  r.get('/scenarios/:id/history', (req, res) => {
+    const id = parseId(req.params.id);
+    load(id);
+    res.json(listHistory(db, id));
+  });
+
+  r.delete('/scenarios/:id/history', (req, res) => {
+    const id = parseId(req.params.id);
+    load(id);
+    clearHistory(db, id);
+    res.status(204).end();
   });
 
   r.delete('/scenarios/:id', (req, res) => {

@@ -45,6 +45,11 @@ export interface Prompt {
   id: number; project_id: number; name: string; full_answers: string[];
 }
 
+/** Ссылка из записи истории на объект, к которому можно перейти. */
+export interface HistoryRef { type: 'intent' | 'prompt' | 'state' | 'part' | 'dependency' | 'error'; name: string; id?: number; part?: string }
+/** Запись истории сценария: день (ГГГГ-ММ-ДД) и текст, в котором {0}, {1}… — места для ссылок. */
+export interface HistoryEntry { id: number; day: string; text: string; refs: HistoryRef[] }
+
 export interface ScenarioListItem { id: number; name: string; step_count: number }
 export type DependencyType = 'string' | 'enum' | 'bool';
 /** Параметр или проверка, от которой зависит запуск сценария. entity_id задан: имя берётся из сущности. */
@@ -53,7 +58,8 @@ export interface Dependency {
 }
 /** Значение зависимости сценария (dep) или значение сущности проекта (entity_id, dep пуст). */
 export type ConditionOp = '=' | '!=' | '<' | '>';
-export interface StepCondition { dep: string; value: string; entity_id?: number; op?: ConditionOp }
+/** Условие-концепт (keyword_id): «=» — концепт есть в запросе, «!=» — его нет; значение пустое. */
+export interface StepCondition { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: ConditionOp }
 /**
  * Строка Transition table (kind = transition), Errors (kind = error) или переход глобального интента
  * из любого состояния (kind = global, state пуст). У ошибки без интента — «по любому интенту».

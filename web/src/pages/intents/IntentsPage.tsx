@@ -7,6 +7,7 @@ import { usePrefixes } from '@/lib/prefixes';
 import { api } from '@/lib/api';
 import { MODE_EMPTY, MODE_TITLE, modeShows, useIntentMode } from '@/lib/intentMode';
 import { valuesPatch } from '@/lib/values';
+import { numberSlots } from '@/lib/entityTypes';
 import { DictionaryTransfer } from '@/components/DictionaryTransfer';
 import { EntitiesCell } from './EntitiesCell';
 import { PhrasesCell } from './PhrasesCell';
@@ -64,7 +65,7 @@ export function IntentsPage() {
           }
         }
         const words = [...owners.keys()];
-        const entityNames = d.entities.flatMap((e) => entities.find((x) => x.id === e.entity_id)?.name ?? []);
+        const numbers = numberSlots(d.entities.flatMap((e) => entities.find((x) => x.id === e.entity_id) ?? []));
         return (
           <>
             <DictCard title={MODE_TITLE[mode]} hint={mode === 'keywords' ? <KeywordsHint /> : undefined}>
@@ -72,7 +73,7 @@ export function IntentsPage() {
                 mode={mode}
                 value={d.values}
                 highlight={words}
-                entityNames={entityNames}
+                numbers={numbers}
                 owners={owners}
                 onChange={(items) => patch(valuesPatch(items))}
               />

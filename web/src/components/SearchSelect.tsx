@@ -20,19 +20,25 @@ interface Props {
   placeholder?: string;
   /** Значок слева в кнопке. */
   icon?: ReactNode;
+  /** Последний пункт списка «+ …», он всегда виден при поиске и вызывает onCreate вместо onChange. */
+  createLabel?: string;
+  onCreate?: () => void;
 }
 
+const CREATE_VALUE = '\u0000create';
+
 /** Выпадающий список с автофильтром по названию и описанию по мере ввода. */
-export function SearchSelect({ options, value, onChange, label, className, renderValue, placeholder, icon }: Props) {
+export function SearchSelect({ options, value, onChange, label, className, renderValue, placeholder, icon, createLabel, onCreate }: Props) {
   const selected = options.find((o) => o.value === value) ?? null;
+  const items = createLabel && onCreate ? [...options, { value: CREATE_VALUE, label: `+ ${createLabel}` }] : options;
   return (
     <Combobox.Root
-      items={options}
+      items={items}
       value={selected}
-      onValueChange={(o: SearchOption | null) => onChange(o?.value ?? null)}
+      onValueChange={(o: SearchOption | null) => (o?.value === CREATE_VALUE ? onCreate?.() : onChange(o?.value ?? null))}
       itemToStringLabel={(o: SearchOption) => o.label}
       isItemEqualToValue={(a: SearchOption, b: SearchOption) => a.value === b.value}
-      filter={(o: SearchOption, q: string) => `${o.label} ${o.hint ?? ''}`.toLowerCase().includes(q.trim().toLowerCase())}
+      filter={(o: SearchOption, q: string) => o.value === CREATE_VALUE || `${o.label} ${o.hint ?? ''}`.toLowerCase().includes(q.trim().toLowerCase())}
     >
       <Combobox.Trigger data-slot="select-trigger" className={cn(SELECT_TRIGGER, 'data-[size=default]:min-h-8', className)} data-size="default" aria-label={label}>
         {icon}
@@ -54,7 +60,10 @@ export function SearchSelect({ options, value, onChange, label, className, rende
                 <Combobox.Item
                   key={o.value}
                   value={o}
-                  className="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                  className={cn(
+                    'relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground',
+                    o.value === CREATE_VALUE && 'text-brand',
+                  )}
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block">{o.label}</span>

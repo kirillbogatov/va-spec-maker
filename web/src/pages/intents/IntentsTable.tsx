@@ -16,7 +16,10 @@ import { SaveNote } from '@/components/SaveIndicator';
 import { TypeToken } from '@/components/TypeToken';
 import { KeywordChips, KeywordsHint } from '@/components/KeywordChips';
 import { useKeywordMatcher } from '@/lib/keywords';
-import { PatternText, Slotted } from './PhrasesCell';
+import { Slotted } from './PhrasesCell';
+import { CreateDialog } from '@/components/CreateDialog';
+import { numberSlots, type EntityKind, type NumberSlot } from '@/lib/entityTypes';
+import { usePrefixes } from '@/lib/prefixes';
 import { useProjectId } from '@/hooks/project';
 import { useAutosave } from '@/hooks/useAutosave';
 import { api } from '@/lib/api';
@@ -61,6 +64,19 @@ const PHRASE_BOX = 'h-9 w-full min-w-0 rounded-none border-0 bg-transparent px-2
 function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; entities: EntityListItem[]; onChange: (v: IntentEntity[]) => void }) {
   const find = (id: number) => entities.find((e) => e.id === id);
   const options = entities.filter((e) => !value.some((v) => v.entity_id === e.id)).map((e) => ({ value: String(e.id), label: e.name, hint: e.description }));
+  const projectId = useProjectId();
+  const prefixes = usePrefixes(projectId);
+  const qc = useQueryClient();
+  const [creating, setCreating] = useState(false);
+  // Созданная сущность сразу добавляется в интент
+  const create = useMutation({
+    mutationFn: ({ name, kind }: { name: string; kind?: EntityKind }) => api.entities.create(projectId, name, kind),
+    onSuccess: (c) => {
+      qc.invalidateQueries({ queryKey: ['entities'] });
+      onChange([...value, { entity_id: c.id, required: false }]);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   return (
     <div className="grid content-start gap-1.5">
       {value.length > 0 && (
@@ -93,23 +109,32 @@ function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; 
           </tbody>
         </table>
       )}
-      {options.length > 0 && (
-        <SearchSelect
-          options={options}
-          value={null}
-          onChange={(v) => v != null && onChange([...value, { entity_id: Number(v), required: false }])}
-          label="Добавить сущность"
-          className={cn(ADD_ROW, 'justify-start gap-2 px-2.5')}
-          icon={<Plus className="size-3.5 shrink-0" />}
-          placeholder="сущность"
-        />
-      )}
+      <SearchSelect
+        options={options}
+        value={null}
+        onChange={(v) => v != null && onChange([...value, { entity_id: Number(v), required: false }])}
+        label="Добавить сущность"
+        className={cn(ADD_ROW, 'justify-start gap-2 px-2.5')}
+        icon={<Plus className="size-3.5 shrink-0" />}
+        placeholder="сущность"
+        createLabel="Новая сущность…"
+        onCreate={() => setCreating(true)}
+      />
+      <CreateDialog
+        open={creating}
+        onOpenChange={setCreating}
+        title="Новая сущность"
+        prefix={prefixes.entity}
+        existingNames={entities.map((e) => e.name)}
+        withType
+        onCreate={(name, kind) => create.mutate({ name, kind })}
+      />
     </div>
   );
 }
 
 /** Значения интента (тренировочные фразы и паттерны) редактируемыми строками со значком типа, поле добавления и массовое добавление списком. */
-function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { value: ValueItem[]; others: PhraseOwner[]; words: string[]; entityNames: string[]; mode: IntentMode; onChange: (v: ValueItem[]) => void }) {
+function PhrasesEditor({ value, others, words, numbers, mode, onChange }: { value: ValueItem[]; others: PhraseOwner[]; words: string[]; numbers: NumberSlot[]; mode: IntentMode; onChange: (v: ValueItem[]) => void }) {
   const [text, setText] = useState('');
   const matchKw = useKeywordMatcher(useProjectId());
   const kw = mode === 'keywords';
@@ -170,7 +195,7 @@ function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { 
                 <KindToggle kind={v.kind} bare className="size-6 max-md:size-8" onChange={(kind) => onChange(value.map((x, j) => (j === i ? { ...x, kind } : x)))} />
               </span>
             )}
-          {(v.kind === 'phrase' ? words.length > 0 : entityNames.length > 0) && editing !== i && v.text.trim() ? (
+          {v.kind === 'phrase' && (words.length > 0 || numbers.length > 0) && editing !== i && v.text.trim() ? (
             <div
               role="textbox"
               tabIndex={0}
@@ -179,7 +204,7 @@ function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { 
               className={cn(PHRASE_BOX, 'flex cursor-text items-center')}
               onFocus={() => setEditing(i)}
             >
-              <span className="truncate">{v.kind === 'phrase' ? <Slotted text={v.text} words={words} /> : <PatternText text={v.text} names={entityNames} />}</span>
+              <span className="truncate"><Slotted text={v.text} words={words} numbers={numbers} /></span>
             </div>
           ) : (
             <Input
@@ -262,7 +287,7 @@ function PhrasesEditor({ value, others, words, entityNames, mode, onChange }: { 
           </div>
           </div>
           {kw && (
-            <div aria-label="Ключевые слова новой фразы" className="hidden h-8 w-[38%] shrink-0 items-center rounded-md border border-dashed bg-muted/40 px-2 md:flex">
+            <div aria-label="Концепты новой фразы" className="hidden h-8 w-[38%] shrink-0 items-center rounded-md border border-dashed bg-muted/40 px-2 md:flex">
               <KeywordChips names={matchKw(text)} text={text} />
             </div>
           )}
@@ -306,7 +331,7 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
     const words = draft.entities.flatMap((ie) => entities.find((e) => e.id === ie.entity_id)?.values.flatMap((v) => [v.value, ...v.synonyms]) ?? []);
     return [...new Set(words.map((w) => w.trim()).filter((w) => w.length > 1))].sort((a, b) => b.length - a.length);
   }, [draft.entities, entities]);
-  const entityNames = draft.entities.flatMap((ie) => entities.find((e) => e.id === ie.entity_id)?.name ?? []);
+  const numbers = useMemo(() => numberSlots(draft.entities.flatMap((ie) => entities.find((e) => e.id === ie.entity_id) ?? [])), [draft.entities, entities]);
   const shownValues = draft.values.filter((v) => modeShows(mode, v.kind));
   const shown = shownValues.slice(0, 2).map((v) => v.text).join(' · ');
   const more = shownValues.length - 2;
@@ -376,7 +401,7 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
                 value={draft.values}
                 others={siblings}
                 words={slotWords}
-                entityNames={entityNames}
+                numbers={numbers}
                 mode={mode}
                 onChange={(items) => patch(valuesPatch(items))}
               />

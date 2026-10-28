@@ -21,9 +21,9 @@ export function reconcile(deps: Dependency[], steps: Step[]): Step[] {
   const byRef = new Map(deps.map((d) => [d.ref, d]));
   return steps.map((s) => {
     const conditions = s.conditions
-      .filter((c) => c.entity_id !== undefined || byRef.has(c.dep))
+      .filter((c) => c.entity_id !== undefined || c.keyword_id !== undefined || byRef.has(c.dep))
       .map((c) => {
-        if (c.entity_id !== undefined) return c;
+        if (c.entity_id !== undefined || c.keyword_id !== undefined) return c;
         const choices = valueChoices(byRef.get(c.dep)!);
         if (!choices) return c;
         // Для значений из списка сравнения «<» и «>» не имеют смысла.
@@ -68,7 +68,8 @@ export function validValue(input: ValueInput, v: string): boolean {
 }
 
 /** Подпись условия: «зависимость ⟨оператор⟩ значение» или «сущность ⟨оператор⟩ значение». */
-export function conditionLabel(c: StepCondition, deps: Dependency[], entities: EntityListItem[]): string {
+export function conditionLabel(c: StepCondition, deps: Dependency[], entities: EntityListItem[], keywords: { id: number; name: string }[] = []): string {
+  if (c.keyword_id !== undefined) return `${c.op === '!=' ? 'нет концепта' : 'концепт'} ${keywords.find((k) => k.id === c.keyword_id)?.name ?? `#${c.keyword_id}`}`;
   const name = c.entity_id !== undefined
     ? entities.find((e) => e.id === c.entity_id)?.name ?? `сущность #${c.entity_id}`
     : (() => { const d = deps.find((x) => x.ref === c.dep); return d ? depLabel(d, entities) : c.dep; })();

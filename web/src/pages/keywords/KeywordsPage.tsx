@@ -5,12 +5,14 @@ import { toast } from 'sonner';
 import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
 import { Input } from '@/components/ui/input';
 import { TransferMenu } from '@/components/TransferMenu';
-import { useProjectId } from '@/hooks/project';
+import { Navigate } from 'react-router-dom';
+import { usePath, useProjectId } from '@/hooks/project';
+import { useIntentMode } from '@/lib/intentMode';
 import { api } from '@/lib/api';
 import { useKeywords } from '@/lib/keywords';
 import { splitTags } from '@/lib/parse';
 
-/** Синонимы ключевого слова: список с полем добавления. */
+/** Синонимы концепта: список с полем добавления. */
 function SynonymsList({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const [text, setText] = useState('');
   const add = () => {
@@ -66,9 +68,11 @@ function SynonymsList({ value, onChange }: { value: string[]; onChange: (v: stri
   );
 }
 
-/** Справочник ключевых слов проекта: код и синонимы, импорт и экспорт в txt. */
+/** Справочник концептов проекта: код и синонимы, импорт и экспорт в txt. */
 export function KeywordsPage() {
   const projectId = useProjectId();
+  const path = usePath();
+  const mode = useIntentMode(projectId);
   const qc = useQueryClient();
   const items = useKeywords(projectId);
   const refresh = () => qc.invalidateQueries({ queryKey: ['keywords', projectId] });
@@ -85,6 +89,9 @@ export function KeywordsPage() {
     }
   };
 
+  // Справочник есть только в режиме «Концепты»
+  if (mode !== 'keywords') return <Navigate to={path('/lists/intents')} replace />;
+
   return (
     <DictionaryMaster
       kind="keyword"
@@ -99,9 +106,9 @@ export function KeywordsPage() {
           <SynonymsList value={d.synonyms} onChange={(synonyms) => patch({ synonyms })} />
         </DictCard>
       )}
-      emptyText="Ключевых слов пока нет"
-      createTitle="Новое ключевое слово"
-      deleteTitle={(d) => `Удалить ключевое слово ${d.name}?`}
+      emptyText="Концептов пока нет"
+      createTitle="Новый концепт"
+      deleteTitle={(d) => `Удалить концепт ${d.name}?`}
       onCreate={(n) => create.mutateAsync(n)}
       onSave={async (d) => {
         await api.keywords.save(d.id, { name: d.name, synonyms: d.synonyms });

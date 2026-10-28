@@ -23,7 +23,7 @@ const GROUPS: { kind: HitKind; title: string }[] = [
   { kind: 'entity', title: 'Сущности' },
   { kind: 'prompt', title: 'Промпты' },
   { kind: 'dependency', title: 'Зависимости' },
-  { kind: 'keyword', title: 'Ключевые слова' },
+  { kind: 'keyword', title: 'Концепты' },
 ];
 
 /** Корни русских слов и их латинские соответствия в идентификаторах: «свет» находит LIGHT, «будил» — ALARM. */

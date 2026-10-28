@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_KIND, entityTypeLabel, hasRange, rangeError, rangeSummary } from './entityTypes';
+import { DEFAULT_KIND, entityTypeLabel, findNumberMatches, hasRange, numberSlots, rangeError, rangeSummary } from './entityTypes';
 
 describe('entityTypes', () => {
   it('has a range only for number, time and date', () => {
@@ -23,5 +23,24 @@ describe('entityTypes', () => {
     expect(rangeSummary({ type: 'number', range_min: '15', range_max: '' })).toBe('от 15');
     expect(rangeSummary({ type: 'time', range_min: '', range_max: '23:00' })).toBe('до 23:00');
     expect(rangeSummary({ type: 'string', range_min: '', range_max: '' })).toBe('');
+  });
+});
+
+describe('number slots', () => {
+  const slots = numberSlots([
+    { type: 'number', name: 'TEMP', range_min: '15', range_max: '30' },
+    { type: 'string', name: 'ROOM', range_min: '', range_max: '' },
+  ]);
+
+  it('keeps only number entities with their bounds', () => {
+    expect(slots).toEqual([{ name: 'TEMP', min: 15, max: 30 }]);
+  });
+
+  it('highlights the number, not the word that names the entity', () => {
+    const text = 'поставь температуру 22 градуса';
+    const [m] = findNumberMatches(text, slots);
+    expect(text.slice(m.from, m.to)).toBe('22');
+    expect(findNumberMatches('температура 50', slots)).toEqual([]);
+    expect(findNumberMatches('температура', slots)).toEqual([]);
   });
 });

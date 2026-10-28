@@ -9,6 +9,7 @@ import { useProjectId } from '@/hooks/project';
 import { useNormalize } from '@/lib/normalize';
 import { parsePhrases } from '@/lib/parse';
 import { findSlotMatches } from '@/lib/stem';
+import { findNumberMatches, type NumberSlot } from '@/lib/entityTypes';
 import { KeywordChips } from '@/components/KeywordChips';
 import { useKeywordMatcher } from '@/lib/keywords';
 import { type ValueItem, type ValueKind } from '@/lib/values';
@@ -22,49 +23,37 @@ interface Props {
   onChange: (value: ValueItem[]) => void;
   /** Значения сущностей интента: в фразах подсвечиваются как слоты. */
   highlight?: string[];
-  /** Названия сущностей интента: в паттернах подсвечиваются. */
-  entityNames?: string[];
+  /** Числовые сущности интента: числа в фразах подсвечиваются как их значения. */
+  numbers?: NumberSlot[];
   /** Слово (в нижнем регистре) → название сущности для подсказки при наведении. */
   owners?: ReadonlyMap<string, string>;
 }
 
-/** Фраза с подсвеченными слотами значений сущностей (при включённой нормализации — и в других формах слова). */
-export function Slotted({ text, words, owners }: { text: string; words: string[]; owners?: ReadonlyMap<string, string> }) {
+/** Фраза с подсвеченными слотами: значения сущностей (при включённой нормализации — и в других формах слова) и числа числовых сущностей. Название сущности значением не считается. */
+export function Slotted({ text, words, numbers = [], owners }: { text: string; words: string[]; numbers?: NumberSlot[]; owners?: ReadonlyMap<string, string> }) {
   const normalize = useNormalize(useProjectId());
-  const slots = words.length ? findSlotMatches(text, words, normalize) : [];
+  const slots: { from: number; to: number; title?: string }[] = [
+    ...(words.length ? findSlotMatches(text, words, normalize) : []).map(({ from, to, word }) => {
+      const owner = owners?.get(word.trim().toLowerCase());
+      return { from, to, title: owner ? `Значение сущности (${owner})` : undefined };
+    }),
+    ...findNumberMatches(text, numbers).map(({ from, to, owner }) => ({ from, to, title: `Значение сущности (${owner})` })),
+  ].sort((x, y) => x.from - y.from);
   if (!slots.length) return <>{text}</>;
   const parts: ReactNode[] = [];
   let pos = 0;
-  slots.forEach(({ from, to, word }, i) => {
+  slots.forEach(({ from, to, title }, i) => {
+    if (from < pos) return;
     if (from > pos) parts.push(text.slice(pos, from));
-    parts.push(<span key={i} title={owners?.has(word.trim().toLowerCase()) ? `Значение сущности (${owners.get(word.trim().toLowerCase())})` : undefined} className="rounded-[3px] bg-ent-bg px-0.5 text-ent">{text.slice(from, to)}</span>);
+    parts.push(<span key={i} title={title} className="rounded-[3px] bg-ent-bg px-0.5 text-ent">{text.slice(from, to)}</span>);
     pos = to;
   });
   if (pos < text.length) parts.push(text.slice(pos));
   return <>{parts}</>;
 }
 
-const WORD_CHAR = String.raw`[\p{L}\d_]`;
-
-/** Паттерн с подсвеченными названиями сущностей интента (целые слова без учёта регистра, скобки и звёздочки вокруг допустимы). */
-export function PatternText({ text, names }: { text: string; names: string[] }) {
-  if (!names.length) return <>{text}</>;
-  const escaped = [...names].sort((a, b) => b.length - a.length).map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const re = new RegExp(`(?<!${WORD_CHAR})(?:${escaped.join('|')})(?!${WORD_CHAR})`, 'giu');
-  const parts: ReactNode[] = [];
-  let pos = 0;
-  for (const m of text.matchAll(re)) {
-    if (m.index > pos) parts.push(text.slice(pos, m.index));
-    parts.push(<span key={m.index} title="Название сущности" className="rounded-[3px] bg-ent-bg px-0.5 text-ent">{m[0]}</span>);
-    pos = m.index + m[0].length;
-  }
-  if (!parts.length) return <>{text}</>;
-  if (pos < text.length) parts.push(text.slice(pos));
-  return <>{parts}</>;
-}
-
 /** Значения интента (тренировочные фразы и паттерны): поле добавления (Enter / вставка нескольких строк) со значком типа и список, свёрнутый после 7 строк. */
-export function PhrasesCell({ value, onChange, mode, highlight = [], entityNames = [], owners }: Props) {
+export function PhrasesCell({ value, onChange, mode, highlight = [], numbers = [], owners }: Props) {
   const [text, setText] = useState('');
   const matchKw = useKeywordMatcher(useProjectId());
   const kw = mode === 'keywords';
@@ -141,7 +130,7 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], entityNames
           />
           </div>
           {kw && (
-            <div aria-label="Ключевые слова новой фразы" className="hidden h-10 min-w-0 flex-1 items-center rounded-md border border-dashed bg-muted/40 px-3 md:flex md:h-9">
+            <div aria-label="Концепты новой фразы" className="hidden h-10 min-w-0 flex-1 items-center rounded-md border border-dashed bg-muted/40 px-3 md:flex md:h-9">
               <KeywordChips names={matchKw(text)} text={text} />
             </div>
           )}
@@ -165,7 +154,7 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], entityNames
               </span>
             )}
             <span className="min-w-0 flex-1 self-center break-words px-3 py-2 font-mono text-[13px] leading-[18px]">
-              {v.kind === 'phrase' ? <Slotted text={v.text} words={words} owners={owners} /> : <PatternText text={v.text} names={entityNames} />}
+              {v.kind === 'phrase' ? <Slotted text={v.text} words={words} numbers={numbers} owners={owners} /> : v.text}
               {kw && <span className="mt-1 block md:hidden"><KeywordChips names={matchKw(v.text)} text={v.text} /></span>}
             </span>
             {kw && (

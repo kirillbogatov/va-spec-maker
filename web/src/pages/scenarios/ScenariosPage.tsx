@@ -22,7 +22,7 @@ const isDesktop = () => typeof window !== 'undefined' && window.matchMedia('(min
 /** Сценарии по схеме «мастер — деталь»: слева список сценариев, справа выбранный сценарий со вкладками. */
 export function ScenariosPage() {
   const { id, tab } = useParams();
-  const activeTab: ScenarioTab = tab === 'intents' || tab === 'prompts' || tab === 'logic' || tab === 'errors' || tab === 'preview' ? tab : 'general';
+  const activeTab: ScenarioTab = tab === 'intents' || tab === 'prompts' || tab === 'logic' || tab === 'errors' || tab === 'history' || tab === 'preview' ? tab : 'general';
   const projectId = useProjectId();
   const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();

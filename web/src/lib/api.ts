@@ -1,5 +1,5 @@
 import type {
-  DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Keyword, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
+  DictionaryDependency, Entity, HistoryEntry, EntityListItem, EntityValue, Intent, IntentListItem, Keyword, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
 } from './types';
 import type { EntityKind } from './entityTypes';
 import type { IntentMode } from './intentMode';
@@ -102,6 +102,7 @@ export const api = {
     create: (pid: number, name: string) => req<{ id: number; name: string }>('POST', `/api/projects/${pid}/scenarios`, { name }),
     save: (id: number, body: Omit<Scenario, 'id' | 'project_id'>) => req<Scenario>('PUT', `/api/scenarios/${id}`, body),
     remove: (id: number) => req<void>('DELETE', `/api/scenarios/${id}`),
+    history: (id: number) => req<HistoryEntry[]>('GET', `/api/scenarios/${id}/history`),
   },
   exportFile: async (url: string, fallback: string) => downloadResponse(await request('GET', url), fallback),
   preview: (scenarioId: number, lang: SpecLang, intentMode: IntentMode) => req<string>('GET', `/api/scenarios/${scenarioId}/preview?lang=${lang}&intentMode=${intentMode}`),

@@ -8,11 +8,11 @@ export const INTENT_MODES: { value: IntentMode; label: string; hint: string }[] 
   { value: 'phrases', label: 'Тренировочные фразы', hint: 'Для обучения классификатора на основе ИИ' },
   { value: 'patterns', label: 'Паттерны', hint: 'Для создания строгих правил (rule-based модель)' },
   { value: 'both', label: 'Гибрид', hint: 'Использовать тренировочные фразы вместе с паттернами' },
-  { value: 'keywords', label: 'Ключевые слова', hint: 'Определять смысл фразы только по наличию определенных слов' },
+  { value: 'keywords', label: 'Концепты', hint: 'Определять смысл фразы только по наличию определенных слов' },
 ];
 
 /** Название списка значений интента (и колонки) в выбранном режиме. */
-export const MODE_TITLE: Record<IntentMode, string> = { phrases: 'Тренировочные фразы', patterns: 'Паттерны', both: 'Значения', keywords: 'Ключевые слова' };
+export const MODE_TITLE: Record<IntentMode, string> = { phrases: 'Тренировочные фразы', patterns: 'Паттерны', both: 'Значения', keywords: 'Концепты' };
 
 /** Пометка интента без значений в выбранном режиме. */
 export const MODE_EMPTY: Record<IntentMode, string> = { phrases: 'нет фраз', patterns: 'нет паттернов', both: 'нет значений', keywords: 'нет фраз' };

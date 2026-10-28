@@ -15,6 +15,8 @@ export interface SpecStrings {
   no: string;
   anyScenarioIntent: string;
   anyOf: string;
+  conceptPresent: string;
+  conceptAbsent: string;
   entityTypes: Record<string, string>;
   from: string;
   to: string;
@@ -41,11 +43,13 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     no: 'нет',
     anyScenarioIntent: 'Любой интент сценария',
     anyOf: 'Любое из:',
+    conceptPresent: 'В запросе есть концепт',
+    conceptAbsent: 'В запросе нет концепта',
     entityTypes: { string: 'Строка', number: 'Число', time: 'Время', date: 'Дата', boolean: 'Логический' },
     from: 'от',
     to: 'до',
     intentsHead: ['Интент', 'Фразы для обучения', 'Паттерны', 'Сущности'],
-    keywordsHead: 'Ключевые слова',
+    keywordsHead: 'Концепты',
     examplePhrasesHead: 'Фразы для обучения',
     entitiesHead: ['Сущность', 'Тип', 'Значения', 'Несколько значений', 'Уточняющий вопрос'],
     promptsHead: ['Промпт', 'Ответ ассистента'],
@@ -65,11 +69,13 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     no: 'no',
     anyScenarioIntent: 'Any scenario intent',
     anyOf: 'Any of:',
+    conceptPresent: 'Request has concept',
+    conceptAbsent: 'Request has no concept',
     entityTypes: { string: 'String', number: 'Number', time: 'Time', date: 'Date', boolean: 'Boolean' },
     from: 'from',
     to: 'to',
     intentsHead: ['Intent', 'Training phrases', 'Patterns', 'Entities'],
-    keywordsHead: 'Keywords',
+    keywordsHead: 'Concepts',
     examplePhrasesHead: 'Example phrases',
     entitiesHead: ['Entity', 'Type', 'Values', 'Multiple values', 'Follow-up question'],
     promptsHead: ['Prompt', 'Assistant response'],

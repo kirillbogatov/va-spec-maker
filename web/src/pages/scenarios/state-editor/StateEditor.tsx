@@ -9,6 +9,8 @@ import { ENTRY_STATE, newTransition, removeState, renameState, uniqueStateName }
 import { splitNext, type Analysis } from '@/lib/states';
 import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem, StateInfo, Step } from '@/lib/types';
 import { conditionLabel } from '../dependencies';
+import { useProjectId } from '@/hooks/project';
+import { useKeywords } from '@/lib/keywords';
 import { EdgePanel } from './EdgePanel';
 import { NodePanel } from './NodePanel';
 import { StateNode, TransitionEdge, type EdgeCard, type StateNodeData, type TransitionEdgeData } from './StateNode';
@@ -34,6 +36,8 @@ interface Props {
   showPart?: boolean;
   /** Вкладки сценария — в панели инструментов холста. */
   tabs?: ReactNode;
+  /** Состояние, которое нужно выделить при открытии (переход по ссылке из истории). */
+  focusState?: string | null;
   /** Выбран узел или переход — панель вкладки уступает место. */
   onSelectElement?: () => void;
 }
@@ -60,7 +64,8 @@ function ZoomControls() {
   );
 }
 
-function StateEditorInner({ steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement }: Props) {
+function StateEditorInner({ steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, focusState }: Props) {
+  const keywords = useKeywords(useProjectId());
   const [selected, setSelectedRaw] = useState<Selection>(null);
   const setSelected = (s: Selection) => {
     setSelectedRaw(s);
@@ -75,8 +80,13 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
     return out;
   }, [analysis, layout]);
 
+  useEffect(() => {
+    if (focusState && names.includes(focusState)) setSelected({ type: 'node', name: focusState });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusState]);
+
   const intentTitle = (s: Step) => intents.find((i) => i.id === s.intent_id)?.name ?? 'без интента';
-  const condsOf = (s: Step) => [...s.conditions.map((c) => conditionLabel(c, dependencies, entities)), ...s.condition.split('\n').map((l) => l.trim())].filter(Boolean);
+  const condsOf = (s: Step) => [...s.conditions.map((c) => conditionLabel(c, dependencies, entities, keywords)), ...s.condition.split('\n').map((l) => l.trim())].filter(Boolean);
   const edgeText = (s: Step) => {
     const conds = condsOf(s);
     const to = splitNext(s.next_states)[0];

@@ -224,5 +224,7 @@ export async function seedDemo(app: App): Promise<number> {
       },
     }],
   });
+  // Наполнение демо — не правки пользователя: история сценариев начинается с чистого листа
+  for (const sid of [light, climate, alarm]) await call(app, 'DELETE', `/api/scenarios/${sid}/history`);
   return pid;
 }

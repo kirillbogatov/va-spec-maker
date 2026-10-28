@@ -30,3 +30,22 @@ export function rangeSummary({ type, range_min: min, range_max: max }: EntityKin
   if (max) return `до ${max}`;
   return '';
 }
+
+/** Числовая сущность интента: число во фразе — её значение, если укладывается в диапазон. */
+export interface NumberSlot { name: string; min: number | null; max: number | null }
+
+export function numberSlots(entities: { type: EntityType; name: string; range_min: string; range_max: string }[]): NumberSlot[] {
+  const bound = (v: string) => (v.trim() !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
+  return entities.filter((e) => e.type === 'number').map((e) => ({ name: e.name, min: bound(e.range_min), max: bound(e.range_max) }));
+}
+
+/** Числа во фразе, подходящие хотя бы одной числовой сущности (название сущности — в `owner`). */
+export function findNumberMatches(text: string, slots: NumberSlot[]): { from: number; to: number; owner: string }[] {
+  const out: { from: number; to: number; owner: string }[] = [];
+  for (const m of text.matchAll(/(?<![\p{L}\d.,])\d+(?:[.,]\d+)?(?![\p{L}\d])/gu)) {
+    const n = Number(m[0].replace(',', '.'));
+    const slot = slots.find((s) => (s.min === null || n >= s.min) && (s.max === null || n <= s.max));
+    if (slot) out.push({ from: m.index, to: m.index + m[0].length, owner: slot.name });
+  }
+  return out;
+}

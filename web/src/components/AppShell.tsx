@@ -18,7 +18,7 @@ const DICTIONARY: { to: string; label: string; icon: LucideIcon; key: 'intents' 
   { to: '/entities', label: 'Сущности', icon: Shapes, key: 'entities' },
   { to: '/lists/prompts', label: 'Промпты', icon: ScrollText, key: 'prompts' },
   { to: '/dependencies', label: 'Зависимости', icon: SlidersHorizontal, key: 'deps' },
-  { to: '/lists/keywords', label: 'Ключевые слова', icon: Anchor, key: 'keywords' },
+  { to: '/lists/keywords', label: 'Концепты', icon: Anchor, key: 'keywords' },
 ];
 
 const itemClass = (active: boolean) =>
@@ -76,7 +76,7 @@ export function AppShell() {
   }, []);
   const on = (m: string) => pathname === m || pathname.startsWith(`${m}/`);
   const onScenarios = on(path('/scenarios'));
-  // Справочник ключевых слов нужен только в режиме «Ключевые слова»
+  // Справочник концептов нужен только в режиме «Концепты»
   const mode = useIntentMode(useProjectId());
   const dictionary = DICTIONARY.filter((d) => d.key !== 'keywords' || mode === 'keywords');
   const onDictionary = dictionary.some((d) => on(path(d.to)));

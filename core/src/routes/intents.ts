@@ -1,6 +1,7 @@
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
+import { logIntentChanges } from '../history';
 import { assertSameProject, connect, disconnect, setGlobal } from '../links';
 import { assertUniqueName } from '../unique';
 import { cleanStrings, optString, parseId, requireString } from '../validate';
@@ -148,6 +149,8 @@ export function intentsRouter(db: Db): RouterT {
           ...cleanStrings(b.patterns).map((text) => ({ text, kind: 'pattern' as const })),
         ];
 
+    const snapshot = (name: string, enabled: boolean, comment: string, vals: { text: string; kind: string }[], ents: { entity_id: number; required: boolean }[]) => ({ name, enabled, comment, values: vals, entities: ents });
+    const before = snapshot(cur.name, !!cur.enabled, cur.comment, cur.values, cur.entities);
     db.transaction(() => {
       db.prepare('UPDATE intents SET name = ?, enabled = ?, comment = ? WHERE id = ?').run(
         name, b.enabled === false ? 0 : 1, optString(b.comment), id,
@@ -160,6 +163,7 @@ export function intentsRouter(db: Db): RouterT {
       const insEntity = db.prepare('INSERT INTO intent_entities(intent_id, entity_id, required, position) VALUES (?, ?, ?, ?)');
       values.forEach((v, i) => (v.kind === 'pattern' ? insPattern : insPhrase).run(id, v.text, i));
       entities.forEach((e: { entity_id: number; required: boolean }, i: number) => insEntity.run(id, e.entity_id, e.required ? 1 : 0, i));
+      logIntentChanges(db, id, cur.project_id, before, snapshot(name, b.enabled !== false, optString(b.comment), values, entities));
     })();
     res.json(load(id));
   });

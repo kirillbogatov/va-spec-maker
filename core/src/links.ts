@@ -1,5 +1,6 @@
 import { HttpError, notFound } from './errors';
 import type { Db } from './sqlite';
+import { logLink } from './history';
 
 export type LinkKind = 'intent' | 'prompt';
 
@@ -12,7 +13,8 @@ const LINK = {
 export function connect(db: Db, kind: LinkKind, scenarioId: number, id: number): void {
   const l = LINK[kind];
   const next = (db.prepare(`SELECT COALESCE(MAX(position), -1) + 1 AS n FROM ${l.table} WHERE scenario_id = ?`).get(scenarioId) as { n: number }).n;
-  db.prepare(`INSERT OR IGNORE INTO ${l.table}(scenario_id, ${l.col}, position) VALUES (?, ?, ?)`).run(scenarioId, id, next);
+  const { changes } = db.prepare(`INSERT OR IGNORE INTO ${l.table}(scenario_id, ${l.col}, position) VALUES (?, ?, ?)`).run(scenarioId, id, next);
+  if (changes) logLink(db, scenarioId, kind, id, 'connect');
 }
 
 /** Сценарий и объект должны существовать и быть из одного проекта; чужой объект считается ненайденным. */
@@ -45,6 +47,7 @@ export function disconnect(db: Db, kind: LinkKind, scenarioId: number, id: numbe
     throw new HttpError(409, 'in_use', `${l.what} используется в сценарии (${uses}) — сначала уберите его из шагов`, { uses });
   }
   db.prepare(`DELETE FROM ${l.table} WHERE scenario_id = ? AND ${l.col} = ?`).run(scenarioId, id);
+  logLink(db, scenarioId, kind, id, 'disconnect');
 }
 
 /** Меняет флаг «глобальный» у подключённого интента; снять его нельзя, пока есть глобальные переходы. */
@@ -53,5 +56,7 @@ export function setGlobal(db: Db, scenarioId: number, intentId: number, isGlobal
     const n = (db.prepare("SELECT COUNT(*) AS n FROM scenario_steps WHERE scenario_id = ? AND intent_id = ? AND kind = 'global'").get(scenarioId, intentId) as { n: number }).n;
     if (n) throw new HttpError(409, 'in_use', `У интента есть глобальные переходы (${n}) — сначала удалите их`, { uses: n });
   }
+  const was = (db.prepare('SELECT is_global FROM scenario_intents WHERE scenario_id = ? AND intent_id = ?').get(scenarioId, intentId) as { is_global: number } | undefined)?.is_global;
   db.prepare('UPDATE scenario_intents SET is_global = ? WHERE scenario_id = ? AND intent_id = ?').run(isGlobal ? 1 : 0, scenarioId, intentId);
+  if (was !== undefined && !!was !== isGlobal) logLink(db, scenarioId, 'intent', intentId, isGlobal ? 'global-on' : 'global-off');
 }

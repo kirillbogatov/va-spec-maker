@@ -5,9 +5,9 @@ const storageKey = (projectId: number) => `normalize:${projectId}`;
 
 export function readNormalize(projectId: number): boolean {
   try {
-    return localStorage.getItem(storageKey(projectId)) === '1';
+    return localStorage.getItem(storageKey(projectId)) !== '0';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -20,7 +20,7 @@ export function writeNormalize(projectId: number, value: boolean): void {
   window.dispatchEvent(new Event(EVENT));
 }
 
-/** Настройка «Нормализовать слова»: хранится в браузере отдельно для каждого проекта. */
+/** Настройка «Нормализовать слова» (по умолчанию включена): хранится в браузере отдельно для каждого проекта. */
 export function useNormalize(projectId: number): boolean {
   const [v, setV] = useState(() => readNormalize(projectId));
   useEffect(() => {

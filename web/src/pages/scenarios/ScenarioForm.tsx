@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ellipsis, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { api } from '@/lib/api';
 import type { Dependency, Layout, Scenario, ScenarioPart, Step } from '@/lib/types';
 import { DependenciesTable } from './DependenciesTable';
 import { reconcile } from './dependencies';
-import { ScenarioEntities } from './ScenarioEntities';
+import { ScenarioHistory } from './ScenarioHistory';
 import { ScenarioIntents } from './ScenarioIntents';
 import { ScenarioPrompts } from './ScenarioPrompts';
 import { GlobalTransitions } from './GlobalTransitions';
@@ -28,7 +28,7 @@ import { canonicalOrder, normalizeEntry, splitLegacySteps } from '@/lib/fsm';
 import { StateEditor } from './state-editor/StateEditor';
 import { PartPanel, PartTabs } from './PartTabs';
 
-export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'errors' | 'preview';
+export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'errors' | 'history' | 'preview';
 
 const TABS: { id: ScenarioTab; label: string }[] = [
   { id: 'general', label: 'Общая информация' },
@@ -36,6 +36,7 @@ const TABS: { id: ScenarioTab; label: string }[] = [
   { id: 'prompts', label: 'Промпты' },
   { id: 'logic', label: 'Логика' },
   { id: 'errors', label: 'Ошибки' },
+  { id: 'history', label: 'История изменений' },
   { id: 'preview', label: 'Предпросмотр' },
 ];
 
@@ -65,7 +66,16 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Имя хранится вместе с ключом: после удаления вкладки диалог ещё закрывается и не должен потерять заголовок
   const [confirmPart, setConfirmPart] = useState<{ key: string; name: string } | null>(null);
-  const [activeKey, setActiveKey] = useState(() => draft.parts[0].key!);
+  // Ссылки из истории: ?part=<вкладка>&state=<состояние> открывают нужную вкладку схемы и выделяют состояние
+  const [params] = useSearchParams();
+  const partParam = params.get('part');
+  const stateParam = params.get('state');
+  const [activeKey, setActiveKey] = useState(() => (draft.parts.find((p) => p.name === partParam) ?? draft.parts[0]).key!);
+  useEffect(() => {
+    const found = draft.parts.find((p) => p.name === partParam);
+    if (found) setActiveKey(found.key!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partParam, stateParam]);
   const [showPart, setShowPart] = useState(false);
   const { data: ownIntents = [] } = useQuery({ queryKey: ['intents', 'scenario', scenario.id], queryFn: () => api.intents.listByScenario(scenario.id) });
   const { data: allIntents = [] } = useQuery({ queryKey: ['intents', projectId], queryFn: () => api.intents.list(projectId) });
@@ -121,6 +131,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
       entities: d.entities.filter((e) => e.entity_id !== null),
     });
     qc.invalidateQueries({ queryKey: ['scenarios', projectId] });
+    qc.invalidateQueries({ queryKey: ['history', scenario.id] });
   });
 
   const setDependencies = (update: (deps: Dependency[]) => Dependency[]) =>
@@ -247,7 +258,6 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
             <Card title="Описание">
               <Textarea rows={1} className={cn(GHOST, 'min-h-0 resize-none rounded-md')} placeholder="Добавьте описание" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             </Card>
-            <ScenarioEntities value={draft.entities} entities={entities} onChange={(es) => setDraft((d) => ({ ...d, entities: es }))} />
             <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} />
           </div>
         </div>
@@ -270,6 +280,7 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-8">
           <StateEditor
             key={part.key}
+            focusState={stateParam}
             tabs={
               <PartTabs
                 parts={draft.parts}
@@ -327,6 +338,13 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
             layout={part.layout}
             onChange={setErrors}
           />
+        </div>
+      )}
+      {tab === 'history' && (
+        <div className={column}>
+          <div className={inner}>
+            <ScenarioHistory scenarioId={scenario.id} />
+          </div>
         </div>
       )}
       {tab === 'preview' && (
