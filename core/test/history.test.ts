@@ -67,7 +67,7 @@ describe('scenario history', () => {
     await request(app).put(`/api/intents/${intent.id}`).send({ name: 'INT_TEMP_SET', enabled: true, comment: '', phrases: ['поставь температуру'] });
     await request(app).put(`/api/intents/${intent.id}`).send({ name: 'INT_TEMP_SET', enabled: true, comment: '', phrases: ['поставь температуру', 'поставь теплее'] });
     const texts = (await history()).map((h) => h.text);
-    expect(texts).toContain('В интент {0} добавлен концепт SET');
+    expect(texts).toContain('В интент {0} добавлено ключевое слово SET');
     expect(texts.filter((t) => t.startsWith('В интент {0} добавлена фраза'))).toHaveLength(2);
     await save({});
   });

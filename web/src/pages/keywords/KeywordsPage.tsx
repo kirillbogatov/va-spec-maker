@@ -13,7 +13,7 @@ import { useKeywords } from '@/lib/keywords';
 import { downloadDictionaryDoc } from '@/lib/dictionaryDoc';
 import { splitTags } from '@/lib/parse';
 
-/** Синонимы концепта: список с полем добавления. */
+/** Синонимы ключевого слова: список с полем добавления. */
 function SynonymsList({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const [text, setText] = useState('');
   const add = () => {
@@ -69,7 +69,7 @@ function SynonymsList({ value, onChange }: { value: string[]; onChange: (v: stri
   );
 }
 
-/** Справочник концептов проекта: код и синонимы, импорт из txt, экспорт в txt и docx. */
+/** Справочник ключевых слов проекта: код и синонимы, импорт из txt, экспорт в txt и docx. */
 export function KeywordsPage() {
   const projectId = useProjectId();
   const path = usePath();
@@ -90,7 +90,7 @@ export function KeywordsPage() {
     }
   };
 
-  // Справочник есть только в режиме «Концепты»
+  // Справочник есть только в режиме «Ключевые слова»
   if (mode !== 'keywords') return <Navigate to={path('/lists/intents')} replace />;
 
   return (
@@ -118,9 +118,9 @@ export function KeywordsPage() {
           <SynonymsList value={d.synonyms} onChange={(synonyms) => patch({ synonyms })} />
         </DictCard>
       )}
-      emptyText="Концептов пока нет"
-      createTitle="Новый концепт"
-      deleteTitle={(d) => `Удалить концепт ${d.name}?`}
+      emptyText="Ключевых слов пока нет"
+      createTitle="Новое ключевое слово"
+      deleteTitle={(d) => `Удалить ключевое слово ${d.name}?`}
       onCreate={(n) => create.mutateAsync(n)}
       onSave={async (d) => {
         await api.keywords.save(d.id, { name: d.name, synonyms: d.synonyms });

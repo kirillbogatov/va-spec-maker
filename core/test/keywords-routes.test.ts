@@ -32,7 +32,7 @@ describe('keywords dictionary', () => {
     expect(exp.body).toBe('OFF: выключи, отключи\nSOUND: звук\n');
   });
 
-  it('used_by — сценарии, где концепт во фразах интента или в условии строки', async () => {
+  it('used_by — сценарии, где ключевое слово во фразах интента или в условии строки', async () => {
     const { app, db } = await makeApp();
     const pid = createProject(db);
     await request(app).post(`/api/projects/${pid}/keywords/import`).send({ text: 'OFF: выключи\nSOUND: звук\nTEMP: температура\n' });

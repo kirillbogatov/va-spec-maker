@@ -277,7 +277,7 @@ describe('intents table in keywords mode', () => {
   it('выводит колонки Intent | Keywords | Example phrases | Entities с общей нумерацией; фразы без ключевых слов пропускает', () => {
     const s: ProjectSpec = { ...spec, intentMode: 'keywords', intents: [{ ...base, phrases: ['включи обогрев', 'привет'], patterns: ['* x *'], keywords: [['SET', 'HEATING'], []] }] };
     const t = intentsTable(s, 'en');
-    expect(t.head).toEqual(['Intent', 'Concepts', 'Example phrases', 'Entities']);
+    expect(t.head).toEqual(['Intent', 'Keywords', 'Example phrases', 'Entities']);
     expect(t.rows[0].cells[1]).toEqual({ list: ['SET, HEATING'] });
     expect(t.rows[0].cells[2]).toEqual({ list: ['включи обогрев'] });
     expect(t.widths.reduce((a, b) => a + b, 0)).toBe(100);
@@ -290,7 +290,48 @@ describe('intents table in keywords mode', () => {
     const it = await request(app).post(`/api/scenarios/${sc.body.id}/intents`).send({ name: 'MUTE' });
     await request(app).put(`/api/intents/${it.body.id}`).send({ name: 'MUTE', comment: '', enabled: true, values: [{ text: 'выключи звук', kind: 'phrase' }], entities: [] });
     const md = await request(app).get(`/api/scenarios/${sc.body.id}/preview?lang=en&intentMode=keywords`);
-    expect(md.text).toContain('Concepts');
+    expect(md.text).toContain('Keywords');
     expect(md.text).toContain('OFF, SOUND');
+  });
+});
+
+describe('changelog in scenario export', () => {
+  async function setup() {
+    const { app, db } = await makeApp();
+    const pid = createProject(db, 'Вампус');
+    const sid = (await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Сценарий' })).body.id as number;
+    await request(app).put(`/api/scenarios/${sid}`).send({ name: 'Сценарий', description: 'Описание сценария' });
+    return { app, sid };
+  }
+
+  it('puts the changelog right after the description, before Intents', async () => {
+    const { app, sid } = await setup();
+    await request(app).put(`/api/scenarios/${sid}/changelog`).send({ rows: [{ task: 'TASK-1', author: 'Иванов', description: 'Добавлен интент' }] });
+    const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
+    const at = (s: string) => md.indexOf(s);
+    expect(at('## Журнал изменений')).toBeGreaterThan(at('Описание сценария'));
+    expect(at('## Журнал изменений')).toBeLessThan(at('## Интенты'));
+    expect(md).toContain('| Задача | Автор | Описание |');
+    expect(md).toContain('| TASK-1 | Иванов | Добавлен интент |');
+  });
+
+  it('uses English headings and appears in the preview', async () => {
+    const { app, sid } = await setup();
+    await request(app).put(`/api/scenarios/${sid}/changelog`).send({ rows: [{ task: 'T', author: 'A', description: 'D' }] });
+    const md = (await request(app).get(`/api/scenarios/${sid}/preview?lang=en`)).text;
+    expect(md).toContain('## Change log');
+    expect(md).toContain('| Task | Author | Description |');
+  });
+
+  it('omits the section when the changelog is empty', async () => {
+    const { app, sid } = await setup();
+    const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
+    expect(md).not.toContain('Журнал изменений');
+  });
+
+  it('does not put the automatic history into the document', async () => {
+    const { app, sid } = await setup();
+    const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
+    expect(md).not.toContain('Сценарий создан');
   });
 });

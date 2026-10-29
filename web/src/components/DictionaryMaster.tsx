@@ -83,7 +83,7 @@ const SEARCH_WHERE: Record<ObjectKind, string> = {
   prompt: 'промптах',
   state: 'состояниях',
   dependency: 'зависимостях',
-  keyword: 'концептах',
+  keyword: 'ключевых словах',
 };
 
 /** Карточка раздела внутри детали: заголовок, действия справа. */

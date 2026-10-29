@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Copy, Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/UserMenu';
@@ -87,6 +87,16 @@ export function ProjectsPage() {
   };
   const exportDocx = (p: ProjectListItem) =>
     api.exportFile(`/api/projects/${p.id}/export?format=docx&lang=${readSpecLang(p.id)}`, `${p.name}.docx`).catch((e: Error) => toast.error(e.message));
+  const fileRef = useRef<HTMLInputElement>(null);
+  const importJson = async (file: File) => {
+    try {
+      const r = await api.projects.import(JSON.parse(await file.text()));
+      await refresh();
+      toast.success(`Проект «${r.name}» импортирован`);
+    } catch (e) {
+      toast.error(e instanceof SyntaxError ? 'Файл не похож на копию проекта (JSON)' : (e as Error).message);
+    }
+  };
   const loadDemo = async () => {
     await addDemo();
     await refresh();
@@ -104,7 +114,22 @@ export function ProjectsPage() {
         </div>
       </header>
       <main className="mx-auto max-w-[1100px] px-4 py-8 sm:px-6 sm:py-10">
-        <h1 className="mb-6 text-balance text-3xl font-semibold tracking-tight">Проекты</h1>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-balance text-3xl font-semibold tracking-tight">Проекты</h1>
+          <Button variant="outline" className="h-10 sm:h-9" onClick={() => fileRef.current?.click()}><Upload className="size-4" /> Импорт из JSON</Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            aria-label="Файл копии проекта"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) void importJson(f);
+            }}
+          />
+        </div>
 
         {!isLoading && projects.length === 0 && (
           <div className="grid place-items-center rounded-xl border border-dashed bg-background px-6 py-16 text-center">

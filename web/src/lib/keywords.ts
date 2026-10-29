@@ -8,7 +8,7 @@ export function useKeywords(projectId: number): Keyword[] {
   return useQuery({ queryKey: ['keywords', projectId], queryFn: () => api.keywords.list(projectId) }).data ?? [];
 }
 
-/** Функция «фраза → коды концептов» по справочнику проекта. */
+/** Функция «фраза → коды ключевых слов» по справочнику проекта. */
 export function useKeywordMatcher(projectId: number): (phrase: string) => string[] {
   const keywords = useKeywords(projectId);
   return useMemo(() => (phrase: string) => matchKeywords(phrase, keywords), [keywords]);

@@ -69,7 +69,7 @@ export function validValue(input: ValueInput, v: string): boolean {
 
 /** Подпись условия: «зависимость ⟨оператор⟩ значение» или «сущность ⟨оператор⟩ значение». */
 export function conditionLabel(c: StepCondition, deps: Dependency[], entities: EntityListItem[], keywords: { id: number; name: string }[] = []): string {
-  if (c.keyword_id !== undefined) return `${c.op === '!=' ? 'нет концепта' : 'концепт'} ${keywords.find((k) => k.id === c.keyword_id)?.name ?? `#${c.keyword_id}`}`;
+  if (c.keyword_id !== undefined) return `${c.op === '!=' ? 'нет ключевого слова' : 'ключевое слово'} ${keywords.find((k) => k.id === c.keyword_id)?.name ?? `#${c.keyword_id}`}`;
   const name = c.entity_id !== undefined
     ? entities.find((e) => e.id === c.entity_id)?.name ?? `сущность #${c.entity_id}`
     : (() => { const d = deps.find((x) => x.ref === c.dep); return d ? depLabel(d, entities) : c.dep; })();

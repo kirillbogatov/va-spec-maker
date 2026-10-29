@@ -30,7 +30,7 @@ const CONCEPT_OPS: { value: ConditionOp; label: string }[] = [{ value: '=', labe
 const subjectKey = (c: StepCondition) => (c.keyword_id !== undefined ? `kw:${c.keyword_id}` : c.entity_id !== undefined ? `ent:${c.entity_id}` : `dep:${c.dep}`);
 const fromKey = (key: string): Pick<StepCondition, 'dep' | 'entity_id' | 'keyword_id'> =>
   key.startsWith('kw:') ? { dep: '', keyword_id: Number(key.slice(3)) } : key.startsWith('ent:') ? { dep: '', entity_id: Number(key.slice(4)) } : { dep: key.slice(4) };
-const subjectLabel = (c: StepCondition) => (c.keyword_id !== undefined ? 'Концепт' : c.entity_id !== undefined ? 'Сущность' : 'Зависимость');
+const subjectLabel = (c: StepCondition) => (c.keyword_id !== undefined ? 'Ключевое слово' : c.entity_id !== undefined ? 'Сущность' : 'Зависимость');
 
 /** Ячейка Condition: пары «зависимость или сущность — значение» (все должны выполняться) и произвольный текст. */
 export function ConditionsCell({ conditions, freeText, mode = 'all', dependencies, entities, onChange, stacked }: Props) {
@@ -41,7 +41,7 @@ export function ConditionsCell({ conditions, freeText, mode = 'all', dependencie
   const modeName = useId();
   const projectId = useProjectId();
   const keywords = useKeywords(projectId);
-  // Условия по концептам доступны только в режиме «Концепты»
+  // Условия по ключевым словам доступны только в режиме «Ключевые слова»
   const conceptsOn = useIntentMode(projectId) === 'keywords';
   // Свои условия хранятся одной строкой: каждое условие — отдельная строка текста.
   const texts = freeText === '' ? (showText ? [''] : []) : freeText.split('\n');
@@ -143,7 +143,7 @@ export function ConditionsCell({ conditions, freeText, mode = 'all', dependencie
         {(conceptsOn || conditions.some((c) => c.keyword_id !== undefined)) && (
           <Button variant="outline" size="xs" disabled={!conceptsOn || keywords.length === 0}
             onClick={() => { onChange({ conditions: [...conditions, { dep: '', keyword_id: keywords[0].id, op: '=', value: '' }] }); if (stacked) setEditing(conditions.length); }}>
-            <Plus className="size-3" /> концепт
+            <Plus className="size-3" /> ключевое слово
           </Button>
         )}
         <Button variant="outline" size="xs" onClick={() => { setShowText(true); setTexts([...texts, '']); }}>

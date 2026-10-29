@@ -58,6 +58,8 @@ export interface SpecPart {
 export interface ScenarioDoc {
   spec: ProjectSpec;
   parts: SpecPart[];
+  /** Журнал изменений, который ведут вручную; выводится вверху документа после описания. */
+  changelog: { task: string; author: string; description: string }[];
 }
 
 /**
@@ -93,8 +95,10 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
   }
   const spec = buildSpec(db, projectId, { ...project, name: scenario.name, description: scenario.description }, lang, { scenarioId, partId: null, intentIds, promptIds, entityIds });
   const single = parts.length === 1;
+  const changelog = db.prepare('SELECT task, author, description FROM scenario_changelog WHERE scenario_id = ? ORDER BY position, id').all(scenarioId) as ScenarioDoc['changelog'];
   return {
     spec: { ...spec, transitions: [] },
+    changelog,
     parts: parts.map((part) => {
       const ps = buildSpec(db, projectId, project, lang, { scenarioId, partId: part.id, intentIds, promptIds, entityIds });
       return { title: single ? scenario.name : part.name, description: part.description, transitions: ps.transitions, globals: ps.globals ?? [] };

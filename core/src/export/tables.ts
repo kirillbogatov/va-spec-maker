@@ -138,3 +138,11 @@ export const globalsTable = (rows: TransitionRow[], lang: SpecLang = 'ru'): Tabl
     ],
   })),
 });
+
+export interface ChangelogRow { task: string; author: string; description: string }
+
+export const changelogTable = (rows: ChangelogRow[], lang: SpecLang = 'ru'): TableDef => ({
+  head: STRINGS[lang].changelogHead,
+  widths: [20, 20, 60],
+  rows: rows.map((r): Row => ({ cells: [dash(r.task), dash(r.author), dash(r.description)] })),
+});

@@ -34,7 +34,7 @@ export interface Intent {
 }
 
 export interface DictionaryDependency { id: number; name: string; values: string[]; used_by: { id: number; name: string }[] }
-/** used_by — сценарии, где концепт стоит в условии строки или находится во фразах подключённого интента. */
+/** used_by — сценарии, где ключевое слово стоит в условии строки или находится во фразах подключённого интента. */
 export interface Keyword { id: number; project_id: number; name: string; synonyms: string[]; used_by: { id: number; name: string }[] }
 
 export interface PromptListItem {
@@ -61,7 +61,7 @@ export interface Dependency {
 }
 /** Значение зависимости сценария (dep) или значение сущности проекта (entity_id, dep пуст). */
 export type ConditionOp = '=' | '!=' | '<' | '>';
-/** Условие-концепт (keyword_id): «=» — концепт есть в запросе, «!=» — его нет; значение пустое. */
+/** Условие по ключевому слову (keyword_id): «=» — ключевое слово есть в запросе, «!=» — его нет; значение пустое. */
 export interface StepCondition { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: ConditionOp }
 /**
  * Строка Transition table (kind = transition), Errors (kind = error) или переход глобального интента

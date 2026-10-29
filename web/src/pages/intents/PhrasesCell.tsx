@@ -130,7 +130,7 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], numbers = [
           />
           </div>
           {kw && (
-            <div aria-label="Концепты новой фразы" className="hidden h-10 min-w-0 flex-1 items-center rounded-md border border-dashed bg-muted/40 px-3 md:flex md:h-9">
+            <div aria-label="Ключевые слова новой фразы" className="hidden h-10 min-w-0 flex-1 items-center rounded-md border border-dashed bg-muted/40 px-3 md:flex md:h-9">
               <KeywordChips names={matchKw(text)} text={text} />
             </div>
           )}

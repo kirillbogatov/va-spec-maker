@@ -273,7 +273,7 @@ export function logIntentChanges(db: Db, intentId: number, projectId: number, be
   }
   for (const eid of hadE.keys()) if (!hasE.has(eid)) changes.push(removed(`${id}:entity:${eid}`, `Из интента {0} удалена сущность ${q(entityName(eid))}`, refs));
 
-  // Концепты интента — те, что встречаются хотя бы в одной его фразе
+  // Ключевые слова интента — те, что встречаются хотя бы в одной его фразе
   const keywords = (db.prepare('SELECT name, synonyms FROM keywords WHERE project_id = ?').all(projectId) as { name: string; synonyms: string }[]).map(
     (k): KeywordDef => ({ name: k.name, synonyms: JSON.parse(k.synonyms) as string[] }),
   );
@@ -283,8 +283,8 @@ export function logIntentChanges(db: Db, intentId: number, projectId: number, be
     const now = concepts(after);
     const plus = [...now].filter((c) => !was.has(c)).sort();
     const minus = [...was].filter((c) => !now.has(c)).sort();
-    if (plus.length) changes.push({ key: `add:${id}:concepts:${plus.join(',')}`, text: `В интент {0} добавлен${plus.length > 1 ? 'ы' : ''} концепт${plus.length > 1 ? 'ы' : ''} ${plus.join(', ')}`, refs, cancels: `del:${id}:concepts:${plus.join(',')}` });
-    if (minus.length) changes.push({ key: `del:${id}:concepts:${minus.join(',')}`, text: `Из интента {0} удален${minus.length > 1 ? 'ы' : ''} концепт${minus.length > 1 ? 'ы' : ''} ${minus.join(', ')}`, refs, cancels: `add:${id}:concepts:${minus.join(',')}` });
+    if (plus.length) changes.push({ key: `add:${id}:concepts:${plus.join(',')}`, text: `В интент {0} добавлен${plus.length > 1 ? 'ы' : 'о'} ${plus.length > 1 ? 'ключевые слова' : 'ключевое слово'} ${plus.join(', ')}`, refs, cancels: `del:${id}:concepts:${plus.join(',')}` });
+    if (minus.length) changes.push({ key: `del:${id}:concepts:${minus.join(',')}`, text: `Из интента {0} удален${minus.length > 1 ? 'ы' : 'о'} ${minus.length > 1 ? 'ключевые слова' : 'ключевое слово'} ${minus.join(', ')}`, refs, cancels: `add:${id}:concepts:${minus.join(',')}` });
   }
   for (const sid of scenarios) for (const c of changes) record(db, sid, c);
 }

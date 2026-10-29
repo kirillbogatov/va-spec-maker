@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Info } from 'lucide-react';
 import { TypeToken } from '@/components/TypeToken';
 
-export const KEYWORDS_HINT = 'Начните вводить фразу на естественном языке — система сама разберёт её на концепты';
+export const KEYWORDS_HINT = 'Начните вводить фразу на естественном языке — система сама разберёт её на ключевые слова';
 
-/** Иконка-подсказка рядом с заголовком блока «Концепты»: появляется при наведении, фокусе и по клику (для сенсорных экранов). */
+/** Иконка-подсказка рядом с заголовком блока «Ключевые слова»: появляется при наведении, фокусе и по клику (для сенсорных экранов). */
 export function KeywordsHint() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
@@ -38,10 +38,10 @@ export function KeywordsHint() {
   );
 }
 
-/** Концепты фразы чипами через запятую; пустое поле — заглушка, фраза без совпадений — пометка «не распознаны». */
+/** Ключевые слова фразы чипами через запятую; пустое поле — заглушка, фраза без совпадений — пометка «не распознаны». */
 export function KeywordChips({ names, text }: { names: string[]; text: string }) {
   if (!names.length) {
-    return <span className="truncate text-sm text-muted-foreground">{text.trim() ? 'Концепты не распознаны' : 'Концепты'}</span>;
+    return <span className="truncate text-sm text-muted-foreground">{text.trim() ? 'Ключевые слова не распознаны' : 'Ключевые слова'}</span>;
   }
   return (
     <span className="flex flex-wrap items-center gap-x-1 gap-y-1">

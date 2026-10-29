@@ -1,7 +1,7 @@
 import type { ProjectSpec, ScenarioDoc } from './model';
 import {
   entitiesTable, intentsTable, promptsTable, transitionsTable,
-  type Cell, type TableDef,
+  changelogTable, type Cell, type TableDef,
 } from './tables';
 import { STRINGS, type SpecLang } from './i18n';
 
@@ -27,11 +27,12 @@ function table({ head, rows }: TableDef): string {
   ].join('\n');
 }
 
-function section(spec: ProjectSpec, date: string | null, lang: SpecLang, parts?: ScenarioDoc['parts']): string[] {
+function section(spec: ProjectSpec, date: string | null, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = []): string[] {
   const t = STRINGS[lang];
   const out: string[] = [`# ${spec.project.name}`];
   if (date) out.push(`_${t.specFrom(date)}_`);
   if (spec.project.description) out.push(spec.project.description);
+  if (changelog.length) out.push(`## ${t.changelog}`, table(changelogTable(changelog, lang)));
 
   out.push(`## ${t.intents}`, table(intentsTable(spec, lang)));
   out.push(`## ${t.entities}`, table(entitiesTable(spec, lang)));
@@ -55,5 +56,5 @@ export function renderMarkdown(spec: ProjectSpec, date: string, lang: SpecLang =
 
 /** Общие таблицы сценария один раз; вкладки — только подразделы State transitions. */
 export function renderMarkdownScenario(doc: ScenarioDoc, date: string, lang: SpecLang = 'ru'): string {
-  return section(doc.spec, date, lang, doc.parts).join('\n\n') + '\n';
+  return section(doc.spec, date, lang, doc.parts, doc.changelog).join('\n\n') + '\n';
 }

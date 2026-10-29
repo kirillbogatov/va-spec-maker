@@ -28,6 +28,8 @@ export interface SpecStrings {
   dependenciesHead: string[];
   transitionHead: string[];
   globalHead: string[];
+  changelog: string;
+  changelogHead: string[];
 }
 
 export const STRINGS: Record<SpecLang, SpecStrings> = {
@@ -43,19 +45,21 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     no: 'нет',
     anyScenarioIntent: 'Любой интент сценария',
     anyOf: 'Любое из:',
-    conceptPresent: 'В запросе есть концепт',
-    conceptAbsent: 'В запросе нет концепта',
+    conceptPresent: 'В запросе есть ключевое слово',
+    conceptAbsent: 'В запросе нет ключевого слова',
     entityTypes: { string: 'Строка', number: 'Число', time: 'Время', date: 'Дата', boolean: 'Логический' },
     from: 'от',
     to: 'до',
     intentsHead: ['Интент', 'Фразы для обучения', 'Паттерны', 'Сущности'],
-    keywordsHead: 'Концепты',
+    keywordsHead: 'Ключевые слова',
     examplePhrasesHead: 'Фразы для обучения',
     entitiesHead: ['Сущность', 'Тип', 'Значения', 'Несколько значений'],
     promptsHead: ['Промпт', 'Ответ ассистента'],
     dependenciesHead: ['Сценарий', 'Зависимость', 'Тип', 'Значения'],
     transitionHead: ['Из состояния', 'В состояние', 'Запрос пользователя', 'Условия', 'Действие системы', 'Ответ ассистента'],
     globalHead: ['В состояние', 'Запрос пользователя', 'Условия', 'Действие системы', 'Ответ ассистента'],
+    changelog: 'Журнал изменений',
+    changelogHead: ['Задача', 'Автор', 'Описание'],
   },
   en: {
     specFrom: (d) => `Specification dated ${d}`,
@@ -69,18 +73,20 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     no: 'no',
     anyScenarioIntent: 'Any scenario intent',
     anyOf: 'Any of:',
-    conceptPresent: 'Request has concept',
-    conceptAbsent: 'Request has no concept',
+    conceptPresent: 'Request has keyword',
+    conceptAbsent: 'Request has no keyword',
     entityTypes: { string: 'String', number: 'Number', time: 'Time', date: 'Date', boolean: 'Boolean' },
     from: 'from',
     to: 'to',
     intentsHead: ['Intent', 'Training phrases', 'Patterns', 'Entities'],
-    keywordsHead: 'Concepts',
+    keywordsHead: 'Keywords',
     examplePhrasesHead: 'Example phrases',
     entitiesHead: ['Entity', 'Type', 'Values', 'Multiple values'],
     promptsHead: ['Prompt', 'Assistant response'],
     dependenciesHead: ['Scenario', 'Dependency', 'Type', 'Values'],
     transitionHead: ['From state', 'To state', 'User request', 'Conditions', 'System action', 'Assistant response'],
     globalHead: ['To state', 'User request', 'Conditions', 'System action', 'Assistant response'],
+    changelog: 'Change log',
+    changelogHead: ['Task', 'Author', 'Description'],
   },
 };

@@ -287,7 +287,7 @@ function PhrasesEditor({ value, others, words, numbers, mode, onChange }: { valu
           </div>
           </div>
           {kw && (
-            <div aria-label="Концепты новой фразы" className="hidden h-8 w-[38%] shrink-0 items-center rounded-md border border-dashed bg-muted/40 px-2 md:flex">
+            <div aria-label="Ключевые слова новой фразы" className="hidden h-8 w-[38%] shrink-0 items-center rounded-md border border-dashed bg-muted/40 px-2 md:flex">
               <KeywordChips names={matchKw(text)} text={text} />
             </div>
           )}

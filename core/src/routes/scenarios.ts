@@ -9,7 +9,7 @@ const DEP_TYPES = ['string', 'enum', 'bool'];
 
 /**
  * Условие: значение зависимости сценария (dep), значение сущности проекта (entity_id, dep пуст)
- * или наличие концепта в запросе (keyword_id: «=» — есть, «!=» — нет; значение пустое).
+ * или наличие ключевого слова в запросе (keyword_id: «=» — есть, «!=» — нет; значение пустое).
  */
 type ConditionOp = '=' | '!=' | '<' | '>';
 interface StepCondition { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: ConditionOp }
@@ -182,7 +182,7 @@ export function scenariosRouter(db: Db): RouterT {
           throw badRequest('Сущность условия не найдена в проекте');
         }
         if (s.conditions.some((c: StepCondition) => c.keyword_id !== undefined && !findKeyword.get(c.keyword_id, cur.project_id))) {
-          throw badRequest('Концепт условия не найден в проекте');
+          throw badRequest('Ключевое слово условия не найдено в проекте');
         }
         if (s.intent_id !== null && !findIntent.get(s.intent_id, cur.project_id)) {
           throw badRequest('Интент строки не найден в проекте');
