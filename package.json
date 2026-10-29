@@ -12,6 +12,10 @@
     "build": "npm run build -w web",
     "build:demo": "npm run build:demo -w web",
     "dev:demo": "npm run dev:demo -w web",
-    "test": "npm run test -w core && npm run test -w web"
+    "test": "npm run test -w core && npm run test -w web",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
   }
 }

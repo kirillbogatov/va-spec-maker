@@ -2,3 +2,5 @@ node_modules
 web/dist
 *.log
 data/
+test-results/
+playwright-report/
