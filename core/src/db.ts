@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS dependency_dictionary (
   id INTEGER PRIMARY KEY,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
   "values" TEXT NOT NULL DEFAULT '[]',
   UNIQUE (project_id, name)
 );
@@ -216,6 +217,11 @@ export function migrate(db: Db): void {
     // Версия 4: у правил (ошибок и глобальных переходов) появилось название.
     if (!hasColumn(db, 'scenario_steps', 'name')) db.exec("ALTER TABLE scenario_steps ADD COLUMN name TEXT NOT NULL DEFAULT ''");
     db.exec('PRAGMA user_version = 4');
+  }
+  if (user_version < 5) {
+    // Версия 5: у зависимостей справочника появилось описание.
+    if (!hasColumn(db, 'dependency_dictionary', 'description')) db.exec("ALTER TABLE dependency_dictionary ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+    db.exec('PRAGMA user_version = 5');
   }
 }
 

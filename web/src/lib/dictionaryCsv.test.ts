@@ -21,7 +21,7 @@ describe('csv', () => {
 
 describe('dictionary csv', () => {
   it('зависимости и промпты', () => {
-    const deps = [{ name: 'Двигатель', values: ['запущен', 'заглушен'] }];
+    const deps = [{ name: 'Двигатель', description: 'Состояние двигателя', values: ['запущен', 'заглушен'] }];
     expect(parseDependenciesCsv(dependenciesToCsv(deps))).toEqual(deps);
     const prm = [{ name: 'PRM_A', answers: ['Привет, мир', 'Ещё; ответ'] }];
     expect(parsePromptsCsv(promptsToCsv(prm))).toEqual(prm);

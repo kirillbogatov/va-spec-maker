@@ -51,7 +51,7 @@ interface Props<T extends DictItem> {
   subtitle?: (i: T) => string;
   /** Элементы справа в шапке (например, тумблер «Включён»). */
   headerExtra?: (draft: T, patch: (p: Partial<T>) => void) => ReactNode;
-  /** Меню справа от «+ Новое…» над списком (импорт и экспорт). */
+  /** Меню слева от «+ Новое…» над списком (импорт и экспорт). */
   listActions?: ReactNode;
   /** Основное содержимое детали. */
   body: (draft: T, patch: (p: Partial<T>) => void) => ReactNode;

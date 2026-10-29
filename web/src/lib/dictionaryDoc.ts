@@ -20,7 +20,11 @@ export async function dictionaryTable(kind: DocKind, pid: number): Promise<Table
   }
   if (kind === 'dependencies') {
     const items = await api.dependencyDictionary.list(pid);
-    return { head: ['Зависимость', 'Значения'], widths: [35, 65], rows: items.map((d) => ({ cells: [text(d.name), list(d.values)] })) };
+    return {
+      head: ['Зависимость', 'Описание', 'Значения'],
+      widths: [25, 30, 45],
+      rows: items.map((d) => ({ cells: [text(d.name), text(d.description), list(d.values)] })),
+    };
   }
   if (kind === 'prompts') {
     const items = await Promise.all((await api.prompts.list(pid)).map((p) => api.prompts.get(p.id)));

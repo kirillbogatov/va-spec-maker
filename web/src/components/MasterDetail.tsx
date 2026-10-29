@@ -105,7 +105,8 @@ export function EmptyDetail({ text = 'Выберите элемент слева
 /** Шапка списка: компактная кнопка «+ Создать». */
 export function ListHeader({ onCreate, label = 'Создать', extra }: { onCreate: () => void; label?: string; extra?: ReactNode }) {
   return (
-    <div className="flex items-center justify-end gap-2 border-b px-3 py-2">
+    <div className={cn('flex items-center gap-2 border-b px-3 py-2', !extra && 'justify-end')}>
+      {extra}
       <button
         type="button"
         onClick={onCreate}
@@ -113,7 +114,6 @@ export function ListHeader({ onCreate, label = 'Создать', extra }: { onCr
       >
         <Plus className="size-3.5" /> {label}
       </button>
-      {extra}
     </div>
   );
 }

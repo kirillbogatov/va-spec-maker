@@ -14,11 +14,11 @@ function table(text: string, what: string): Record<string, string>[] {
   return rows;
 }
 
-export interface DependencyRow { name: string; values: string[] }
+export interface DependencyRow { name: string; description: string; values: string[] }
 export const dependenciesToCsv = (items: DependencyRow[]) =>
-  toCsv([['name', 'values'], ...items.map((d) => [d.name, d.values.join('\n')])]);
+  toCsv([['name', 'description', 'values'], ...items.map((d) => [d.name, d.description, d.values.join('\n')])]);
 export const parseDependenciesCsv = (text: string): DependencyRow[] =>
-  table(text, 'зависимостей').map((r) => ({ name: r.name.trim(), values: lines(r.values ?? '') }));
+  table(text, 'зависимостей').map((r) => ({ name: r.name.trim(), description: r.description ?? '', values: lines(r.values ?? '') }));
 
 export interface PromptRow { name: string; answers: string[] }
 export const promptsToCsv = (items: PromptRow[]) =>

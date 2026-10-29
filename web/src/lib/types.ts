@@ -33,7 +33,7 @@ export interface Intent {
   id: number; project_id: number; name: string; enabled: boolean; comment: string; phrases: string[]; patterns: string[]; values: ValueItem[]; entities: IntentEntity[];
 }
 
-export interface DictionaryDependency { id: number; name: string; values: string[]; used_by: { id: number; name: string }[] }
+export interface DictionaryDependency { id: number; name: string; description: string; values: string[]; used_by: { id: number; name: string }[] }
 /** used_by — сценарии, где ключевое слово стоит в условии строки или находится во фразах подключённого интента. */
 export interface Keyword { id: number; project_id: number; name: string; synonyms: string[]; used_by: { id: number; name: string }[] }
 

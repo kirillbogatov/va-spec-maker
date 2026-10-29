@@ -78,6 +78,7 @@ export function DependenciesPage() {
   return (
     <DictionaryMaster
       kind="dependency"
+      commentKey="description"
       listActions={<DictionaryTransfer kind="dependencies" />}
       base="/dependencies"
       items={items}
@@ -98,7 +99,7 @@ export function DependenciesPage() {
       }
       onCreate={(n) => create.mutateAsync(n)}
       onSave={async (d) => {
-        await api.dependencyDictionary.save(d.id, { name: d.name, values: d.values });
+        await api.dependencyDictionary.save(d.id, { name: d.name, description: d.description, values: d.values });
         refresh();
       }}
       onRemove={(d) => remove.mutate(d.id)}

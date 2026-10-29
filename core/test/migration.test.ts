@@ -18,9 +18,9 @@ const userVersion = (db: Db) => (db.prepare('PRAGMA user_version').get() as { us
 const links = (db: Db, table: string) => db.prepare(`SELECT * FROM ${table} ORDER BY id`).all() as Record<string, number>[];
 
 describe('migrate', () => {
-  it('stamps a fresh database with version 4', async () => {
+  it('stamps a fresh database with version 5', async () => {
     const db = await openDb();
-    expect(userVersion(db)).toBe(4);
+    expect(userVersion(db)).toBe(5);
   });
 
   it('turns ownership and usage into connections, and any_intent transitions into errors', async () => {
@@ -47,7 +47,7 @@ describe('migrate', () => {
     expect(db.prepare('SELECT scenario_id FROM prompts WHERE scenario_id IS NOT NULL').all()).toEqual([]);
     expect(db.prepare("SELECT kind FROM scenario_steps WHERE state = 'B'").get()).toEqual({ kind: 'error' });
     expect(db.prepare('SELECT 1 FROM scenario_intents WHERE intent_id = ?').get(free)).toBeUndefined();
-    expect(userVersion(db)).toBe(4);
+    expect(userVersion(db)).toBe(5);
   });
 
   it('adds entity type columns to an older database and keeps existing entities as strings', async () => {
@@ -60,9 +60,9 @@ describe('migrate', () => {
     migrate(db);
 
     expect(db.prepare('SELECT type, range_min, range_max FROM entities').get()).toEqual({ type: 'string', range_min: '', range_max: '' });
-    expect(userVersion(db)).toBe(4);
+    expect(userVersion(db)).toBe(5);
     migrate(db);
-    expect(userVersion(db)).toBe(4);
+    expect(userVersion(db)).toBe(5);
   });
 
   it('is idempotent and leaves intents alive when their scenario is deleted', async () => {

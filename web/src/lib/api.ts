@@ -73,7 +73,7 @@ export const api = {
     get: (id: number) => req<DictionaryDependency>('GET', `/api/dependency-dictionary/${id}`),
     create: (pid: number, name: string) =>
       req<DictionaryDependency>('POST', `/api/projects/${pid}/dependency-dictionary`, { name }),
-    save: (id: number, body: { name: string; values: string[] }) =>
+    save: (id: number, body: { name: string; description: string; values: string[] }) =>
       req<DictionaryDependency>('PUT', `/api/dependency-dictionary/${id}`, body),
     remove: (id: number) => req<void>('DELETE', `/api/dependency-dictionary/${id}`),
   },

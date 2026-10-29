@@ -69,13 +69,13 @@ export async function seedDemo(app: App): Promise<number> {
   const alarmRepeat = await entity('ENT_ALARM_REPEAT', 'Повторять будильник', [], { type: 'boolean' });
 
   // Справочник зависимостей: сценарии подставляют отсюда название и варианты значений.
-  for (const [name, values] of [
-    ['DEP_HOME_MODE', ['home', 'away', 'night']],
-    ['DEP_LAMP_ONLINE', ['true', 'false']],
-    ['DEP_HAS_ALARM', ['true', 'false']],
-  ] as [string, string[]][]) {
+  for (const [name, description, values] of [
+    ['DEP_HOME_MODE', 'Режим дома', ['home', 'away', 'night']],
+    ['DEP_LAMP_ONLINE', 'Лампа на связи', ['true', 'false']],
+    ['DEP_HAS_ALARM', 'У пользователя уже есть будильник', ['true', 'false']],
+  ] as [string, string, string[]][]) {
     const { id } = await call(app, 'POST', `/api/projects/${pid}/dependency-dictionary`, { name });
-    await call(app, 'PUT', `/api/dependency-dictionary/${id}`, { name, values });
+    await call(app, 'PUT', `/api/dependency-dictionary/${id}`, { name, description, values });
   }
 
   // Объекты проекта, которые подключаются сразу к нескольким сценариям.

@@ -57,7 +57,7 @@ export async function importDictionary(kind: DictKind, pid: number, text: string
   };
   if (kind === 'dependencies') {
     const existing = new Map((await api.dependencyDictionary.list(pid)).map((d) => [key(d.name), d.id]));
-    await run(parseDependenciesCsv(text), existing, async (name) => (await api.dependencyDictionary.create(pid, name)).id, (id, r) => api.dependencyDictionary.save(id, { name: r.name, values: r.values }));
+    await run(parseDependenciesCsv(text), existing, async (name) => (await api.dependencyDictionary.create(pid, name)).id, (id, r) => api.dependencyDictionary.save(id, { name: r.name, description: r.description, values: r.values }));
   } else if (kind === 'prompts') {
     const existing = new Map((await api.prompts.list(pid)).map((p) => [key(p.name), p.id]));
     await run(parsePromptsCsv(text), existing, async (name) => (await api.prompts.createInProject(pid, name)).id, (id, r) => api.prompts.save(id, { name: r.name, full_answers: r.answers }));
