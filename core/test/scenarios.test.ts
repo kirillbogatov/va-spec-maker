@@ -27,7 +27,7 @@ describe('scenarios API', () => {
     const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Обогрев сидений' });
     expect(c.status).toBe(201);
     expect((await request(app).get(`/api/projects/${pid}/scenarios`)).body).toEqual([
-      { id: c.body.id, name: 'Обогрев сидений', step_count: 0 },
+      { id: c.body.id, name: 'Обогрев сидений', description: '', step_count: 0 },
     ]);
     expect((await request(app).get(`/api/scenarios/${c.body.id}`)).body).toMatchObject({
       name: 'Обогрев сидений', description: '', parts: [{ name: 'Обогрев сидений', description: '', steps: [], layout: {} }],

@@ -87,7 +87,7 @@ export function scenariosRouter(db: Db): RouterT {
     res.json(
       db
         .prepare(
-          `SELECT s.id, s.name,
+          `SELECT s.id, s.name, s.description,
                   (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id) AS step_count
            FROM scenarios s WHERE s.project_id = ? ORDER BY s.id`,
         )

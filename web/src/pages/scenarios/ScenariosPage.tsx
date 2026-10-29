@@ -67,6 +67,7 @@ export function ScenariosPage() {
                 <li key={s.id}>
                   <ListItem to={path(`/scenarios/${s.id}`)}>
                     <span className="block truncate">{s.name}</span>
+                    {s.description?.trim() && <span className="block truncate text-xs font-normal text-muted-foreground">{s.description.trim().replace(/\s+/g, ' ')}</span>}
                   </ListItem>
                 </li>
               ))}

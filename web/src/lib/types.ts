@@ -53,7 +53,7 @@ export interface HistoryEntry { id: number; day: string; text: string; refs: His
 /** Строка журнала изменений, который ведут вручную. */
 export interface ChangelogRow { task: string; author: string; description: string }
 
-export interface ScenarioListItem { id: number; name: string; step_count: number }
+export interface ScenarioListItem { id: number; name: string; description: string; step_count: number }
 export type DependencyType = 'string' | 'enum' | 'bool';
 /** Параметр или проверка, от которой зависит запуск сценария. entity_id задан: имя берётся из сущности. */
 export interface Dependency {
