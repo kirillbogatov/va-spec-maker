@@ -62,7 +62,7 @@ describe('project duplicate / import', () => {
     expect(full.project_id).toBe(dup.id);
     expect(full.parts[0].steps).toHaveLength(7);
     const connected = (await request(app).get(`/api/scenarios/${b[0].id}/intents`)).body as any[];
-    expect(connected.find((i) => i.name === 'STOP')).toMatchObject({ is_global: true });
+    expect(connected.find((i) => i.name === 'INT_STOP')).toMatchObject({ is_global: true });
     expect((await request(app).get(`/api/projects/${dup.id}/intents`)).body.length).toBeGreaterThan(0);
     await request(app).delete(`/api/projects/${src}`);
     expect((await request(app).get(`/api/scenarios/${b[0].id}`)).status).toBe(200);
@@ -74,11 +74,11 @@ describe('project duplicate / import', () => {
     const types = async (pid: number) =>
       Object.fromEntries(((await request(app).get(`/api/projects/${pid}/entities`)).body as any[]).map((e) => [e.name, [e.type, e.range_min, e.range_max]]));
     expect(await types(src)).toMatchObject({
-      ROOM: ['string', '', ''],
-      TEMP_VALUE: ['number', '15', '30'],
-      TIME: ['time', '05:00', '23:00'],
-      ALARM_DATE: ['date', '', ''],
-      ALARM_REPEAT: ['boolean', '', ''],
+      ENT_ROOM: ['string', '', ''],
+      ENT_TEMP_VALUE: ['number', '15', '30'],
+      ENT_TIME: ['time', '05:00', '23:00'],
+      ENT_ALARM_DATE: ['date', '', ''],
+      ENT_ALARM_REPEAT: ['boolean', '', ''],
     });
     const dup = (await request(app).post(`/api/projects/${src}/duplicate`)).body;
     expect(await types(dup.id)).toEqual(await types(src));

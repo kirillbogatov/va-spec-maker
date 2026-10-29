@@ -111,7 +111,7 @@ export function IntentSelect({ intents, value, onChange, label, emptyLabel = '�
 /** Сетка правила: справа действия и перенос; на мобильном правило — карточка. */
 const GRID = 'grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 px-3 md:grid-cols-[160px_190px_170px_minmax(0,1fr)_minmax(0,1.2fr)_72px]';
 
-/** Условие в сжатой записи: «Режим дома = away». */
+/** Условие в сжатой записи: «DEP_HOME_MODE = away». */
 function chipText(c: StepCondition, deps: Dependency[], entities: EntityListItem[]): string {
   const name = c.entity_id !== undefined
     ? entities.find((e) => e.id === c.entity_id)?.name ?? `сущность #${c.entity_id}`

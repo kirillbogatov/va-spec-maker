@@ -7,7 +7,7 @@ export const PREFIX_FIELDS: { key: PrefixKey; label: string; hint: string }[] = 
   { key: 'entity', label: 'Сущности', hint: 'ENT_' },
   { key: 'prompt', label: 'Промпты', hint: 'PRM_' },
   { key: 'dependency', label: 'Зависимости', hint: 'DEP_' },
-  { key: 'scenario', label: 'Сценарии', hint: 'SCN_' },
+  { key: 'scenario', label: 'Сценарии', hint: 'SC_' },
   { key: 'state', label: 'Состояния', hint: 'ST_' },
 ];
 
