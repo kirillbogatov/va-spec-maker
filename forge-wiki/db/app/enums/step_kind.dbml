@@ -1,0 +1,6 @@
+Enum step_kind {
+  transition
+  error
+  global
+}
+// Вид строки вкладки: переход, ошибка, глобальный переход.

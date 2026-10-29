@@ -1,0 +1,19 @@
+Table scenario_steps {
+  id integer [pk]
+  scenario_id integer [not null, ref: > scenarios.id, delete: cascade]
+  part_id integer [ref: > scenario_parts.id, delete: cascade]
+  position integer [not null, default: 0]
+  name text [not null, default: '']
+  kind step_kind [not null, default: 'transition']
+  state text [not null, default: '']
+  intent_id integer [ref: > intents.id, delete: set null]
+  request_params text [not null, default: '']
+  condition text [not null, default: '']
+  conditions text [not null, default: '[]']
+  cond_mode cond_mode [not null, default: 'all']
+  prompt_id integer [ref: > prompts.id, delete: set null]
+  system_action text [not null, default: '']
+  next_states text [not null, default: '']
+
+  Note: 'Строка вкладки: переход (transition), ошибка (error) или глобальный переход (global); conditions — JSON пунктов условия; next_states — одно состояние.'
+}

@@ -1,0 +1,86 @@
+{
+  "/api/projects/{pid}/intents": {
+    "post": {
+      "tags": [
+        "Интенты"
+      ],
+      "summary": "POST /api/projects/{pid}/intents",
+      "description": "Создаёт пустой интент в проекте.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название интента",
+                  "example": "INT_включить_свет"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "INT_включить_свет"
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор интента",
+                    "example": 7
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название интента",
+                    "example": "INT_включить_свет"
+                  }
+                }
+              },
+              "example": {
+                "id": 7,
+                "name": "INT_включить_свет"
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/DuplicateError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

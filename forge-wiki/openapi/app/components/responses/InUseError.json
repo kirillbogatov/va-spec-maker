@@ -1,0 +1,14 @@
+{
+  "description": "Объект используется, действие отменено (InUseError)",
+  "content": {
+    "application/json": {
+      "schema": {
+        "$ref": "#/components/schemas/Error"
+      },
+      "example": {
+        "error": "in_use",
+        "message": "Интент используется в сценарии (2) — сначала уберите его из шагов"
+      }
+    }
+  }
+}

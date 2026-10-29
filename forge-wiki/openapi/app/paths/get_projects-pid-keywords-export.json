@@ -1,0 +1,40 @@
+{
+  "/api/projects/{pid}/keywords/export": {
+    "get": {
+      "tags": [
+        "Ключевые слова"
+      ],
+      "summary": "GET /api/projects/{pid}/keywords/export",
+      "description": "Возвращает справочник ключевых слов как текстовый файл keywords.txt: строка «КОД: синоним1, синоним2».",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string",
+                "description": "Тело файла"
+              },
+              "example": "OFF: выключи, погаси\nON: включи"
+            }
+          }
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

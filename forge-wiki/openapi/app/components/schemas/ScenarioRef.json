@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "description": "Ссылка на сценарий",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Идентификатор сценария",
+      "example": 1
+    },
+    "name": {
+      "type": "string",
+      "description": "Название сценария",
+      "example": "SC_свет"
+    }
+  }
+}

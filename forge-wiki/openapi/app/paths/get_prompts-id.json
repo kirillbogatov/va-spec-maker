@@ -1,0 +1,74 @@
+{
+  "/api/prompts/{id}": {
+    "get": {
+      "tags": [
+        "Промпты"
+      ],
+      "summary": "GET /api/prompts/{id}",
+      "description": "Возвращает промпт с вариантами ответа.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор",
+                    "example": 4
+                  },
+                  "project_id": {
+                    "type": "integer",
+                    "description": "Проект",
+                    "example": 3
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "PRM_свет_включён"
+                  },
+                  "full_answers": {
+                    "type": "array",
+                    "description": "Варианты ответа ассистента",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "id": 4,
+                "project_id": 3,
+                "name": "PRM_свет_включён",
+                "full_answers": [
+                  "Свет включён",
+                  "Включила свет"
+                ]
+              }
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "/api/projects/{pid}/dependency-dictionary": {
+    "get": {
+      "tags": [
+        "Зависимости"
+      ],
+      "summary": "GET /api/projects/{pid}/dependency-dictionary",
+      "description": "Возвращает справочник зависимостей проекта.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "Идентификатор зависимости",
+                      "example": 6
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Название",
+                      "example": "DEP_режим"
+                    },
+                    "values": {
+                      "type": "array",
+                      "description": "Возможные значения",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "description": "Сценарии, где зависимость используется",
+                      "items": {
+                        "$ref": "#/components/schemas/ScenarioRef"
+                      }
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "id": 6,
+                  "name": "DEP_режим",
+                  "values": [
+                    "дом",
+                    "улица"
+                  ],
+                  "used_by": []
+                }
+              ]
+            }
+          }
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

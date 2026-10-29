@@ -1,0 +1,112 @@
+{
+  "/api/prompts/{id}": {
+    "put": {
+      "tags": [
+        "Промпты"
+      ],
+      "summary": "PUT /api/prompts/{id}",
+      "description": "Заменяет название и варианты ответа; изменение попадает в историю сценариев, где промпт подключён.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название промпта",
+                  "example": "PRM_свет_включён"
+                },
+                "full_answers": {
+                  "type": "array",
+                  "description": "Варианты ответа",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "PRM_свет_включён",
+              "full_answers": [
+                "Свет включён"
+              ]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор",
+                    "example": 4
+                  },
+                  "project_id": {
+                    "type": "integer",
+                    "description": "Проект",
+                    "example": 3
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "PRM_свет_включён"
+                  },
+                  "full_answers": {
+                    "type": "array",
+                    "description": "Варианты ответа",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "id": 4,
+                "project_id": 3,
+                "name": "PRM_свет_включён",
+                "full_answers": [
+                  "Свет включён"
+                ]
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/DuplicateError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

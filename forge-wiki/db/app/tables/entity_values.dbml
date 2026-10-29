@@ -1,0 +1,9 @@
+Table entity_values {
+  id integer [pk]
+  entity_id integer [not null, ref: > entities.id, delete: cascade]
+  value text [not null]
+  synonyms text [not null, default: '[]']
+  position integer [not null, default: 0]
+
+  Note: 'Значение строковой сущности: каноническое значение и синонимы (JSON-массив строк).'
+}

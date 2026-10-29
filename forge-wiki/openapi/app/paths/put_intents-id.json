@@ -1,0 +1,154 @@
+{
+  "/api/intents/{id}": {
+    "put": {
+      "tags": [
+        "Интенты"
+      ],
+      "summary": "PUT /api/intents/{id}",
+      "description": "Полностью заменяет название, признак включения, комментарий, фразы, паттерны и сущности интента; изменения попадают в историю сценариев, к которым подключён интент.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название интента",
+                  "example": "INT_включить_свет"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Интент включён",
+                  "example": true
+                },
+                "comment": {
+                  "type": "string",
+                  "description": "Комментарий",
+                  "example": ""
+                },
+                "values": {
+                  "type": "array",
+                  "description": "Фразы и паттерны одним упорядоченным списком",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "description": "Текст",
+                        "example": "Включи свет"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "description": "Вид: phrase или pattern",
+                        "example": "phrase"
+                      }
+                    }
+                  }
+                },
+                "entities": {
+                  "type": "array",
+                  "description": "Привязанные сущности",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entity_id": {
+                        "type": "integer",
+                        "description": "Идентификатор сущности",
+                        "example": 2
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "description": "Сущность обязательна",
+                        "example": true
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "INT_включить_свет",
+              "enabled": true,
+              "comment": "",
+              "values": [
+                {
+                  "text": "Включи свет",
+                  "kind": "phrase"
+                }
+              ],
+              "entities": [
+                {
+                  "entity_id": 2,
+                  "required": true
+                }
+              ]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор интента",
+                    "example": 7
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "INT_включить_свет"
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Интент включён",
+                    "example": true
+                  }
+                }
+              },
+              "example": {
+                "id": 7,
+                "name": "INT_включить_свет",
+                "enabled": true
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/DuplicateError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

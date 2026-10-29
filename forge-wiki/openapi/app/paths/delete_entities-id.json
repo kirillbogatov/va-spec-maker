@@ -1,0 +1,47 @@
+{
+  "/api/entities/{id}": {
+    "delete": {
+      "tags": [
+        "Сущности"
+      ],
+      "summary": "DELETE /api/entities/{id}",
+      "description": "Удаляет сущность; если она используется в интентах, требуется подтверждение параметром force=1.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        },
+        {
+          "name": "force",
+          "in": "query",
+          "required": false,
+          "description": "Значение 1 разрешает удалить сущность, используемую в интентах",
+          "schema": {
+            "type": "string"
+          },
+          "example": "1"
+        }
+      ],
+      "responses": {
+        "204": {
+          "description": "Успех, тела ответа нет"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/InUseError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

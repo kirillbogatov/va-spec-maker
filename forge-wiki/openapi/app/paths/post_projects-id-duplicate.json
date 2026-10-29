@@ -1,0 +1,60 @@
+{
+  "/api/projects/{id}/duplicate": {
+    "post": {
+      "tags": [
+        "Проекты"
+      ],
+      "summary": "POST /api/projects/{id}/duplicate",
+      "description": "Создаёт копию проекта с названием «<название> (копия)» и всем содержимым.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор копии",
+                    "example": 4
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название копии",
+                    "example": "Умный дом (копия)"
+                  }
+                }
+              },
+              "example": {
+                "id": 4,
+                "name": "Умный дом (копия)"
+              }
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

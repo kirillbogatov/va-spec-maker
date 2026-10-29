@@ -1,0 +1,14 @@
+{
+  "description": "Запрос некорректен: идентификатор, пустое обязательное поле или нарушена бизнес-проверка (BadRequestError)",
+  "content": {
+    "application/json": {
+      "schema": {
+        "$ref": "#/components/schemas/Error"
+      },
+      "example": {
+        "error": "bad_request",
+        "message": "Поле «Название» не может быть пустым"
+      }
+    }
+  }
+}

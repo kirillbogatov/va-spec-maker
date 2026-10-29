@@ -1,0 +1,146 @@
+{
+  "/api/intents/{id}": {
+    "get": {
+      "tags": [
+        "Интенты"
+      ],
+      "summary": "GET /api/intents/{id}",
+      "description": "Возвращает интент с фразами, паттернами и привязанными сущностями.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор интента",
+                    "example": 7
+                  },
+                  "project_id": {
+                    "type": "integer",
+                    "description": "Проект интента",
+                    "example": 3
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "INT_включить_свет"
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Интент включён",
+                    "example": true
+                  },
+                  "comment": {
+                    "type": "string",
+                    "description": "Комментарий",
+                    "example": ""
+                  },
+                  "phrases": {
+                    "type": "array",
+                    "description": "Тренировочные фразы по порядку",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "description": "Паттерны по порядку",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "values": {
+                    "type": "array",
+                    "description": "Фразы и паттерны одним списком в порядке пользователя",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "description": "Текст",
+                          "example": "Включи свет"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "description": "Вид: phrase или pattern",
+                          "example": "phrase"
+                        }
+                      }
+                    }
+                  },
+                  "entities": {
+                    "type": "array",
+                    "description": "Привязанные сущности",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "entity_id": {
+                          "type": "integer",
+                          "description": "Идентификатор сущности",
+                          "example": 2
+                        },
+                        "required": {
+                          "type": "boolean",
+                          "description": "Сущность обязательна",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "id": 7,
+                "project_id": 3,
+                "name": "INT_включить_свет",
+                "enabled": true,
+                "comment": "",
+                "phrases": [
+                  "Включи свет",
+                  "Зажги свет на кухне"
+                ],
+                "patterns": [
+                  "включи свет"
+                ],
+                "values": [
+                  {
+                    "text": "Включи свет",
+                    "kind": "phrase"
+                  }
+                ],
+                "entities": [
+                  {
+                    "entity_id": 2,
+                    "required": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

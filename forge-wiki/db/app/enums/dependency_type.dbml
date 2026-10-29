@@ -1,0 +1,6 @@
+Enum dependency_type {
+  string
+  enum
+  bool
+}
+// Тип зависимости сценария.

@@ -1,0 +1,8 @@
+Enum entity_type {
+  string
+  number
+  time
+  date
+  boolean
+}
+// Тип сущности: строка, число, время, дата, логический.

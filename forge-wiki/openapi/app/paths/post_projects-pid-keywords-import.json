@@ -1,0 +1,86 @@
+{
+  "/api/projects/{pid}/keywords/import": {
+    "post": {
+      "tags": [
+        "Ключевые слова"
+      ],
+      "summary": "POST /api/projects/{pid}/keywords/import",
+      "description": "Добавляет новые и обновляет существующие ключевые слова проекта из текста.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Содержимое txt-файла",
+                  "example": "OFF: выключи, погаси\nON: включи"
+                }
+              },
+              "required": [
+                "text"
+              ]
+            },
+            "example": {
+              "text": "OFF: выключи, погаси\nON: включи"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "added": {
+                    "type": "integer",
+                    "description": "Добавлено",
+                    "example": 1
+                  },
+                  "updated": {
+                    "type": "integer",
+                    "description": "Обновлено",
+                    "example": 1
+                  },
+                  "skipped": {
+                    "type": "integer",
+                    "description": "Пропущено строк без кода",
+                    "example": 0
+                  }
+                }
+              },
+              "example": {
+                "added": 1,
+                "updated": 1,
+                "skipped": 0
+              }
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "/api/projects/{pid}/prompts": {
+    "get": {
+      "tags": [
+        "Промпты"
+      ],
+      "summary": "GET /api/projects/{pid}/prompts",
+      "description": "Возвращает промпты проекта с признаком наличия ответа и сценариями, где они подключены.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "Идентификатор промпта",
+                      "example": 4
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Название",
+                      "example": "PRM_свет_включён"
+                    },
+                    "has_answer": {
+                      "type": "boolean",
+                      "description": "Есть хотя бы один вариант ответа",
+                      "example": true
+                    },
+                    "step_count": {
+                      "type": "integer",
+                      "description": "Сколько раз промпт выбран в строках ошибок и в состояниях",
+                      "example": 2
+                    },
+                    "hint": {
+                      "type": "string",
+                      "description": "Первый непустой вариант ответа",
+                      "example": "Свет включён"
+                    },
+                    "scenarios": {
+                      "type": "array",
+                      "description": "Сценарии, к которым подключён промпт",
+                      "items": {
+                        "$ref": "#/components/schemas/ScenarioRef"
+                      }
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "id": 4,
+                  "name": "PRM_свет_включён",
+                  "has_answer": true,
+                  "step_count": 2,
+                  "hint": "Свет включён",
+                  "scenarios": []
+                }
+              ]
+            }
+          }
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

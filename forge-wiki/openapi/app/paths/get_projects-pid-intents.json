@@ -1,0 +1,85 @@
+{
+  "/api/projects/{pid}/intents": {
+    "get": {
+      "tags": [
+        "Интенты"
+      ],
+      "summary": "GET /api/projects/{pid}/intents",
+      "description": "Возвращает интенты проекта с числом фраз и сценариями, где они подключены.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "Идентификатор интента",
+                      "example": 7
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Название интента",
+                      "example": "INT_включить_свет"
+                    },
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Интент включён",
+                      "example": true
+                    },
+                    "phrase_count": {
+                      "type": "integer",
+                      "description": "Число тренировочных фраз",
+                      "example": 5
+                    },
+                    "hint": {
+                      "type": "string",
+                      "description": "Краткое описание: комментарий или первая непустая фраза",
+                      "example": "Включи свет"
+                    },
+                    "scenarios": {
+                      "type": "array",
+                      "description": "Сценарии, к которым подключён интент",
+                      "items": {
+                        "$ref": "#/components/schemas/ScenarioRef"
+                      }
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "id": 7,
+                  "name": "INT_включить_свет",
+                  "enabled": true,
+                  "phrase_count": 5,
+                  "hint": "Включи свет",
+                  "scenarios": []
+                }
+              ]
+            }
+          }
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

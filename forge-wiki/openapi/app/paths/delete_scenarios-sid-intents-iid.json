@@ -1,0 +1,47 @@
+{
+  "/api/scenarios/{sid}/intents/{iid}": {
+    "delete": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "DELETE /api/scenarios/{sid}/intents/{iid}",
+      "description": "Снимает подключение интента к сценарию; сам интент остаётся в проекте.",
+      "parameters": [
+        {
+          "name": "sid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        },
+        {
+          "name": "iid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "204": {
+          "description": "Успех, тела ответа нет"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/InUseError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

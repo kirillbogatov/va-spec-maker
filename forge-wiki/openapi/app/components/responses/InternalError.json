@@ -1,0 +1,14 @@
+{
+  "description": "Внутренняя ошибка (InternalError)",
+  "content": {
+    "application/json": {
+      "schema": {
+        "$ref": "#/components/schemas/Error"
+      },
+      "example": {
+        "error": "internal",
+        "message": "Внутренняя ошибка"
+      }
+    }
+  }
+}

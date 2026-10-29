@@ -1,0 +1,65 @@
+{
+  "/api/projects/{pid}/scenarios": {
+    "get": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "GET /api/projects/{pid}/scenarios",
+      "description": "Возвращает сценарии проекта с числом строк.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "Идентификатор сценария",
+                      "example": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Название",
+                      "example": "SC_свет"
+                    },
+                    "step_count": {
+                      "type": "integer",
+                      "description": "Число строк (переходов, ошибок, глобальных)",
+                      "example": 14
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "id": 1,
+                  "name": "SC_свет",
+                  "step_count": 14
+                }
+              ]
+            }
+          }
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

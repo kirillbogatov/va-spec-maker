@@ -1,0 +1,122 @@
+{
+  "/api/keywords/{id}": {
+    "put": {
+      "tags": [
+        "Ключевые слова"
+      ],
+      "summary": "PUT /api/keywords/{id}",
+      "description": "Заменяет код и синонимы ключевого слова.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Код ключевого слова; ведущий $ отбрасывается",
+                  "example": "OFF"
+                },
+                "synonyms": {
+                  "type": "array",
+                  "description": "Синонимы",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "OFF",
+              "synonyms": [
+                "выключи",
+                "погаси"
+              ]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор",
+                    "example": 8
+                  },
+                  "project_id": {
+                    "type": "integer",
+                    "description": "Проект",
+                    "example": 3
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Код ключевого слова без $",
+                    "example": "OFF"
+                  },
+                  "synonyms": {
+                    "type": "array",
+                    "description": "Синонимы",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "used_by": {
+                    "type": "array",
+                    "description": "Сценарии, где используется ключевое слово",
+                    "items": {
+                      "$ref": "#/components/schemas/ScenarioRef"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "id": 8,
+                "project_id": 3,
+                "name": "OFF",
+                "synonyms": [
+                  "выключи",
+                  "погаси"
+                ],
+                "used_by": []
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/DuplicateError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

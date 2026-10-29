@@ -1,0 +1,34 @@
+{
+  "/api/projects/{id}": {
+    "delete": {
+      "tags": [
+        "Проекты"
+      ],
+      "summary": "DELETE /api/projects/{id}",
+      "description": "Удаляет проект вместе со всем его содержимым (каскадно).",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "204": {
+          "description": "Успех, тела ответа нет"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

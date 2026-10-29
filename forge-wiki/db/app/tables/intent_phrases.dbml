@@ -1,0 +1,8 @@
+Table intent_phrases {
+  id integer [pk]
+  intent_id integer [not null, ref: > intents.id, delete: cascade]
+  text text [not null]
+  position integer [not null, default: 0]
+
+  Note: 'Тренировочная фраза интента; position общий с паттернами.'
+}

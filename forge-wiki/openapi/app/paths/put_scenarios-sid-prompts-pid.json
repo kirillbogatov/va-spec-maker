@@ -1,0 +1,61 @@
+{
+  "/api/scenarios/{sid}/prompts/{pid}": {
+    "put": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "PUT /api/scenarios/{sid}/prompts/{pid}",
+      "description": "Подключает существующий промпт проекта к сценарию.",
+      "parameters": [
+        {
+          "name": "sid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        },
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор промпта",
+                    "example": 4
+                  }
+                }
+              },
+              "example": {
+                "id": 4
+              }
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

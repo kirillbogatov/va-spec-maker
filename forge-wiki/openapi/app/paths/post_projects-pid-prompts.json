@@ -1,0 +1,86 @@
+{
+  "/api/projects/{pid}/prompts": {
+    "post": {
+      "tags": [
+        "Промпты"
+      ],
+      "summary": "POST /api/projects/{pid}/prompts",
+      "description": "Создаёт пустой промпт в проекте.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название промпта",
+                  "example": "PRM_свет_включён"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "PRM_свет_включён"
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор промпта",
+                    "example": 4
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "PRM_свет_включён"
+                  }
+                }
+              },
+              "example": {
+                "id": 4,
+                "name": "PRM_свет_включён"
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/DuplicateError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

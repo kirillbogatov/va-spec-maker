@@ -1,0 +1,34 @@
+{
+  "/api/scenarios/{id}/history": {
+    "delete": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "DELETE /api/scenarios/{id}/history",
+      "description": "Удаляет автоматическую историю изменений сценария; журнал изменений не затрагивается.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "204": {
+          "description": "Успех, тела ответа нет"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

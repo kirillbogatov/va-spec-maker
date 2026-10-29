@@ -1,0 +1,9 @@
+Table scenarios {
+  id integer [pk]
+  project_id integer [not null, ref: > projects.id, delete: cascade]
+  name text [not null]
+  description text [not null, default: '']
+  layout text [not null, default: '{}']
+
+  Note: 'Сценарий проекта; layout устарел и не используется, положение узлов хранится во вкладках.'
+}

@@ -1,0 +1,15 @@
+Table scenario_states {
+  id integer [pk]
+  scenario_id integer [not null, ref: > scenarios.id, delete: cascade]
+  part_id integer [ref: > scenario_parts.id, delete: cascade]
+  name text [not null]
+  description text [not null, default: '']
+  prompt_id integer [ref: > prompts.id, delete: set null]
+  system_action text [not null, default: '']
+
+  indexes {
+    (part_id, name) [unique]
+  }
+
+  Note: 'Содержимое состояния вкладки: описание, ответ ассистента и действие системы при входе.'
+}

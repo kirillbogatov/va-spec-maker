@@ -1,0 +1,76 @@
+{
+  "/api/scenarios/{id}/export": {
+    "get": {
+      "tags": [
+        "Экспорт"
+      ],
+      "summary": "GET /api/scenarios/{id}/export",
+      "description": "Формирует документ спецификации одного сценария в Word или Markdown.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        },
+        {
+          "name": "format",
+          "in": "query",
+          "required": true,
+          "description": "Формат: md или docx",
+          "schema": {
+            "type": "string"
+          },
+          "example": "docx"
+        },
+        {
+          "name": "lang",
+          "in": "query",
+          "required": false,
+          "description": "Язык спецификации: ru или en; иначе ru",
+          "schema": {
+            "type": "string"
+          },
+          "example": "ru"
+        },
+        {
+          "name": "intentMode",
+          "in": "query",
+          "required": false,
+          "description": "Режим описания интентов: phrases, patterns, both, keywords; иначе both",
+          "schema": {
+            "type": "string"
+          },
+          "example": "both"
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "description": "Файл документа"
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+Table prompts {
+  id integer [pk]
+  project_id integer [not null, ref: > projects.id, delete: cascade]
+  name text [not null]
+  full_answers text [not null, default: '[]']
+
+  indexes {
+    (project_id, name) [unique]
+  }
+
+  Note: 'Промпт проекта: full_answers — JSON-массив вариантов ответа ассистента.'
+}

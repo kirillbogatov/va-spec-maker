@@ -1,0 +1,10 @@
+Table scenario_changelog {
+  id integer [pk]
+  scenario_id integer [not null, ref: > scenarios.id, delete: cascade]
+  position integer [not null, default: 0]
+  task text [not null, default: '']
+  author text [not null, default: '']
+  description text [not null, default: '']
+
+  Note: 'Журнал изменений сценария, который ведут вручную (выводится в документе спецификации).'
+}

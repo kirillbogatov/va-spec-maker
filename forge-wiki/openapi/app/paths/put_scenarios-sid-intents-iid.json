@@ -1,0 +1,90 @@
+{
+  "/api/scenarios/{sid}/intents/{iid}": {
+    "put": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "PUT /api/scenarios/{sid}/intents/{iid}",
+      "description": "Подключает существующий интент проекта к сценарию; если передан is_global, меняет признак глобальности.",
+      "parameters": [
+        {
+          "name": "sid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        },
+        {
+          "name": "iid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "is_global": {
+                  "type": "boolean",
+                  "description": "Сделать интент глобальным или локальным",
+                  "example": true
+                }
+              }
+            },
+            "example": {
+              "is_global": true
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор интента",
+                    "example": 7
+                  },
+                  "is_global": {
+                    "type": "boolean",
+                    "description": "Интент глобальный",
+                    "example": true
+                  }
+                }
+              },
+              "example": {
+                "id": 7,
+                "is_global": true
+              }
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/InUseError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "/api/projects/{pid}/keywords": {
+    "get": {
+      "tags": [
+        "Ключевые слова"
+      ],
+      "summary": "GET /api/projects/{pid}/keywords",
+      "description": "Возвращает справочник ключевых слов проекта.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "Идентификатор",
+                      "example": 8
+                    },
+                    "project_id": {
+                      "type": "integer",
+                      "description": "Проект",
+                      "example": 3
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Код ключевого слова без $",
+                      "example": "OFF"
+                    },
+                    "synonyms": {
+                      "type": "array",
+                      "description": "Синонимы",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "description": "Сценарии, где используется ключевое слово",
+                      "items": {
+                        "$ref": "#/components/schemas/ScenarioRef"
+                      }
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "id": 8,
+                  "project_id": 3,
+                  "name": "OFF",
+                  "synonyms": [
+                    "выключи",
+                    "погаси"
+                  ],
+                  "used_by": []
+                }
+              ]
+            }
+          }
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

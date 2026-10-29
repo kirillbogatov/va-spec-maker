@@ -1,0 +1,17 @@
+Table entities {
+  id integer [pk]
+  project_id integer [not null, ref: > projects.id, delete: cascade]
+  name text [not null]
+  description text [not null, default: '']
+  multiple_values integer [not null, default: 0]
+  followup_prompt text [not null, default: '']
+  type entity_type [not null, default: 'string']
+  range_min text [not null, default: '']
+  range_max text [not null, default: '']
+
+  indexes {
+    (project_id, name) [unique]
+  }
+
+  Note: 'Сущность проекта: параметр запроса с типом и необязательным диапазоном (number, time, date).'
+}

@@ -1,0 +1,106 @@
+{
+  "/api/scenarios/{id}/history": {
+    "get": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "GET /api/scenarios/{id}/history",
+      "description": "Возвращает автоматическую историю изменений сценария (только для просмотра внутри сервиса).",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "Идентификатор записи",
+                      "example": 31
+                    },
+                    "day": {
+                      "type": "string",
+                      "description": "День изменения",
+                      "example": "2026-10-27"
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "Текст записи",
+                      "example": "В интент {0} добавлена фраза «Включи свет»"
+                    },
+                    "refs": {
+                      "type": "array",
+                      "description": "Ссылки на объекты записи",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "Вид объекта: intent, prompt, state, part, dependency, error",
+                            "example": "intent"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Название объекта",
+                            "example": "INT_включить_свет"
+                          },
+                          "id": {
+                            "type": "integer",
+                            "description": "Идентификатор объекта",
+                            "example": 7,
+                            "nullable": true
+                          },
+                          "part": {
+                            "type": "string",
+                            "description": "Вкладка сценария",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "id": 31,
+                  "day": "2026-10-27",
+                  "text": "В интент {0} добавлена фраза «Включи свет»",
+                  "refs": [
+                    {
+                      "type": "intent",
+                      "name": "INT_включить_свет",
+                      "id": 7,
+                      "part": null
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "/api/projects/import": {
+    "post": {
+      "tags": [
+        "Проекты"
+      ],
+      "summary": "POST /api/projects/import",
+      "description": "Создаёт новый проект из дампа. Дампы прежних версий приводятся к текущей модели.",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "integer",
+                  "description": "Версия формата дампа",
+                  "example": 1
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Название проекта",
+                  "example": "Умный дом"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Описание проекта",
+                  "example": ""
+                },
+                "tables": {
+                  "type": "object",
+                  "description": "Строки таблиц проекта по именам таблиц"
+                }
+              },
+              "required": [
+                "version",
+                "name"
+              ]
+            },
+            "example": {
+              "version": 1,
+              "name": "Умный дом",
+              "description": "",
+              "tables": null
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор созданного проекта",
+                    "example": 5
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название проекта",
+                    "example": "Умный дом"
+                  }
+                }
+              },
+              "example": {
+                "id": 5,
+                "name": "Умный дом"
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

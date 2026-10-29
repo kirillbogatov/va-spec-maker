@@ -1,0 +1,92 @@
+{
+  "/api/projects/{id}": {
+    "patch": {
+      "tags": [
+        "Проекты"
+      ],
+      "summary": "PATCH /api/projects/{id}",
+      "description": "Меняет название и/или описание проекта; непереданные поля остаются прежними.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Новое название проекта",
+                  "example": "Умный дом 2"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Новое описание проекта",
+                  "example": ""
+                }
+              }
+            },
+            "example": {
+              "name": "Умный дом 2",
+              "description": ""
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор проекта",
+                    "example": 3
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "Умный дом 2"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Описание",
+                    "example": ""
+                  }
+                }
+              },
+              "example": {
+                "id": 3,
+                "name": "Умный дом 2",
+                "description": ""
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

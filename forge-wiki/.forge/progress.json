@@ -1,0 +1,1819 @@
+{
+  "project": "VA Spec Maker",
+  "branchName": "feat/va-spec-maker-docs",
+  "planningTrack": "method",
+  "mode": "solo",
+  "maxAttempts": 3,
+  "surfaces": [
+    {
+      "code": "BR",
+      "title": "Бизнес требования"
+    },
+    {
+      "code": "GEN",
+      "title": "Общее"
+    },
+    {
+      "code": "ED",
+      "title": "Редактор"
+    }
+  ],
+  "artifacts": {
+    "featureList": "planning/initiatives/01-va-spec-maker/feature-list.md",
+    "brief": "planning/initiatives/01-va-spec-maker/brief.md",
+    "prd": "planning/initiatives/01-va-spec-maker/prd.md",
+    "architecture": "planning/architecture-spine/",
+    "spec": "planning/initiatives/01-va-spec-maker/spec.md",
+    "openapi": "openapi/",
+    "dbml": "db/",
+    "errors": "openapi/",
+    "discrepancies": "planning/initiatives/01-va-spec-maker/discrepancies.md",
+    "codingGuide": "planning/coding-guide.md"
+  },
+  "phases": [
+    {
+      "id": "platform",
+      "title": "Проекты",
+      "description": "Проекты, копирование и перенос."
+    },
+    {
+      "id": "dictionary",
+      "title": "Словарь проекта",
+      "description": "Интенты, сущности, промпты, зависимости, ключевые слова."
+    },
+    {
+      "id": "scenarios",
+      "title": "Сценарии",
+      "description": "Сценарии, подключения, схема, история и журнал."
+    },
+    {
+      "id": "export",
+      "title": "Экспорт",
+      "description": "Предпросмотр и выгрузка спецификации."
+    },
+    {
+      "id": "client",
+      "title": "Клиентские модули",
+      "description": "Вход, настройки, поиск, CSV, SVG, демо."
+    }
+  ],
+  "features": [
+    {
+      "id": "ED-01-01",
+      "phase": "platform",
+      "title": "Список проектов",
+      "description": "Проекты: Список проектов; спека — ED-01-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-1",
+        "FR-2"
+      ],
+      "realizesCAP": [
+        "CAP-1"
+      ],
+      "docs": [
+        "ED-Редактор/ED-01. Проекты/ED-01-01. Список проектов/ED-01-01-BE. Список проектов.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-01. Список проектов/ED-01-01-FE. Список проектов.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-01. Список проектов/ED-01-01-QA. Список проектов.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects отвечает по контракту openapi/app/paths/get_projects.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-1 (BR-Бизнес требования)",
+        "Выполняется FR-2 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 1
+    },
+    {
+      "id": "ED-01-02",
+      "phase": "platform",
+      "title": "Создать проект",
+      "description": "Проекты: Создать проект; спека — ED-01-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-1"
+      ],
+      "realizesCAP": [
+        "CAP-1"
+      ],
+      "docs": [
+        "ED-Редактор/ED-01. Проекты/ED-01-02. Создать проект/ED-01-02-BE. Создать проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-02. Создать проект/ED-01-02-FE. Создать проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-02. Создать проект/ED-01-02-QA. Создать проект.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects отвечает по контракту openapi/app/paths/post_projects.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-1 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 1
+    },
+    {
+      "id": "ED-01-03",
+      "phase": "platform",
+      "title": "Обновить проект",
+      "description": "Проекты: Обновить проект; спека — ED-01-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-1"
+      ],
+      "realizesCAP": [
+        "CAP-1"
+      ],
+      "docs": [
+        "ED-Редактор/ED-01. Проекты/ED-01-03. Обновить проект/ED-01-03-BE. Обновить проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-03. Обновить проект/ED-01-03-FE. Обновить проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-03. Обновить проект/ED-01-03-QA. Обновить проект.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PATCH /api/projects/{id} отвечает по контракту openapi/app/paths/patch_projects-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-1 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 1
+    },
+    {
+      "id": "ED-01-04",
+      "phase": "platform",
+      "title": "Удалить проект",
+      "description": "Проекты: Удалить проект; спека — ED-01-04-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-1",
+        "FR-3"
+      ],
+      "realizesCAP": [
+        "CAP-1"
+      ],
+      "docs": [
+        "ED-Редактор/ED-01. Проекты/ED-01-04. Удалить проект/ED-01-04-BE. Удалить проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-04. Удалить проект/ED-01-04-FE. Удалить проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-04. Удалить проект/ED-01-04-QA. Удалить проект.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/projects/{id} отвечает по контракту openapi/app/paths/delete_projects-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-1 (BR-Бизнес требования)",
+        "Выполняется FR-3 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 1
+    },
+    {
+      "id": "ED-01-05",
+      "phase": "platform",
+      "title": "Дублировать проект",
+      "description": "Проекты: Дублировать проект; спека — ED-01-05-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-1"
+      ],
+      "realizesCAP": [
+        "CAP-1"
+      ],
+      "docs": [
+        "ED-Редактор/ED-01. Проекты/ED-01-05. Дублировать проект/ED-01-05-BE. Дублировать проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-05. Дублировать проект/ED-01-05-FE. Дублировать проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-05. Дублировать проект/ED-01-05-QA. Дублировать проект.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/{id}/duplicate отвечает по контракту openapi/app/paths/post_projects-id-duplicate.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-1 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 1
+    },
+    {
+      "id": "ED-01-06",
+      "phase": "platform",
+      "title": "Выгрузить копию проекта",
+      "description": "Проекты: Выгрузить копию проекта; спека — ED-01-06-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-49"
+      ],
+      "realizesCAP": [
+        "CAP-11"
+      ],
+      "docs": [
+        "ED-Редактор/ED-01. Проекты/ED-01-06. Выгрузить копию проекта/ED-01-06-BE. Выгрузить копию проекта.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-06. Выгрузить копию проекта/ED-01-06-FE. Выгрузить копию проекта.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-06. Выгрузить копию проекта/ED-01-06-QA. Выгрузить копию проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{id}/dump отвечает по контракту openapi/app/paths/get_projects-id-dump.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-49 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 1
+    },
+    {
+      "id": "ED-01-07",
+      "phase": "platform",
+      "title": "Импортировать проект",
+      "description": "Проекты: Импортировать проект; спека — ED-01-07-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-49"
+      ],
+      "realizesCAP": [
+        "CAP-11"
+      ],
+      "docs": [
+        "ED-Редактор/ED-01. Проекты/ED-01-07. Импортировать проект/ED-01-07-BE. Импортировать проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-07. Импортировать проект/ED-01-07-FE. Импортировать проект.md",
+        "ED-Редактор/ED-01. Проекты/ED-01-07. Импортировать проект/ED-01-07-QA. Импортировать проект.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/import отвечает по контракту openapi/app/paths/post_projects-import.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-49 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 1
+    },
+    {
+      "id": "ED-02-01",
+      "phase": "dictionary",
+      "title": "Список интентов проекта",
+      "description": "Интенты: Список интентов проекта; спека — ED-02-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-16",
+        "FR-25",
+        "FR-26"
+      ],
+      "realizesCAP": [
+        "CAP-2"
+      ],
+      "docs": [
+        "ED-Редактор/ED-02. Интенты/ED-02-01. Список интентов проекта/ED-02-01-BE. Список интентов проекта.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-01. Список интентов проекта/ED-02-01-FE. Список интентов проекта.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-01. Список интентов проекта/ED-02-01-QA. Список интентов проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{pid}/intents отвечает по контракту openapi/app/paths/get_projects-pid-intents.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-16 (BR-Бизнес требования)",
+        "Выполняется FR-25 (BR-Бизнес требования)",
+        "Выполняется FR-26 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-02-02",
+      "phase": "dictionary",
+      "title": "Создать интент",
+      "description": "Интенты: Создать интент; спека — ED-02-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-16"
+      ],
+      "realizesCAP": [
+        "CAP-2"
+      ],
+      "docs": [
+        "ED-Редактор/ED-02. Интенты/ED-02-02. Создать интент/ED-02-02-BE. Создать интент.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-02. Создать интент/ED-02-02-FE. Создать интент.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-02. Создать интент/ED-02-02-QA. Создать интент.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/{pid}/intents отвечает по контракту openapi/app/paths/post_projects-pid-intents.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-16 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-02-03",
+      "phase": "dictionary",
+      "title": "Получить интент",
+      "description": "Интенты: Получить интент; спека — ED-02-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-16"
+      ],
+      "realizesCAP": [
+        "CAP-2"
+      ],
+      "docs": [
+        "ED-Редактор/ED-02. Интенты/ED-02-03. Получить интент/ED-02-03-BE. Получить интент.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-03. Получить интент/ED-02-03-QA. Получить интент.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/intents/{id} отвечает по контракту openapi/app/paths/get_intents-id.json, ошибки — по реестру openapi/app/errors",
+        "Выполняется FR-16 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-02-04",
+      "phase": "dictionary",
+      "title": "Обновить интент",
+      "description": "Интенты: Обновить интент; спека — ED-02-04-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-16",
+        "FR-17",
+        "FR-23"
+      ],
+      "realizesCAP": [
+        "CAP-2",
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-02. Интенты/ED-02-04. Обновить интент/ED-02-04-BE. Обновить интент.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-04. Обновить интент/ED-02-04-FE. Обновить интент.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-04. Обновить интент/ED-02-04-QA. Обновить интент.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/intents/{id} отвечает по контракту openapi/app/paths/put_intents-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-16 (BR-Бизнес требования)",
+        "Выполняется FR-17 (BR-Бизнес требования)",
+        "Выполняется FR-23 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-02-05",
+      "phase": "dictionary",
+      "title": "Удалить интент",
+      "description": "Интенты: Удалить интент; спека — ED-02-05-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-3",
+        "FR-16"
+      ],
+      "realizesCAP": [
+        "CAP-2"
+      ],
+      "docs": [
+        "ED-Редактор/ED-02. Интенты/ED-02-05. Удалить интент/ED-02-05-BE. Удалить интент.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-05. Удалить интент/ED-02-05-FE. Удалить интент.md",
+        "ED-Редактор/ED-02. Интенты/ED-02-05. Удалить интент/ED-02-05-QA. Удалить интент.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/intents/{id} отвечает по контракту openapi/app/paths/delete_intents-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-3 (BR-Бизнес требования)",
+        "Выполняется FR-16 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-03-01",
+      "phase": "dictionary",
+      "title": "Список сущностей проекта",
+      "description": "Сущности: Список сущностей проекта; спека — ED-03-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-18",
+        "FR-25"
+      ],
+      "realizesCAP": [
+        "CAP-3"
+      ],
+      "docs": [
+        "ED-Редактор/ED-03. Сущности/ED-03-01. Список сущностей проекта/ED-03-01-BE. Список сущностей проекта.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-01. Список сущностей проекта/ED-03-01-FE. Список сущностей проекта.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-01. Список сущностей проекта/ED-03-01-QA. Список сущностей проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{pid}/entities отвечает по контракту openapi/app/paths/get_projects-pid-entities.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-18 (BR-Бизнес требования)",
+        "Выполняется FR-25 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-03-02",
+      "phase": "dictionary",
+      "title": "Создать сущность",
+      "description": "Сущности: Создать сущность; спека — ED-03-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-17",
+        "FR-18"
+      ],
+      "realizesCAP": [
+        "CAP-3"
+      ],
+      "docs": [
+        "ED-Редактор/ED-03. Сущности/ED-03-02. Создать сущность/ED-03-02-BE. Создать сущность.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-02. Создать сущность/ED-03-02-FE. Создать сущность.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-02. Создать сущность/ED-03-02-QA. Создать сущность.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/{pid}/entities отвечает по контракту openapi/app/paths/post_projects-pid-entities.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-17 (BR-Бизнес требования)",
+        "Выполняется FR-18 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-03-03",
+      "phase": "dictionary",
+      "title": "Получить сущность",
+      "description": "Сущности: Получить сущность; спека — ED-03-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-18"
+      ],
+      "realizesCAP": [
+        "CAP-3"
+      ],
+      "docs": [
+        "ED-Редактор/ED-03. Сущности/ED-03-03. Получить сущность/ED-03-03-BE. Получить сущность.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-03. Получить сущность/ED-03-03-QA. Получить сущность.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/entities/{id} отвечает по контракту openapi/app/paths/get_entities-id.json, ошибки — по реестру openapi/app/errors",
+        "Выполняется FR-18 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-03-04",
+      "phase": "dictionary",
+      "title": "Обновить сущность",
+      "description": "Сущности: Обновить сущность; спека — ED-03-04-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-18",
+        "FR-19"
+      ],
+      "realizesCAP": [
+        "CAP-3"
+      ],
+      "docs": [
+        "ED-Редактор/ED-03. Сущности/ED-03-04. Обновить сущность/ED-03-04-BE. Обновить сущность.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-04. Обновить сущность/ED-03-04-FE. Обновить сущность.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-04. Обновить сущность/ED-03-04-QA. Обновить сущность.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/entities/{id} отвечает по контракту openapi/app/paths/put_entities-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-18 (BR-Бизнес требования)",
+        "Выполняется FR-19 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-03-05",
+      "phase": "dictionary",
+      "title": "Удалить сущность",
+      "description": "Сущности: Удалить сущность; спека — ED-03-05-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-3",
+        "FR-18"
+      ],
+      "realizesCAP": [
+        "CAP-3"
+      ],
+      "docs": [
+        "ED-Редактор/ED-03. Сущности/ED-03-05. Удалить сущность/ED-03-05-BE. Удалить сущность.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-05. Удалить сущность/ED-03-05-FE. Удалить сущность.md",
+        "ED-Редактор/ED-03. Сущности/ED-03-05. Удалить сущность/ED-03-05-QA. Удалить сущность.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/entities/{id} отвечает по контракту openapi/app/paths/delete_entities-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-3 (BR-Бизнес требования)",
+        "Выполняется FR-18 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-04-01",
+      "phase": "dictionary",
+      "title": "Список промптов проекта",
+      "description": "Промпты: Список промптов проекта; спека — ED-04-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-20",
+        "FR-25",
+        "FR-26"
+      ],
+      "realizesCAP": [
+        "CAP-4"
+      ],
+      "docs": [
+        "ED-Редактор/ED-04. Промпты/ED-04-01. Список промптов проекта/ED-04-01-BE. Список промптов проекта.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-01. Список промптов проекта/ED-04-01-FE. Список промптов проекта.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-01. Список промптов проекта/ED-04-01-QA. Список промптов проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{pid}/prompts отвечает по контракту openapi/app/paths/get_projects-pid-prompts.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-20 (BR-Бизнес требования)",
+        "Выполняется FR-25 (BR-Бизнес требования)",
+        "Выполняется FR-26 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-04-02",
+      "phase": "dictionary",
+      "title": "Создать промпт",
+      "description": "Промпты: Создать промпт; спека — ED-04-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-20"
+      ],
+      "realizesCAP": [
+        "CAP-4"
+      ],
+      "docs": [
+        "ED-Редактор/ED-04. Промпты/ED-04-02. Создать промпт/ED-04-02-BE. Создать промпт.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-02. Создать промпт/ED-04-02-FE. Создать промпт.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-02. Создать промпт/ED-04-02-QA. Создать промпт.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/{pid}/prompts отвечает по контракту openapi/app/paths/post_projects-pid-prompts.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-20 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-04-03",
+      "phase": "dictionary",
+      "title": "Получить промпт",
+      "description": "Промпты: Получить промпт; спека — ED-04-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-20"
+      ],
+      "realizesCAP": [
+        "CAP-4"
+      ],
+      "docs": [
+        "ED-Редактор/ED-04. Промпты/ED-04-03. Получить промпт/ED-04-03-BE. Получить промпт.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-03. Получить промпт/ED-04-03-QA. Получить промпт.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/prompts/{id} отвечает по контракту openapi/app/paths/get_prompts-id.json, ошибки — по реестру openapi/app/errors",
+        "Выполняется FR-20 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-04-04",
+      "phase": "dictionary",
+      "title": "Обновить промпт",
+      "description": "Промпты: Обновить промпт; спека — ED-04-04-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-20"
+      ],
+      "realizesCAP": [
+        "CAP-4"
+      ],
+      "docs": [
+        "ED-Редактор/ED-04. Промпты/ED-04-04. Обновить промпт/ED-04-04-BE. Обновить промпт.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-04. Обновить промпт/ED-04-04-FE. Обновить промпт.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-04. Обновить промпт/ED-04-04-QA. Обновить промпт.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/prompts/{id} отвечает по контракту openapi/app/paths/put_prompts-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-20 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-04-05",
+      "phase": "dictionary",
+      "title": "Удалить промпт",
+      "description": "Промпты: Удалить промпт; спека — ED-04-05-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-3",
+        "FR-20"
+      ],
+      "realizesCAP": [
+        "CAP-4"
+      ],
+      "docs": [
+        "ED-Редактор/ED-04. Промпты/ED-04-05. Удалить промпт/ED-04-05-BE. Удалить промпт.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-05. Удалить промпт/ED-04-05-FE. Удалить промпт.md",
+        "ED-Редактор/ED-04. Промпты/ED-04-05. Удалить промпт/ED-04-05-QA. Удалить промпт.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/prompts/{id} отвечает по контракту openapi/app/paths/delete_prompts-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-3 (BR-Бизнес требования)",
+        "Выполняется FR-20 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-05-01",
+      "phase": "dictionary",
+      "title": "Список зависимостей проекта",
+      "description": "Зависимости: Список зависимостей проекта; спека — ED-05-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-21",
+        "FR-25"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-05. Зависимости/ED-05-01. Список зависимостей проекта/ED-05-01-BE. Список зависимостей проекта.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-01. Список зависимостей проекта/ED-05-01-FE. Список зависимостей проекта.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-01. Список зависимостей проекта/ED-05-01-QA. Список зависимостей проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{pid}/dependency-dictionary отвечает по контракту openapi/app/paths/get_projects-pid-dependency-dictionary.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-21 (BR-Бизнес требования)",
+        "Выполняется FR-25 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-05-02",
+      "phase": "dictionary",
+      "title": "Создать зависимость",
+      "description": "Зависимости: Создать зависимость; спека — ED-05-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-21"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-05. Зависимости/ED-05-02. Создать зависимость/ED-05-02-BE. Создать зависимость.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-02. Создать зависимость/ED-05-02-FE. Создать зависимость.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-02. Создать зависимость/ED-05-02-QA. Создать зависимость.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/{pid}/dependency-dictionary отвечает по контракту openapi/app/paths/post_projects-pid-dependency-dictionary.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-21 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-05-03",
+      "phase": "dictionary",
+      "title": "Получить зависимость",
+      "description": "Зависимости: Получить зависимость; спека — ED-05-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-21"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-05. Зависимости/ED-05-03. Получить зависимость/ED-05-03-BE. Получить зависимость.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-03. Получить зависимость/ED-05-03-QA. Получить зависимость.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/dependency-dictionary/{id} отвечает по контракту openapi/app/paths/get_dependency-dictionary-id.json, ошибки — по реестру openapi/app/errors",
+        "Выполняется FR-21 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-05-04",
+      "phase": "dictionary",
+      "title": "Обновить зависимость",
+      "description": "Зависимости: Обновить зависимость; спека — ED-05-04-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-21"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-05. Зависимости/ED-05-04. Обновить зависимость/ED-05-04-BE. Обновить зависимость.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-04. Обновить зависимость/ED-05-04-FE. Обновить зависимость.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-04. Обновить зависимость/ED-05-04-QA. Обновить зависимость.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/dependency-dictionary/{id} отвечает по контракту openapi/app/paths/put_dependency-dictionary-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-21 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-05-05",
+      "phase": "dictionary",
+      "title": "Удалить зависимость",
+      "description": "Зависимости: Удалить зависимость; спека — ED-05-05-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-3",
+        "FR-21"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-05. Зависимости/ED-05-05. Удалить зависимость/ED-05-05-BE. Удалить зависимость.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-05. Удалить зависимость/ED-05-05-FE. Удалить зависимость.md",
+        "ED-Редактор/ED-05. Зависимости/ED-05-05. Удалить зависимость/ED-05-05-QA. Удалить зависимость.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/dependency-dictionary/{id} отвечает по контракту openapi/app/paths/delete_dependency-dictionary-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-3 (BR-Бизнес требования)",
+        "Выполняется FR-21 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-06-01",
+      "phase": "dictionary",
+      "title": "Список ключевых слов проекта",
+      "description": "Ключевые слова: Список ключевых слов проекта; спека — ED-06-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-22"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-01. Список ключевых слов проекта/ED-06-01-BE. Список ключевых слов проекта.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-01. Список ключевых слов проекта/ED-06-01-FE. Список ключевых слов проекта.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-01. Список ключевых слов проекта/ED-06-01-QA. Список ключевых слов проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{pid}/keywords отвечает по контракту openapi/app/paths/get_projects-pid-keywords.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-22 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-06-02",
+      "phase": "dictionary",
+      "title": "Создать ключевое слово",
+      "description": "Ключевые слова: Создать ключевое слово; спека — ED-06-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-22"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-02. Создать ключевое слово/ED-06-02-BE. Создать ключевое слово.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-02. Создать ключевое слово/ED-06-02-FE. Создать ключевое слово.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-02. Создать ключевое слово/ED-06-02-QA. Создать ключевое слово.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/{pid}/keywords отвечает по контракту openapi/app/paths/post_projects-pid-keywords.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-22 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-06-03",
+      "phase": "dictionary",
+      "title": "Получить ключевое слово",
+      "description": "Ключевые слова: Получить ключевое слово; спека — ED-06-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-22"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-03. Получить ключевое слово/ED-06-03-BE. Получить ключевое слово.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-03. Получить ключевое слово/ED-06-03-QA. Получить ключевое слово.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/keywords/{id} отвечает по контракту openapi/app/paths/get_keywords-id.json, ошибки — по реестру openapi/app/errors",
+        "Выполняется FR-22 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-06-04",
+      "phase": "dictionary",
+      "title": "Обновить ключевое слово",
+      "description": "Ключевые слова: Обновить ключевое слово; спека — ED-06-04-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-22",
+        "FR-23"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-04. Обновить ключевое слово/ED-06-04-BE. Обновить ключевое слово.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-04. Обновить ключевое слово/ED-06-04-FE. Обновить ключевое слово.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-04. Обновить ключевое слово/ED-06-04-QA. Обновить ключевое слово.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/keywords/{id} отвечает по контракту openapi/app/paths/put_keywords-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-22 (BR-Бизнес требования)",
+        "Выполняется FR-23 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-06-05",
+      "phase": "dictionary",
+      "title": "Удалить ключевое слово",
+      "description": "Ключевые слова: Удалить ключевое слово; спека — ED-06-05-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-3",
+        "FR-22"
+      ],
+      "realizesCAP": [
+        "CAP-5"
+      ],
+      "docs": [
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-05. Удалить ключевое слово/ED-06-05-BE. Удалить ключевое слово.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-05. Удалить ключевое слово/ED-06-05-FE. Удалить ключевое слово.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-05. Удалить ключевое слово/ED-06-05-QA. Удалить ключевое слово.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/keywords/{id} отвечает по контракту openapi/app/paths/delete_keywords-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-3 (BR-Бизнес требования)",
+        "Выполняется FR-22 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-06-06",
+      "phase": "dictionary",
+      "title": "Выгрузить ключевые слова в txt",
+      "description": "Ключевые слова: Выгрузить ключевые слова в txt; спека — ED-06-06-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-24"
+      ],
+      "realizesCAP": [
+        "CAP-11"
+      ],
+      "docs": [
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-06. Выгрузить ключевые слова в txt/ED-06-06-BE. Выгрузить ключевые слова в txt.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-06. Выгрузить ключевые слова в txt/ED-06-06-FE. Выгрузить ключевые слова в txt.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-06. Выгрузить ключевые слова в txt/ED-06-06-QA. Выгрузить ключевые слова в txt.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{pid}/keywords/export отвечает по контракту openapi/app/paths/get_projects-pid-keywords-export.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-24 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-06-07",
+      "phase": "dictionary",
+      "title": "Загрузить ключевые слова из txt",
+      "description": "Ключевые слова: Загрузить ключевые слова из txt; спека — ED-06-07-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-24"
+      ],
+      "realizesCAP": [
+        "CAP-11"
+      ],
+      "docs": [
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-07. Загрузить ключевые слова из txt/ED-06-07-BE. Загрузить ключевые слова из txt.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-07. Загрузить ключевые слова из txt/ED-06-07-FE. Загрузить ключевые слова из txt.md",
+        "ED-Редактор/ED-06. Ключевые слова/ED-06-07. Загрузить ключевые слова из txt/ED-06-07-QA. Загрузить ключевые слова из txt.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/{pid}/keywords/import отвечает по контракту openapi/app/paths/post_projects-pid-keywords-import.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-24 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "ED-07-01",
+      "phase": "scenarios",
+      "title": "Список сценариев проекта",
+      "description": "Сценарии: Список сценариев проекта; спека — ED-07-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-28"
+      ],
+      "realizesCAP": [
+        "CAP-7"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-01. Список сценариев проекта/ED-07-01-BE. Список сценариев проекта.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-01. Список сценариев проекта/ED-07-01-FE. Список сценариев проекта.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-01. Список сценариев проекта/ED-07-01-QA. Список сценариев проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{pid}/scenarios отвечает по контракту openapi/app/paths/get_projects-pid-scenarios.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-28 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-02",
+      "phase": "scenarios",
+      "title": "Создать сценарий",
+      "description": "Сценарии: Создать сценарий; спека — ED-07-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-28"
+      ],
+      "realizesCAP": [
+        "CAP-7"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-02. Создать сценарий/ED-07-02-BE. Создать сценарий.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-02. Создать сценарий/ED-07-02-FE. Создать сценарий.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-02. Создать сценарий/ED-07-02-QA. Создать сценарий.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/projects/{pid}/scenarios отвечает по контракту openapi/app/paths/post_projects-pid-scenarios.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-28 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-03",
+      "phase": "scenarios",
+      "title": "Получить сценарий",
+      "description": "Сценарии: Получить сценарий; спека — ED-07-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-28",
+        "FR-38"
+      ],
+      "realizesCAP": [
+        "CAP-7",
+        "CAP-8"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-03. Получить сценарий/ED-07-03-BE. Получить сценарий.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-03. Получить сценарий/ED-07-03-FE. Получить сценарий.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-03. Получить сценарий/ED-07-03-QA. Получить сценарий.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/scenarios/{id} отвечает по контракту openapi/app/paths/get_scenarios-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-28 (BR-Бизнес требования)",
+        "Выполняется FR-38 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-04",
+      "phase": "scenarios",
+      "title": "Обновить сценарий",
+      "description": "Сценарии: Обновить сценарий; спека — ED-07-04-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-28",
+        "FR-30",
+        "FR-31",
+        "FR-32",
+        "FR-33",
+        "FR-34",
+        "FR-35",
+        "FR-37",
+        "FR-41"
+      ],
+      "realizesCAP": [
+        "CAP-7",
+        "CAP-8"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-04. Обновить сценарий/ED-07-04-BE. Обновить сценарий.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-04. Обновить сценарий/ED-07-04-FE. Обновить сценарий.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-04. Обновить сценарий/ED-07-04-QA. Обновить сценарий.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/scenarios/{id} отвечает по контракту openapi/app/paths/put_scenarios-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-28 (BR-Бизнес требования)",
+        "Выполняется FR-30 (BR-Бизнес требования)",
+        "Выполняется FR-31 (BR-Бизнес требования)",
+        "Выполняется FR-32 (BR-Бизнес требования)",
+        "Выполняется FR-33 (BR-Бизнес требования)",
+        "Выполняется FR-34 (BR-Бизнес требования)",
+        "Выполняется FR-35 (BR-Бизнес требования)",
+        "Выполняется FR-37 (BR-Бизнес требования)",
+        "Выполняется FR-41 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-05",
+      "phase": "scenarios",
+      "title": "Удалить сценарий",
+      "description": "Сценарии: Удалить сценарий; спека — ED-07-05-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-3",
+        "FR-29"
+      ],
+      "realizesCAP": [
+        "CAP-6"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-05. Удалить сценарий/ED-07-05-BE. Удалить сценарий.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-05. Удалить сценарий/ED-07-05-FE. Удалить сценарий.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-05. Удалить сценарий/ED-07-05-QA. Удалить сценарий.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/scenarios/{id} отвечает по контракту openapi/app/paths/delete_scenarios-id.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-3 (BR-Бизнес требования)",
+        "Выполняется FR-29 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-06",
+      "phase": "scenarios",
+      "title": "Список интентов сценария",
+      "description": "Сценарии: Список интентов сценария; спека — ED-07-06-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-25",
+        "FR-29",
+        "FR-34"
+      ],
+      "realizesCAP": [
+        "CAP-6"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-06. Список интентов сценария/ED-07-06-BE. Список интентов сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-06. Список интентов сценария/ED-07-06-FE. Список интентов сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-06. Список интентов сценария/ED-07-06-QA. Список интентов сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/scenarios/{sid}/intents отвечает по контракту openapi/app/paths/get_scenarios-sid-intents.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-25 (BR-Бизнес требования)",
+        "Выполняется FR-29 (BR-Бизнес требования)",
+        "Выполняется FR-34 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-07",
+      "phase": "scenarios",
+      "title": "Создать и подключить интент",
+      "description": "Сценарии: Создать и подключить интент; спека — ED-07-07-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-29"
+      ],
+      "realizesCAP": [
+        "CAP-6"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-07. Создать и подключить интент/ED-07-07-BE. Создать и подключить интент.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-07. Создать и подключить интент/ED-07-07-FE. Создать и подключить интент.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-07. Создать и подключить интент/ED-07-07-QA. Создать и подключить интент.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/scenarios/{sid}/intents отвечает по контракту openapi/app/paths/post_scenarios-sid-intents.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-29 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-08",
+      "phase": "scenarios",
+      "title": "Подключить интент к сценарию",
+      "description": "Сценарии: Подключить интент к сценарию; спека — ED-07-08-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-29",
+        "FR-34"
+      ],
+      "realizesCAP": [
+        "CAP-6",
+        "CAP-7"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-08. Подключить интент к сценарию/ED-07-08-BE. Подключить интент к сценарию.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-08. Подключить интент к сценарию/ED-07-08-FE. Подключить интент к сценарию.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-08. Подключить интент к сценарию/ED-07-08-QA. Подключить интент к сценарию.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/scenarios/{sid}/intents/{iid} отвечает по контракту openapi/app/paths/put_scenarios-sid-intents-iid.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-29 (BR-Бизнес требования)",
+        "Выполняется FR-34 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-09",
+      "phase": "scenarios",
+      "title": "Отключить интент от сценария",
+      "description": "Сценарии: Отключить интент от сценария; спека — ED-07-09-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-29"
+      ],
+      "realizesCAP": [
+        "CAP-6"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-09. Отключить интент от сценария/ED-07-09-BE. Отключить интент от сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-09. Отключить интент от сценария/ED-07-09-FE. Отключить интент от сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-09. Отключить интент от сценария/ED-07-09-QA. Отключить интент от сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/scenarios/{sid}/intents/{iid} отвечает по контракту openapi/app/paths/delete_scenarios-sid-intents-iid.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-29 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-10",
+      "phase": "scenarios",
+      "title": "Список промптов сценария",
+      "description": "Сценарии: Список промптов сценария; спека — ED-07-10-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-25",
+        "FR-29"
+      ],
+      "realizesCAP": [
+        "CAP-6"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-10. Список промптов сценария/ED-07-10-BE. Список промптов сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-10. Список промптов сценария/ED-07-10-FE. Список промптов сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-10. Список промптов сценария/ED-07-10-QA. Список промптов сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/scenarios/{sid}/prompts отвечает по контракту openapi/app/paths/get_scenarios-sid-prompts.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-25 (BR-Бизнес требования)",
+        "Выполняется FR-29 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-11",
+      "phase": "scenarios",
+      "title": "Создать и подключить промпт",
+      "description": "Сценарии: Создать и подключить промпт; спека — ED-07-11-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-29"
+      ],
+      "realizesCAP": [
+        "CAP-6"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-11. Создать и подключить промпт/ED-07-11-BE. Создать и подключить промпт.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-11. Создать и подключить промпт/ED-07-11-FE. Создать и подключить промпт.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-11. Создать и подключить промпт/ED-07-11-QA. Создать и подключить промпт.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "POST /api/scenarios/{sid}/prompts отвечает по контракту openapi/app/paths/post_scenarios-sid-prompts.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-29 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-12",
+      "phase": "scenarios",
+      "title": "Подключить промпт к сценарию",
+      "description": "Сценарии: Подключить промпт к сценарию; спека — ED-07-12-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-29"
+      ],
+      "realizesCAP": [
+        "CAP-6"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-12. Подключить промпт к сценарию/ED-07-12-BE. Подключить промпт к сценарию.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-12. Подключить промпт к сценарию/ED-07-12-FE. Подключить промпт к сценарию.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-12. Подключить промпт к сценарию/ED-07-12-QA. Подключить промпт к сценарию.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/scenarios/{sid}/prompts/{pid} отвечает по контракту openapi/app/paths/put_scenarios-sid-prompts-pid.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-29 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-13",
+      "phase": "scenarios",
+      "title": "Отключить промпт от сценария",
+      "description": "Сценарии: Отключить промпт от сценария; спека — ED-07-13-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-29"
+      ],
+      "realizesCAP": [
+        "CAP-6"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-13. Отключить промпт от сценария/ED-07-13-BE. Отключить промпт от сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-13. Отключить промпт от сценария/ED-07-13-FE. Отключить промпт от сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-13. Отключить промпт от сценария/ED-07-13-QA. Отключить промпт от сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/scenarios/{sid}/prompts/{pid} отвечает по контракту openapi/app/paths/delete_scenarios-sid-prompts-pid.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-29 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-14",
+      "phase": "scenarios",
+      "title": "История сценария",
+      "description": "Сценарии: История сценария; спека — ED-07-14-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-39"
+      ],
+      "realizesCAP": [
+        "CAP-9"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-14. История сценария/ED-07-14-BE. История сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-14. История сценария/ED-07-14-FE. История сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-14. История сценария/ED-07-14-QA. История сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/scenarios/{id}/history отвечает по контракту openapi/app/paths/get_scenarios-id-history.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-39 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-15",
+      "phase": "scenarios",
+      "title": "Очистить историю сценария",
+      "description": "Сценарии: Очистить историю сценария; спека — ED-07-15-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-39"
+      ],
+      "realizesCAP": [
+        "CAP-9"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-15. Очистить историю сценария/ED-07-15-BE. Очистить историю сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-15. Очистить историю сценария/ED-07-15-QA. Очистить историю сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "DELETE /api/scenarios/{id}/history отвечает по контракту openapi/app/paths/delete_scenarios-id-history.json, ошибки — по реестру openapi/app/errors",
+        "Выполняется FR-39 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-16",
+      "phase": "scenarios",
+      "title": "Журнал изменений сценария",
+      "description": "Сценарии: Журнал изменений сценария; спека — ED-07-16-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-40"
+      ],
+      "realizesCAP": [
+        "CAP-9"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-16. Журнал изменений сценария/ED-07-16-BE. Журнал изменений сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-16. Журнал изменений сценария/ED-07-16-FE. Журнал изменений сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-16. Журнал изменений сценария/ED-07-16-QA. Журнал изменений сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/scenarios/{id}/changelog отвечает по контракту openapi/app/paths/get_scenarios-id-changelog.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-40 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-07-17",
+      "phase": "scenarios",
+      "title": "Сохранить журнал изменений сценария",
+      "description": "Сценарии: Сохранить журнал изменений сценария; спека — ED-07-17-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-40"
+      ],
+      "realizesCAP": [
+        "CAP-9"
+      ],
+      "docs": [
+        "ED-Редактор/ED-07. Сценарии/ED-07-17. Сохранить журнал изменений сценария/ED-07-17-BE. Сохранить журнал изменений сценария.md",
+        "ED-Редактор/ED-07. Сценарии/ED-07-17. Сохранить журнал изменений сценария/ED-07-17-QA. Сохранить журнал изменений сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "PUT /api/scenarios/{id}/changelog отвечает по контракту openapi/app/paths/put_scenarios-id-changelog.json, ошибки — по реестру openapi/app/errors",
+        "Выполняется FR-40 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-01-02",
+        "ED-07-02"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "ED-08-01",
+      "phase": "export",
+      "title": "Выгрузить спецификацию сценария",
+      "description": "Экспорт: Выгрузить спецификацию сценария; спека — ED-08-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-42",
+        "FR-43",
+        "FR-44",
+        "FR-45",
+        "FR-46",
+        "FR-47"
+      ],
+      "realizesCAP": [
+        "CAP-10"
+      ],
+      "docs": [
+        "ED-Редактор/ED-08. Экспорт/ED-08-01. Выгрузить спецификацию сценария/ED-08-01-BE. Выгрузить спецификацию сценария.md",
+        "ED-Редактор/ED-08. Экспорт/ED-08-01. Выгрузить спецификацию сценария/ED-08-01-FE. Выгрузить спецификацию сценария.md",
+        "ED-Редактор/ED-08. Экспорт/ED-08-01. Выгрузить спецификацию сценария/ED-08-01-QA. Выгрузить спецификацию сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/scenarios/{id}/export отвечает по контракту openapi/app/paths/get_scenarios-id-export.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-42 (BR-Бизнес требования)",
+        "Выполняется FR-43 (BR-Бизнес требования)",
+        "Выполняется FR-44 (BR-Бизнес требования)",
+        "Выполняется FR-45 (BR-Бизнес требования)",
+        "Выполняется FR-46 (BR-Бизнес требования)",
+        "Выполняется FR-47 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-07-04"
+      ],
+      "priority": 4
+    },
+    {
+      "id": "ED-08-02",
+      "phase": "export",
+      "title": "Предпросмотр спецификации сценария",
+      "description": "Экспорт: Предпросмотр спецификации сценария; спека — ED-08-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-36"
+      ],
+      "realizesCAP": [
+        "CAP-10"
+      ],
+      "docs": [
+        "ED-Редактор/ED-08. Экспорт/ED-08-02. Предпросмотр спецификации сценария/ED-08-02-BE. Предпросмотр спецификации сценария.md",
+        "ED-Редактор/ED-08. Экспорт/ED-08-02. Предпросмотр спецификации сценария/ED-08-02-FE. Предпросмотр спецификации сценария.md",
+        "ED-Редактор/ED-08. Экспорт/ED-08-02. Предпросмотр спецификации сценария/ED-08-02-QA. Предпросмотр спецификации сценария.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/scenarios/{id}/preview отвечает по контракту openapi/app/paths/get_scenarios-id-preview.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-36 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-07-04"
+      ],
+      "priority": 4
+    },
+    {
+      "id": "ED-08-03",
+      "phase": "export",
+      "title": "Выгрузить спецификацию проекта",
+      "description": "Экспорт: Выгрузить спецификацию проекта; спека — ED-08-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-42",
+        "FR-43"
+      ],
+      "realizesCAP": [
+        "CAP-10"
+      ],
+      "docs": [
+        "ED-Редактор/ED-08. Экспорт/ED-08-03. Выгрузить спецификацию проекта/ED-08-03-BE. Выгрузить спецификацию проекта.md",
+        "ED-Редактор/ED-08. Экспорт/ED-08-03. Выгрузить спецификацию проекта/ED-08-03-FE. Выгрузить спецификацию проекта.md",
+        "ED-Редактор/ED-08. Экспорт/ED-08-03. Выгрузить спецификацию проекта/ED-08-03-QA. Выгрузить спецификацию проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "GET /api/projects/{pid}/export отвечает по контракту openapi/app/paths/get_projects-pid-export.json, ошибки — по реестру openapi/app/errors",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-42 (BR-Бизнес требования)",
+        "Выполняется FR-43 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [
+        "ED-07-04"
+      ],
+      "priority": 4
+    },
+    {
+      "id": "ED-09-01",
+      "phase": "client",
+      "title": "Вход и сессия",
+      "description": "Клиентские модули: Вход и сессия; спека — ED-09-01-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-8",
+        "FR-9"
+      ],
+      "realizesCAP": [
+        "CAP-12"
+      ],
+      "docs": [
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-01. Вход и сессия/ED-09-01-FE. Вход и сессия.md",
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-01. Вход и сессия/ED-09-01-QA. Вход и сессия.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-4 (BR-Бизнес требования)",
+        "Выполняется FR-5 (BR-Бизнес требования)",
+        "Выполняется FR-6 (BR-Бизнес требования)",
+        "Выполняется FR-8 (BR-Бизнес требования)",
+        "Выполняется FR-9 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 5
+    },
+    {
+      "id": "ED-09-02",
+      "phase": "client",
+      "title": "Управление пользователями",
+      "description": "Клиентские модули: Управление пользователями; спека — ED-09-02-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-7"
+      ],
+      "realizesCAP": [
+        "CAP-12"
+      ],
+      "docs": [
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-02. Управление пользователями/ED-09-02-FE. Управление пользователями.md",
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-02. Управление пользователями/ED-09-02-QA. Управление пользователями.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-7 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 5
+    },
+    {
+      "id": "ED-09-03",
+      "phase": "client",
+      "title": "Настройки проекта",
+      "description": "Клиентские модули: Настройки проекта; спека — ED-09-03-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-10",
+        "FR-11",
+        "FR-12",
+        "FR-13"
+      ],
+      "realizesCAP": [
+        "CAP-2",
+        "CAP-10"
+      ],
+      "docs": [
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-03. Настройки проекта/ED-09-03-FE. Настройки проекта.md",
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-03. Настройки проекта/ED-09-03-QA. Настройки проекта.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-10 (BR-Бизнес требования)",
+        "Выполняется FR-11 (BR-Бизнес требования)",
+        "Выполняется FR-12 (BR-Бизнес требования)",
+        "Выполняется FR-13 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 5
+    },
+    {
+      "id": "ED-09-04",
+      "phase": "client",
+      "title": "Глобальный поиск",
+      "description": "Клиентские модули: Глобальный поиск; спека — ED-09-04-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-27"
+      ],
+      "realizesCAP": [
+        "CAP-13"
+      ],
+      "docs": [
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-04. Глобальный поиск/ED-09-04-FE. Глобальный поиск.md",
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-04. Глобальный поиск/ED-09-04-QA. Глобальный поиск.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-27 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 5
+    },
+    {
+      "id": "ED-09-05",
+      "phase": "client",
+      "title": "CSV справочников",
+      "description": "Клиентские модули: CSV справочников; спека — ED-09-05-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-50"
+      ],
+      "realizesCAP": [
+        "CAP-11"
+      ],
+      "docs": [
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-05. CSV справочников/ED-09-05-FE. CSV справочников.md",
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-05. CSV справочников/ED-09-05-QA. CSV справочников.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-50 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 5
+    },
+    {
+      "id": "ED-09-06",
+      "phase": "client",
+      "title": "Экспорт схемы в SVG",
+      "description": "Клиентские модули: Экспорт схемы в SVG; спека — ED-09-06-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-48"
+      ],
+      "realizesCAP": [
+        "CAP-10"
+      ],
+      "docs": [
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-06. Экспорт схемы в SVG/ED-09-06-FE. Экспорт схемы в SVG.md",
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-06. Экспорт схемы в SVG/ED-09-06-QA. Экспорт схемы в SVG.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-48 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 5
+    },
+    {
+      "id": "ED-09-07",
+      "phase": "client",
+      "title": "Демо-режим",
+      "description": "Клиентские модули: Демо-режим; спека — ED-09-07-BE/FE в ED-Редактор.",
+      "realizesFR": [
+        "FR-14",
+        "FR-15"
+      ],
+      "realizesCAP": [
+        "CAP-14"
+      ],
+      "docs": [
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-07. Демо-режим/ED-09-07-FE. Демо-режим.md",
+        "ED-Редактор/ED-09. Клиентские модули/ED-09-07. Демо-режим/ED-09-07-QA. Демо-режим.md"
+      ],
+      "acceptanceCriteria": [
+        "Typecheck passes",
+        "Verify in browser",
+        "E2E Playwright test passes for each user story",
+        "Выполняется FR-14 (BR-Бизнес требования)",
+        "Выполняется FR-15 (BR-Бизнес требования)"
+      ],
+      "dependsOn": [],
+      "priority": 5
+    }
+  ]
+}

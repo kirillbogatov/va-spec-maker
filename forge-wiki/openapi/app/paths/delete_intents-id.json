@@ -1,0 +1,34 @@
+{
+  "/api/intents/{id}": {
+    "delete": {
+      "tags": [
+        "Интенты"
+      ],
+      "summary": "DELETE /api/intents/{id}",
+      "description": "Удаляет интент из проекта; его подключения к сценариям удаляются каскадно, строки сценариев теряют интент.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "204": {
+          "description": "Успех, тела ответа нет"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

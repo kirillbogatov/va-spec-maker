@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "required": [
+    "error",
+    "message"
+  ],
+  "description": "Тело ответа с ошибкой",
+  "properties": {
+    "error": {
+      "type": "string",
+      "description": "Код ошибки в нижнем регистре: bad_request, not_found, duplicate, in_use, internal",
+      "example": "not_found"
+    },
+    "message": {
+      "type": "string",
+      "description": "Сообщение для пользователя на русском",
+      "example": "Проект не найден"
+    },
+    "details": {
+      "type": "object",
+      "description": "Дополнительные данные, например перечень интентов при in_use",
+      "nullable": true,
+      "example": {
+        "uses": 2
+      }
+    }
+  }
+}

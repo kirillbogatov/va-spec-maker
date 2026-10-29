@@ -1,0 +1,68 @@
+{
+  "/api/scenarios/{id}/changelog": {
+    "get": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "GET /api/scenarios/{id}/changelog",
+      "description": "Возвращает журнал изменений, который ведётся вручную и выводится в документе спецификации.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "task": {
+                      "type": "string",
+                      "description": "Задача",
+                      "example": "TASK-123"
+                    },
+                    "author": {
+                      "type": "string",
+                      "description": "Автор",
+                      "example": "Иванов И."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Описание изменения",
+                      "example": "Добавлен интент включения света"
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "task": "TASK-123",
+                  "author": "Иванов И.",
+                  "description": "Добавлен интент включения света"
+                }
+              ]
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

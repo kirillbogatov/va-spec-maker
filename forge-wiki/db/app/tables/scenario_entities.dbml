@@ -1,0 +1,11 @@
+Table scenario_entities {
+  id integer [pk]
+  scenario_id integer [not null, ref: > scenarios.id, delete: cascade]
+  position integer [not null, default: 0]
+  entity_id integer [not null, ref: > entities.id, delete: cascade]
+  followup_prompt text [not null, default: '']
+  required integer [not null, default: 0]
+  is_array integer [not null, default: 0]
+
+  Note: 'Сущность, подключённая к сценарию; обязательность и уточняющий вопрос задаются здесь.'
+}

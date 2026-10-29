@@ -1,0 +1,14 @@
+{
+  "description": "Запрошенный объект не найден (NotFoundError)",
+  "content": {
+    "application/json": {
+      "schema": {
+        "$ref": "#/components/schemas/Error"
+      },
+      "example": {
+        "error": "not_found",
+        "message": "Проект не найден"
+      }
+    }
+  }
+}

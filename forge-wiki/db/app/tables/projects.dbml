@@ -1,0 +1,8 @@
+Table projects {
+  id integer [pk]
+  name text [not null]
+  description text [not null, default: '']
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Проект — изолированная спецификация; владелец всего содержимого (каскадное удаление).'
+}

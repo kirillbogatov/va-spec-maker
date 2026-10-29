@@ -1,0 +1,80 @@
+{
+  "/api/projects": {
+    "post": {
+      "tags": [
+        "Проекты"
+      ],
+      "summary": "POST /api/projects",
+      "description": "Создаёт пустой проект.",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название проекта",
+                  "example": "Умный дом"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Описание проекта",
+                  "example": "Голосовой ассистент для квартиры"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "Умный дом",
+              "description": "Голосовой ассистент для квартиры"
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор проекта",
+                    "example": 3
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "Умный дом"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Описание",
+                    "example": "Голосовой ассистент для квартиры"
+                  }
+                }
+              },
+              "example": {
+                "id": 3,
+                "name": "Умный дом",
+                "description": "Голосовой ассистент для квартиры"
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

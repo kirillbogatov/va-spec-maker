@@ -1,0 +1,12 @@
+Table scenario_dependencies {
+  id integer [pk]
+  scenario_id integer [not null, ref: > scenarios.id, delete: cascade]
+  position integer [not null, default: 0]
+  ref text [not null]
+  entity_id integer [ref: > entities.id, delete: set null]
+  name text [not null, default: '']
+  type dependency_type [not null, default: 'string']
+  options text [not null, default: '[]']
+
+  Note: 'Зависимость сценария: ссылка на сущность (entity_id) либо собственное name; ref — стабильный ключ для условий; options — варианты для enum.'
+}

@@ -1,0 +1,12 @@
+Table dependency_dictionary {
+  id integer [pk]
+  project_id integer [not null, ref: > projects.id, delete: cascade]
+  name text [not null]
+  "values" text [not null, default: '[]']
+
+  indexes {
+    (project_id, name) [unique]
+  }
+
+  Note: 'Справочник зависимостей проекта: название и JSON-массив возможных значений.'
+}

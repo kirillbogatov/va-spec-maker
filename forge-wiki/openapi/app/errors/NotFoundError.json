@@ -1,0 +1,6 @@
+{
+  "code": "NotFoundError",
+  "statusCode": 404,
+  "title": "Not found",
+  "message": "Запрошенный объект не найден"
+}

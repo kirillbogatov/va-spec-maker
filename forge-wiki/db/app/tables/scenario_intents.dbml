@@ -1,0 +1,13 @@
+Table scenario_intents {
+  id integer [pk]
+  scenario_id integer [not null, ref: > scenarios.id, delete: cascade]
+  intent_id integer [not null, ref: > intents.id, delete: cascade]
+  is_global integer [not null, default: 0]
+  position integer [not null, default: 0]
+
+  indexes {
+    (scenario_id, intent_id) [unique]
+  }
+
+  Note: 'Подключение интента к сценарию; is_global — интент срабатывает из любого состояния.'
+}

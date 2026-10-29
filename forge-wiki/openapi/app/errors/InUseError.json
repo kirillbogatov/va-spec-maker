@@ -1,0 +1,6 @@
+{
+  "code": "InUseError",
+  "statusCode": 409,
+  "title": "In use",
+  "message": "Объект используется, действие отменено"
+}

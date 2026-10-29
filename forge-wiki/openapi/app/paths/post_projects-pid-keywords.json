@@ -1,0 +1,111 @@
+{
+  "/api/projects/{pid}/keywords": {
+    "post": {
+      "tags": [
+        "Ключевые слова"
+      ],
+      "summary": "POST /api/projects/{pid}/keywords",
+      "description": "Создаёт ключевое слово без синонимов.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Код ключевого слова; ведущий $ отбрасывается",
+                  "example": "$OFF"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "$OFF"
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор",
+                    "example": 8
+                  },
+                  "project_id": {
+                    "type": "integer",
+                    "description": "Проект",
+                    "example": 3
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Код ключевого слова без $",
+                    "example": "OFF"
+                  },
+                  "synonyms": {
+                    "type": "array",
+                    "description": "Синонимы",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "used_by": {
+                    "type": "array",
+                    "description": "Сценарии, где используется ключевое слово",
+                    "items": {
+                      "$ref": "#/components/schemas/ScenarioRef"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "id": 8,
+                "project_id": 3,
+                "name": "OFF",
+                "synonyms": [
+                  "выключи",
+                  "погаси"
+                ],
+                "used_by": []
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/DuplicateError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

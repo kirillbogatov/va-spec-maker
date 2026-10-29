@@ -1,0 +1,12 @@
+Table scenario_prompts {
+  id integer [pk]
+  scenario_id integer [not null, ref: > scenarios.id, delete: cascade]
+  prompt_id integer [not null, ref: > prompts.id, delete: cascade]
+  position integer [not null, default: 0]
+
+  indexes {
+    (scenario_id, prompt_id) [unique]
+  }
+
+  Note: 'Подключение промпта к сценарию.'
+}

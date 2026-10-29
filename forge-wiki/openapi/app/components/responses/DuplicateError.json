@@ -1,0 +1,14 @@
+{
+  "description": "Объект с таким названием уже существует (DuplicateError)",
+  "content": {
+    "application/json": {
+      "schema": {
+        "$ref": "#/components/schemas/Error"
+      },
+      "example": {
+        "error": "duplicate",
+        "message": "Интент с названием «INT_свет» уже существует"
+      }
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "/api/projects/{pid}/dependency-dictionary": {
+    "post": {
+      "tags": [
+        "Зависимости"
+      ],
+      "summary": "POST /api/projects/{pid}/dependency-dictionary",
+      "description": "Создаёт зависимость без значений.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название зависимости",
+                  "example": "DEP_режим"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "DEP_режим"
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор",
+                    "example": 6
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "DEP_режим"
+                  },
+                  "values": {
+                    "type": "array",
+                    "description": "Значения",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "id": 6,
+                "name": "DEP_режим",
+                "values": []
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/DuplicateError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

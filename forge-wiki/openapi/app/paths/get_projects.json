@@ -1,0 +1,89 @@
+{
+  "/api/projects": {
+    "get": {
+      "tags": [
+        "Проекты"
+      ],
+      "summary": "GET /api/projects",
+      "description": "Возвращает все проекты с количеством сценариев, интентов, сущностей, промптов и числом готовых сценариев.",
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "Идентификатор проекта",
+                      "example": 3
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Название проекта",
+                      "example": "Умный дом"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Описание проекта",
+                      "example": ""
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "Время создания",
+                      "example": "2026-10-20 09:15:00"
+                    },
+                    "scenario_count": {
+                      "type": "integer",
+                      "description": "Число сценариев",
+                      "example": 4
+                    },
+                    "intent_count": {
+                      "type": "integer",
+                      "description": "Число интентов",
+                      "example": 12
+                    },
+                    "entity_count": {
+                      "type": "integer",
+                      "description": "Число сущностей",
+                      "example": 6
+                    },
+                    "prompt_count": {
+                      "type": "integer",
+                      "description": "Число промптов",
+                      "example": 9
+                    },
+                    "ready_count": {
+                      "type": "integer",
+                      "description": "Число готовых сценариев",
+                      "example": 2
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "id": 3,
+                  "name": "Умный дом",
+                  "description": "",
+                  "created_at": "2026-10-20 09:15:00",
+                  "scenario_count": 4,
+                  "intent_count": 12,
+                  "entity_count": 6,
+                  "prompt_count": 9,
+                  "ready_count": 2
+                }
+              ]
+            }
+          }
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

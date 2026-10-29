@@ -1,0 +1,113 @@
+{
+  "/api/scenarios/{id}/changelog": {
+    "put": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "PUT /api/scenarios/{id}/changelog",
+      "description": "Полностью заменяет строки журнала изменений сценария.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rows": {
+                  "type": "array",
+                  "description": "Строки журнала по порядку",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "task": {
+                        "type": "string",
+                        "description": "Задача",
+                        "example": "TASK-123"
+                      },
+                      "author": {
+                        "type": "string",
+                        "description": "Автор",
+                        "example": "Иванов И."
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Описание изменения",
+                        "example": "Добавлен интент включения света"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "example": {
+              "rows": [
+                {
+                  "task": "TASK-123",
+                  "author": "Иванов И.",
+                  "description": "Добавлен интент включения света"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "task": {
+                      "type": "string",
+                      "description": "Задача",
+                      "example": "TASK-123"
+                    },
+                    "author": {
+                      "type": "string",
+                      "description": "Автор",
+                      "example": "Иванов И."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Описание изменения",
+                      "example": "Добавлен интент включения света"
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "task": "TASK-123",
+                  "author": "Иванов И.",
+                  "description": "Добавлен интент включения света"
+                }
+              ]
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

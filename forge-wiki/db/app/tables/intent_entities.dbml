@@ -1,0 +1,9 @@
+Table intent_entities {
+  id integer [pk]
+  intent_id integer [not null, ref: > intents.id, delete: cascade]
+  entity_id integer [not null, ref: > entities.id, delete: cascade]
+  required integer [not null, default: 0]
+  position integer [not null, default: 0]
+
+  Note: 'Сущность, привязанная к интенту; required — обязательность слота.'
+}

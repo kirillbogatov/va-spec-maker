@@ -1,0 +1,68 @@
+{
+  "/api/projects/{id}/dump": {
+    "get": {
+      "tags": [
+        "Проекты"
+      ],
+      "summary": "GET /api/projects/{id}/dump",
+      "description": "Возвращает полный дамп проекта в JSON для резервной копии и переноса.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "description": "Версия формата дампа",
+                    "example": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название проекта",
+                    "example": "Умный дом"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Описание проекта",
+                    "example": ""
+                  },
+                  "tables": {
+                    "type": "object",
+                    "description": "Строки таблиц проекта по именам таблиц"
+                  }
+                }
+              },
+              "example": {
+                "version": 1,
+                "name": "Умный дом",
+                "description": "",
+                "tables": null
+              }
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

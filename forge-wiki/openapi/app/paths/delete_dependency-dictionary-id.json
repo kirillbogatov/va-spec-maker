@@ -1,0 +1,34 @@
+{
+  "/api/dependency-dictionary/{id}": {
+    "delete": {
+      "tags": [
+        "Зависимости"
+      ],
+      "summary": "DELETE /api/dependency-dictionary/{id}",
+      "description": "Удаляет зависимость из справочника; зависимости сценариев с тем же названием остаются.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "204": {
+          "description": "Успех, тела ответа нет"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

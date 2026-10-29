@@ -1,0 +1,86 @@
+{
+  "/api/scenarios/{sid}/prompts": {
+    "post": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "POST /api/scenarios/{sid}/prompts",
+      "description": "Создаёт промпт в проекте сценария и сразу подключает его к сценарию.",
+      "parameters": [
+        {
+          "name": "sid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название промпта",
+                  "example": "PRM_свет_включён"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "PRM_свет_включён"
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор",
+                    "example": 4
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "PRM_свет_включён"
+                  }
+                }
+              },
+              "example": {
+                "id": 4,
+                "name": "PRM_свет_включён"
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "409": {
+          "$ref": "#/components/responses/DuplicateError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

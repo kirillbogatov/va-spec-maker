@@ -1,0 +1,82 @@
+{
+  "/api/dependency-dictionary/{id}": {
+    "get": {
+      "tags": [
+        "Зависимости"
+      ],
+      "summary": "GET /api/dependency-dictionary/{id}",
+      "description": "Возвращает зависимость со значениями и сценариями, где она используется.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор зависимости",
+                    "example": 6
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "DEP_режим"
+                  },
+                  "values": {
+                    "type": "array",
+                    "description": "Возможные значения",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "used_by": {
+                    "type": "array",
+                    "description": "Сценарии, где зависимость используется",
+                    "items": {
+                      "$ref": "#/components/schemas/ScenarioRef"
+                    }
+                  },
+                  "project_id": {
+                    "type": "integer",
+                    "description": "Проект",
+                    "example": 3
+                  }
+                }
+              },
+              "example": {
+                "id": 6,
+                "name": "DEP_режим",
+                "values": [
+                  "дом",
+                  "улица"
+                ],
+                "used_by": [],
+                "project_id": 3
+              }
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

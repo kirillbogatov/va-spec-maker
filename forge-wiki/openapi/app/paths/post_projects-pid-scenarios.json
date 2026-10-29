@@ -1,0 +1,83 @@
+{
+  "/api/projects/{pid}/scenarios": {
+    "post": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "POST /api/projects/{pid}/scenarios",
+      "description": "Создаёт сценарий с одной вкладкой и записью о создании в истории.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название сценария",
+                  "example": "SC_свет"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "SC_свет"
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "description": "Создано",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор",
+                    "example": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "SC_свет"
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "name": "SC_свет"
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

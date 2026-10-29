@@ -1,0 +1,10 @@
+Table scenario_history {
+  id integer [pk]
+  scenario_id integer [not null, ref: > scenarios.id, delete: cascade]
+  day text [not null]
+  key text [not null]
+  text text [not null]
+  refs text [not null, default: '[]']
+
+  Note: 'Автоматическая история изменений сценария (key склеивает повторные правки за день; refs — JSON ссылок на объекты).'
+}

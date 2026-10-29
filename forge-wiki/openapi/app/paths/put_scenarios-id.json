@@ -1,0 +1,631 @@
+{
+  "/api/scenarios/{id}": {
+    "put": {
+      "tags": [
+        "Сценарии"
+      ],
+      "summary": "PUT /api/scenarios/{id}",
+      "description": "Полностью заменяет содержимое сценария (автосохранение редактора): название, описание, сущности, зависимости, вкладки, строки и состояния. Подключает к сценарию интенты и промпты, на которые ссылаются строки и состояния, и записывает изменения в историю.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Название сценария",
+                  "example": "SC_свет"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Описание",
+                  "example": "Управление освещением"
+                },
+                "entities": {
+                  "type": "array",
+                  "description": "Сущности сценария",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entity_id": {
+                        "type": "integer",
+                        "description": "Сущность проекта",
+                        "example": 2
+                      },
+                      "followup_prompt": {
+                        "type": "string",
+                        "description": "Уточняющий вопрос",
+                        "example": "В какой комнате?"
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "description": "Сущность обязательна",
+                        "example": true
+                      },
+                      "is_array": {
+                        "type": "boolean",
+                        "description": "Сущность — массив значений",
+                        "example": false
+                      }
+                    }
+                  }
+                },
+                "dependencies": {
+                  "type": "array",
+                  "description": "Зависимости сценария",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "description": "Идентификатор зависимости в сценарии",
+                        "example": "mode"
+                      },
+                      "entity_id": {
+                        "type": "integer",
+                        "description": "Сущность проекта; null — собственная зависимость",
+                        "nullable": true
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Название собственной зависимости",
+                        "example": "DEP_режим"
+                      },
+                      "type": {
+                        "type": "string",
+                        "description": "Тип: string, enum или bool",
+                        "example": "enum"
+                      },
+                      "options": {
+                        "type": "array",
+                        "description": "Варианты для enum",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "parts": {
+                  "type": "array",
+                  "description": "Вкладки сценария",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Название вкладки",
+                        "example": "Основная"
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Описание вкладки",
+                        "example": ""
+                      },
+                      "steps": {
+                        "type": "array",
+                        "description": "Строки вкладки по порядку",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "Название правила (для ошибок и глобальных переходов)",
+                              "example": ""
+                            },
+                            "kind": {
+                              "type": "string",
+                              "description": "Вид строки: transition, error или global",
+                              "example": "transition"
+                            },
+                            "state": {
+                              "type": "string",
+                              "description": "Исходное состояние (у global пусто)",
+                              "example": "ST_ожидание"
+                            },
+                            "intent_id": {
+                              "type": "integer",
+                              "description": "Интент строки; null — любой интент (для ошибок)",
+                              "example": 7,
+                              "nullable": true
+                            },
+                            "request_params": {
+                              "type": "string",
+                              "description": "Параметры запроса пользователя",
+                              "example": ""
+                            },
+                            "condition": {
+                              "type": "string",
+                              "description": "Условие свободным текстом",
+                              "example": ""
+                            },
+                            "conditions": {
+                              "type": "array",
+                              "description": "Пункты условия",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "dep": {
+                                    "type": "string",
+                                    "description": "Ссылка (ref) зависимости сценария; пусто для сущности и ключевого слова",
+                                    "example": "mode"
+                                  },
+                                  "entity_id": {
+                                    "type": "integer",
+                                    "description": "Сущность проекта (вместо dep)",
+                                    "nullable": true
+                                  },
+                                  "keyword_id": {
+                                    "type": "integer",
+                                    "description": "Ключевое слово проекта (вместо dep)",
+                                    "nullable": true
+                                  },
+                                  "op": {
+                                    "type": "string",
+                                    "description": "Операция: =, !=, <, >",
+                                    "example": "="
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "description": "Значение",
+                                    "example": "дом"
+                                  }
+                                }
+                              }
+                            },
+                            "cond_mode": {
+                              "type": "string",
+                              "description": "Объединение пунктов: all (И) или any (ИЛИ)",
+                              "example": "all"
+                            },
+                            "prompt_id": {
+                              "type": "integer",
+                              "description": "Промпт (только у строки ошибки)",
+                              "nullable": true
+                            },
+                            "system_action": {
+                              "type": "string",
+                              "description": "Действие системы (только у строки ошибки)",
+                              "example": ""
+                            },
+                            "next_states": {
+                              "type": "string",
+                              "description": "Следующее состояние",
+                              "example": "ST_свет_включён"
+                            }
+                          }
+                        }
+                      },
+                      "layout": {
+                        "type": "object",
+                        "properties": {
+                          "x": {
+                            "type": "integer",
+                            "description": "Координата X узла",
+                            "example": 120
+                          },
+                          "y": {
+                            "type": "integer",
+                            "description": "Координата Y узла",
+                            "example": 80
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Описание состояния",
+                            "example": ""
+                          },
+                          "prompt_id": {
+                            "type": "integer",
+                            "description": "Промпт при входе в состояние",
+                            "nullable": true
+                          },
+                          "system_action": {
+                            "type": "string",
+                            "description": "Действие системы при входе",
+                            "example": ""
+                          }
+                        },
+                        "description": "Состояния вкладки по именам: положение узла, описание, ответ ассистента и действие системы при входе"
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "example": {
+              "name": "SC_свет",
+              "description": "Управление освещением",
+              "entities": [
+                {
+                  "entity_id": 2,
+                  "followup_prompt": "В какой комнате?",
+                  "required": true,
+                  "is_array": false
+                }
+              ],
+              "dependencies": [
+                {
+                  "ref": "mode",
+                  "entity_id": null,
+                  "name": "DEP_режим",
+                  "type": "enum",
+                  "options": [
+                    "дом",
+                    "улица"
+                  ]
+                }
+              ],
+              "parts": [
+                {
+                  "name": "Основная",
+                  "description": "",
+                  "steps": [
+                    {
+                      "name": "",
+                      "kind": "transition",
+                      "state": "ST_ожидание",
+                      "intent_id": 7,
+                      "request_params": "",
+                      "condition": "",
+                      "conditions": [
+                        {
+                          "dep": "mode",
+                          "entity_id": null,
+                          "keyword_id": null,
+                          "op": "=",
+                          "value": "дом"
+                        }
+                      ],
+                      "cond_mode": "all",
+                      "prompt_id": null,
+                      "system_action": "",
+                      "next_states": "ST_свет_включён"
+                    }
+                  ],
+                  "layout": {
+                    "x": 120,
+                    "y": 80,
+                    "description": "",
+                    "prompt_id": null,
+                    "system_action": ""
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Идентификатор",
+                    "example": 1
+                  },
+                  "project_id": {
+                    "type": "integer",
+                    "description": "Проект",
+                    "example": 3
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Название",
+                    "example": "SC_свет"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Описание",
+                    "example": "Управление освещением"
+                  },
+                  "entities": {
+                    "type": "array",
+                    "description": "Сущности сценария",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "entity_id": {
+                          "type": "integer",
+                          "description": "Сущность проекта",
+                          "example": 2
+                        },
+                        "followup_prompt": {
+                          "type": "string",
+                          "description": "Уточняющий вопрос",
+                          "example": "В какой комнате?"
+                        },
+                        "required": {
+                          "type": "boolean",
+                          "description": "Сущность обязательна",
+                          "example": true
+                        },
+                        "is_array": {
+                          "type": "boolean",
+                          "description": "Сущность — массив значений",
+                          "example": false
+                        }
+                      }
+                    }
+                  },
+                  "dependencies": {
+                    "type": "array",
+                    "description": "Зависимости сценария",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ref": {
+                          "type": "string",
+                          "description": "Идентификатор зависимости в сценарии",
+                          "example": "mode"
+                        },
+                        "entity_id": {
+                          "type": "integer",
+                          "description": "Сущность проекта; null — собственная зависимость",
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Название собственной зависимости",
+                          "example": "DEP_режим"
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "Тип: string, enum или bool",
+                          "example": "enum"
+                        },
+                        "options": {
+                          "type": "array",
+                          "description": "Варианты для enum",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "parts": {
+                    "type": "array",
+                    "description": "Вкладки сценария",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "Название вкладки",
+                          "example": "Основная"
+                        },
+                        "description": {
+                          "type": "string",
+                          "description": "Описание вкладки",
+                          "example": ""
+                        },
+                        "steps": {
+                          "type": "array",
+                          "description": "Строки вкладки по порядку",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "Название правила (для ошибок и глобальных переходов)",
+                                "example": ""
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Вид строки: transition, error или global",
+                                "example": "transition"
+                              },
+                              "state": {
+                                "type": "string",
+                                "description": "Исходное состояние (у global пусто)",
+                                "example": "ST_ожидание"
+                              },
+                              "intent_id": {
+                                "type": "integer",
+                                "description": "Интент строки; null — любой интент (для ошибок)",
+                                "example": 7,
+                                "nullable": true
+                              },
+                              "request_params": {
+                                "type": "string",
+                                "description": "Параметры запроса пользователя",
+                                "example": ""
+                              },
+                              "condition": {
+                                "type": "string",
+                                "description": "Условие свободным текстом",
+                                "example": ""
+                              },
+                              "conditions": {
+                                "type": "array",
+                                "description": "Пункты условия",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "dep": {
+                                      "type": "string",
+                                      "description": "Ссылка (ref) зависимости сценария; пусто для сущности и ключевого слова",
+                                      "example": "mode"
+                                    },
+                                    "entity_id": {
+                                      "type": "integer",
+                                      "description": "Сущность проекта (вместо dep)",
+                                      "nullable": true
+                                    },
+                                    "keyword_id": {
+                                      "type": "integer",
+                                      "description": "Ключевое слово проекта (вместо dep)",
+                                      "nullable": true
+                                    },
+                                    "op": {
+                                      "type": "string",
+                                      "description": "Операция: =, !=, <, >",
+                                      "example": "="
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "description": "Значение",
+                                      "example": "дом"
+                                    }
+                                  }
+                                }
+                              },
+                              "cond_mode": {
+                                "type": "string",
+                                "description": "Объединение пунктов: all (И) или any (ИЛИ)",
+                                "example": "all"
+                              },
+                              "prompt_id": {
+                                "type": "integer",
+                                "description": "Промпт (только у строки ошибки)",
+                                "nullable": true
+                              },
+                              "system_action": {
+                                "type": "string",
+                                "description": "Действие системы (только у строки ошибки)",
+                                "example": ""
+                              },
+                              "next_states": {
+                                "type": "string",
+                                "description": "Следующее состояние",
+                                "example": "ST_свет_включён"
+                              }
+                            }
+                          }
+                        },
+                        "layout": {
+                          "type": "object",
+                          "properties": {
+                            "x": {
+                              "type": "integer",
+                              "description": "Координата X узла",
+                              "example": 120
+                            },
+                            "y": {
+                              "type": "integer",
+                              "description": "Координата Y узла",
+                              "example": 80
+                            },
+                            "description": {
+                              "type": "string",
+                              "description": "Описание состояния",
+                              "example": ""
+                            },
+                            "prompt_id": {
+                              "type": "integer",
+                              "description": "Промпт при входе в состояние",
+                              "nullable": true
+                            },
+                            "system_action": {
+                              "type": "string",
+                              "description": "Действие системы при входе",
+                              "example": ""
+                            }
+                          },
+                          "description": "Состояния вкладки по именам: положение узла, описание, ответ ассистента и действие системы при входе"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "id": 1,
+                "project_id": 3,
+                "name": "SC_свет",
+                "description": "Управление освещением",
+                "entities": [
+                  {
+                    "entity_id": 2,
+                    "followup_prompt": "В какой комнате?",
+                    "required": true,
+                    "is_array": false
+                  }
+                ],
+                "dependencies": [
+                  {
+                    "ref": "mode",
+                    "entity_id": null,
+                    "name": "DEP_режим",
+                    "type": "enum",
+                    "options": [
+                      "дом",
+                      "улица"
+                    ]
+                  }
+                ],
+                "parts": [
+                  {
+                    "name": "Основная",
+                    "description": "",
+                    "steps": [
+                      {
+                        "name": "",
+                        "kind": "transition",
+                        "state": "ST_ожидание",
+                        "intent_id": 7,
+                        "request_params": "",
+                        "condition": "",
+                        "conditions": [
+                          {
+                            "dep": "mode",
+                            "entity_id": null,
+                            "keyword_id": null,
+                            "op": "=",
+                            "value": "дом"
+                          }
+                        ],
+                        "cond_mode": "all",
+                        "prompt_id": null,
+                        "system_action": "",
+                        "next_states": "ST_свет_включён"
+                      }
+                    ],
+                    "layout": {
+                      "x": 120,
+                      "y": 80,
+                      "description": "",
+                      "prompt_id": null,
+                      "system_action": ""
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequestError"
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "/api/projects/{pid}/entities": {
+    "get": {
+      "tags": [
+        "Сущности"
+      ],
+      "summary": "GET /api/projects/{pid}/entities",
+      "description": "Возвращает сущности проекта с типом, значениями и интентами, где они используются.",
+      "parameters": [
+        {
+          "name": "pid",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "Идентификатор сущности",
+                      "example": 2
+                    },
+                    "project_id": {
+                      "type": "integer",
+                      "description": "Проект",
+                      "example": 3
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Название",
+                      "example": "ENT_комната"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Описание",
+                      "example": ""
+                    },
+                    "multiple_values": {
+                      "type": "boolean",
+                      "description": "Допустимо несколько значений",
+                      "example": false
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "Тип: string, number, time, date, boolean",
+                      "example": "string"
+                    },
+                    "range_min": {
+                      "type": "string",
+                      "description": "Нижняя граница диапазона (number, time, date); пустая строка — не задана",
+                      "example": ""
+                    },
+                    "range_max": {
+                      "type": "string",
+                      "description": "Верхняя граница диапазона; пустая строка — не задана",
+                      "example": ""
+                    },
+                    "values": {
+                      "type": "array",
+                      "description": "Значения со синонимами (только у типа string)",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "string",
+                            "description": "Каноническое значение",
+                            "example": "кухня"
+                          },
+                          "synonyms": {
+                            "type": "array",
+                            "description": "Синонимы",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "description": "Интенты, где используется сущность",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Идентификатор интента",
+                            "example": 7
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Название интента",
+                            "example": "INT_включить_свет"
+                          },
+                          "scenario_ids": {
+                            "type": "array",
+                            "description": "Сценарии, где подключён интент",
+                            "items": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "value_count": {
+                      "type": "integer",
+                      "description": "Число значений",
+                      "example": 4
+                    }
+                  }
+                }
+              },
+              "example": [
+                {
+                  "id": 2,
+                  "project_id": 3,
+                  "name": "ENT_комната",
+                  "description": "",
+                  "multiple_values": false,
+                  "type": "string",
+                  "range_min": "",
+                  "range_max": "",
+                  "values": [
+                    {
+                      "value": "кухня",
+                      "synonyms": [
+                        "на кухне"
+                      ]
+                    }
+                  ],
+                  "used_by": [
+                    {
+                      "id": 7,
+                      "name": "INT_включить_свет",
+                      "scenario_ids": [
+                        1
+                      ]
+                    }
+                  ],
+                  "value_count": 4
+                }
+              ]
+            }
+          }
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "/api/scenarios/{id}/preview": {
+    "get": {
+      "tags": [
+        "Экспорт"
+      ],
+      "summary": "GET /api/scenarios/{id}/preview",
+      "description": "Возвращает Markdown спецификации сценария для показа на странице без вложения.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Идентификатор объекта",
+          "schema": {
+            "type": "integer"
+          },
+          "example": 1
+        },
+        {
+          "name": "lang",
+          "in": "query",
+          "required": false,
+          "description": "Язык спецификации: ru или en; иначе ru",
+          "schema": {
+            "type": "string"
+          },
+          "example": "ru"
+        },
+        {
+          "name": "intentMode",
+          "in": "query",
+          "required": false,
+          "description": "Режим описания интентов: phrases, patterns, both, keywords; иначе both",
+          "schema": {
+            "type": "string"
+          },
+          "example": "both"
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Успех",
+          "content": {
+            "text/markdown": {
+              "schema": {
+                "type": "string",
+                "description": "Тело файла"
+              },
+              "example": "# SC_свет\n\n## Интенты\n..."
+            }
+          }
+        },
+        "404": {
+          "$ref": "#/components/responses/NotFoundError"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        }
+      }
+    }
+  }
+}

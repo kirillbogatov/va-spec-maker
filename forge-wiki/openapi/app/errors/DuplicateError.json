@@ -1,0 +1,6 @@
+{
+  "code": "DuplicateError",
+  "statusCode": 409,
+  "title": "Duplicate",
+  "message": "Объект с таким названием уже существует"
+}
