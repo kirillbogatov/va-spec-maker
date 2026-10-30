@@ -181,6 +181,29 @@ const hasColumn = (db: Db, table: string, column: string) =>
  * Версия 2: тип и диапазон сущностей.
  */
 export function migrate(db: Db): void {
+  // Edition-specific migration numbers overlap; inspect the actual schema.
+  const compatibleColumns: [string, string][] = [
+    ["dependency_dictionary", "description TEXT NOT NULL DEFAULT ''"],
+  ];
+  for (const [table, ddl] of compatibleColumns) {
+    if (db.prepare(`PRAGMA table_info(${table})`).all().length && !hasColumn(db, table, ddl.split(' ')[0])) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+    }
+  }
+
+  // Both local editions may open the same persisted database. Keep both history
+  // layouts available rather than relying on their different user_version values.
+  if (db.prepare("PRAGMA table_info(scenario_history)").all().length) {
+    for (const ddl of ["at TEXT NOT NULL DEFAULT ''", "field TEXT NOT NULL DEFAULT ''", "old_value TEXT NOT NULL DEFAULT ''", "new_value TEXT NOT NULL DEFAULT ''", "day TEXT NOT NULL DEFAULT ''", "key TEXT NOT NULL DEFAULT ''", "refs TEXT NOT NULL DEFAULT '[]'"]) {
+      if (!hasColumn(db, 'scenario_history', ddl.split(' ')[0])) db.exec(`ALTER TABLE scenario_history ADD COLUMN ${ddl}`);
+    }
+    db.exec("UPDATE scenario_history SET day = substr(at, 1, 10) WHERE day = '' AND at <> ''");
+    db.exec("UPDATE scenario_history SET at = day || 'T00:00:00.000Z' WHERE at = '' AND day <> ''");
+  }
+
+  if (db.prepare("PRAGMA table_info(scenario_changelog)").all().length && !hasColumn(db, 'scenario_changelog', 'date')) {
+    db.exec("ALTER TABLE scenario_changelog ADD COLUMN date TEXT NOT NULL DEFAULT ''");
+  }
   const { user_version } = db.prepare('PRAGMA user_version').get() as { user_version: number };
   if (user_version < 1) {
     db.transaction(() => {

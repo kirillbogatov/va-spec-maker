@@ -51,7 +51,7 @@ export interface HistoryRef { type: 'intent' | 'prompt' | 'state' | 'part' | 'de
 /** Запись истории сценария: день (ГГГГ-ММ-ДД) и текст, в котором {0}, {1}… — места для ссылок. */
 export interface HistoryEntry { id: number; day: string; text: string; refs: HistoryRef[] }
 /** Строка журнала изменений, который ведут вручную. */
-export interface ChangelogRow { task: string; author: string; description: string }
+export interface ChangelogRow { date?: string; task: string; author: string; description: string }
 
 export interface ScenarioListItem { id: number; name: string; description: string; step_count: number }
 export type DependencyType = 'string' | 'enum' | 'bool';

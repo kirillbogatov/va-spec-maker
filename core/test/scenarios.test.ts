@@ -14,9 +14,10 @@ describe('scenarios API', () => {
     const { app, pid } = await setup();
     const s = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Свет' });
     expect((await request(app).get(`/api/scenarios/${s.body.id}/changelog`)).body).toEqual([]);
-    const rows = [{ task: 'VA-1', author: 'Иванов', description: 'Первая версия' }, { task: '', author: 'Петров', description: 'Ошибки' }];
+    const rows = [{ date: '2026-10-30', task: 'VA-1', author: 'Иванов', description: 'Первая версия' }, { date: '', task: '', author: 'Петров', description: 'Ошибки' }];
     const put = await request(app).put(`/api/scenarios/${s.body.id}/changelog`).send({ rows: [...rows, { task: 1, extra: 'x' }] });
-    expect(put.body).toEqual([...rows, { task: '', author: '', description: '' }]);
+    expect(put.body).toEqual([...rows, { date: '', task: '', author: '', description: '' }]);
+    expect((await request(app).get(`/api/scenarios/${s.body.id}/changelog`)).body).toEqual(put.body);
     const history = (await request(app).get(`/api/scenarios/${s.body.id}/history`)).body as { text: string }[];
     expect(history.every((h) => !h.text.includes('Иванов'))).toBe(true);
     expect((await request(app).get(`/api/scenarios/999/changelog`)).status).toBe(404);

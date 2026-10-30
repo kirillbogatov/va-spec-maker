@@ -58,7 +58,7 @@ export function ScenarioHistory({ scenarioId }: { scenarioId: number }) {
     });
 
   return (
-    <Card title="Все изменения" flush>
+    <Card title="Журнал событий" flush>
       {isSuccess && entries.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Изменений пока нет.</p>}
       <ul>
         {entries.map((e) => (

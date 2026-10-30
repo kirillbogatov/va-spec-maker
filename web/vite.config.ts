@@ -12,7 +12,7 @@ export default defineConfig({
   base: process.env.BASE_PATH ?? '/',
   define: { __DEMO_VERSION__: JSON.stringify(demoVersion) },
   plugins: [react(), tailwindcss()],
-  resolve: { alias: { '@': path.resolve(import.meta.dirname, './src') } },
+  resolve: { alias: { '@va/core': path.resolve(import.meta.dirname, '../core/src/index.ts'), '@': path.resolve(import.meta.dirname, './src') } },
   server: { port: 5173 },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },
 });

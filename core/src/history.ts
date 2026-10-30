@@ -48,7 +48,7 @@ function record(db: Db, scenarioId: number, c: Change): void {
   const refs = JSON.stringify(c.refs ?? []);
   const row = find.get(scenarioId, day, c.key) as { id: number } | undefined;
   if (row) db.prepare('UPDATE scenario_history SET text = ?, refs = ? WHERE id = ?').run(c.text, refs, row.id);
-  else db.prepare('INSERT INTO scenario_history(scenario_id, day, key, text, refs) VALUES (?, ?, ?, ?, ?)').run(scenarioId, day, c.key, c.text, refs);
+  else db.prepare('INSERT INTO scenario_history(scenario_id, day, key, text, refs, at) VALUES (?, ?, ?, ?, ?, ?)').run(scenarioId, day, c.key, c.text, refs, new Date().toISOString());
 }
 
 export function listHistory(db: Db, scenarioId: number): HistoryEntry[] {

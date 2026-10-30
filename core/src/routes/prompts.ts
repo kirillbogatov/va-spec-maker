@@ -39,7 +39,7 @@ export function promptsRouter(db: Db): RouterT {
   const create = (pid: number, body: any) => {
     const name = requireString(body?.name, 'Название');
     assertUniqueName(db, 'prompts', pid, name, 'Промпт');
-    const info = db.prepare('INSERT INTO prompts(project_id, name) VALUES (?, ?)').run(pid, name);
+    const info = db.prepare("INSERT INTO prompts(project_id, name, full_answers) VALUES (?, ?, '[]')").run(pid, name);
     return { id: Number(info.lastInsertRowid), name };
   };
 
