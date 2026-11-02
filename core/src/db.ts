@@ -1,4 +1,5 @@
 import { openSqlite, type Db, type OpenOpts } from './sqlite';
+import { backfillDependencyLinks } from './dependency-links';
 
 export type { Db };
 
@@ -97,8 +98,11 @@ CREATE TABLE IF NOT EXISTS scenario_dependencies (
   scenario_id INTEGER NOT NULL REFERENCES scenarios(id) ON DELETE CASCADE,
   position INTEGER NOT NULL DEFAULT 0,
   ref TEXT NOT NULL,
+  dictionary_id INTEGER REFERENCES dependency_dictionary(id) ON DELETE SET NULL,
+  editable INTEGER NOT NULL DEFAULT 0,
   entity_id INTEGER REFERENCES entities(id) ON DELETE SET NULL,
   name TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT 'string',
   options TEXT NOT NULL DEFAULT '[]'
 );
@@ -115,7 +119,7 @@ CREATE TABLE IF NOT EXISTS scenario_intents (
   id INTEGER PRIMARY KEY,
   scenario_id INTEGER NOT NULL REFERENCES scenarios(id) ON DELETE CASCADE,
   intent_id INTEGER NOT NULL REFERENCES intents(id) ON DELETE CASCADE,
-  is_global INTEGER NOT NULL DEFAULT 0,
+  is_global INTEGER NOT NULL DEFAULT 1,
   position INTEGER NOT NULL DEFAULT 0,
   UNIQUE (scenario_id, intent_id)
 );
@@ -184,6 +188,9 @@ export function migrate(db: Db): void {
   // Edition-specific migration numbers overlap; inspect the actual schema.
   const compatibleColumns: [string, string][] = [
     ["dependency_dictionary", "description TEXT NOT NULL DEFAULT ''"],
+    ["scenario_dependencies", "description TEXT NOT NULL DEFAULT ''"],
+    ["scenario_dependencies", "dictionary_id INTEGER REFERENCES dependency_dictionary(id) ON DELETE SET NULL"],
+    ["scenario_dependencies", "editable INTEGER NOT NULL DEFAULT 0"],
   ];
   for (const [table, ddl] of compatibleColumns) {
     if (db.prepare(`PRAGMA table_info(${table})`).all().length && !hasColumn(db, table, ddl.split(' ')[0])) {
@@ -209,15 +216,15 @@ export function migrate(db: Db): void {
     db.transaction(() => {
       for (const [table, link, col] of [['intents', 'scenario_intents', 'intent_id'], ['prompts', 'scenario_prompts', 'prompt_id']] as const) {
         if (!hasColumn(db, table, 'scenario_id')) continue;
-        db.exec(`INSERT OR IGNORE INTO ${link}(scenario_id, ${col}) SELECT scenario_id, id FROM ${table} WHERE scenario_id IS NOT NULL ORDER BY id;
+        db.exec(`INSERT OR IGNORE INTO ${link}(scenario_id, ${col}${link === 'scenario_intents' ? ', is_global' : ''}) SELECT scenario_id, id${link === 'scenario_intents' ? ', 0' : ''} FROM ${table} WHERE scenario_id IS NOT NULL ORDER BY id;
                  UPDATE ${table} SET scenario_id = NULL;`);
       }
       if (hasColumn(db, 'scenario_steps', 'any_intent')) {
         db.exec(`UPDATE scenario_steps SET kind = 'error', intent_id = NULL WHERE any_intent = 1;
                  UPDATE scenario_steps SET any_intent = 0;`);
       }
-      db.exec(`INSERT OR IGNORE INTO scenario_intents(scenario_id, intent_id)
-                 SELECT DISTINCT scenario_id, intent_id FROM scenario_steps WHERE intent_id IS NOT NULL ORDER BY scenario_id, intent_id;
+      db.exec(`INSERT OR IGNORE INTO scenario_intents(scenario_id, intent_id, is_global)
+                 SELECT DISTINCT scenario_id, intent_id, 0 FROM scenario_steps WHERE intent_id IS NOT NULL ORDER BY scenario_id, intent_id;
                INSERT OR IGNORE INTO scenario_prompts(scenario_id, prompt_id)
                  SELECT scenario_id, prompt_id FROM scenario_steps WHERE prompt_id IS NOT NULL
                  UNION SELECT scenario_id, prompt_id FROM scenario_states WHERE prompt_id IS NOT NULL;`);
@@ -246,6 +253,7 @@ export function migrate(db: Db): void {
     if (!hasColumn(db, 'dependency_dictionary', 'description')) db.exec("ALTER TABLE dependency_dictionary ADD COLUMN description TEXT NOT NULL DEFAULT ''");
     db.exec('PRAGMA user_version = 5');
   }
+  backfillDependencyLinks(db);
 }
 
 export async function openDb(opts: OpenOpts = {}): Promise<Db> {

@@ -42,7 +42,7 @@ export async function convertScenarioDocument(text: string, filename: string, op
       const old = db.prepare(`SELECT id FROM ${table} WHERE project_id = 1 AND name = ?`).get(name);
       const id = old?.id ?? db.prepare(`INSERT INTO ${table}(project_id,name) VALUES (1,?)`).run(name).lastInsertRowid;
       map.set(name, id);
-      if (table === 'intents') db.prepare('INSERT OR IGNORE INTO scenario_intents(scenario_id,intent_id) VALUES (?,?)').run(sid,id);
+      if (table === 'intents') db.prepare('INSERT OR IGNORE INTO scenario_intents(scenario_id,intent_id,is_global) VALUES (?,?,1)').run(sid,id);
       if (table === 'prompts') db.prepare('INSERT OR IGNORE INTO scenario_prompts(scenario_id,prompt_id) VALUES (?,?)').run(sid,id);
       return id;
     };
@@ -66,6 +66,17 @@ export async function convertScenarioDocument(text: string, filename: string, op
           const full = at(/полный|full|response/);
           db.prepare('UPDATE prompts SET full_answers = ? WHERE id = ?').run(JSON.stringify(lines(row[full < 0 ? 1 : full])), id);
           if (promptHasShort) db.prepare('UPDATE prompts SET short_answers = ? WHERE id = ?').run(JSON.stringify(lines(row[at(/короткий|short/)])),id);
+        }
+      } else if (/^(зависимость|dependency)/.test(t.head[0] ?? '')) {
+        recognized++;
+        for (const [position, row] of t.rows.entries()) {
+          const name = nameOf(row[0]);
+          if (!name) continue;
+          const values = lines(row[at(/значен|values/)]);
+          const description = clean(row[at(/описан|description/)]);
+          db.prepare('INSERT INTO scenario_dependencies(scenario_id,position,ref,name,type,options,description) VALUES (?,?,?,?,?,?,?)').run(
+            sid, position, `imported-dependency-${position}`, name, values.length ? 'enum' : 'string', JSON.stringify(values), description,
+          );
         }
       } else if (/^(сущност|entity|parameter)/.test(t.head[0] ?? '')) {
         recognized++;

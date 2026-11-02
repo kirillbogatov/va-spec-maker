@@ -112,17 +112,17 @@ describe('intents API', () => {
     const a = await request(app).post(`/api/scenarios/${s1}/intents`).send({ name: 'INT_A' });
     const put = await request(app).put(`/api/scenarios/${s2}/intents/${a.body.id}`).send({});
     expect(put.status).toBe(200);
-    expect(put.body).toEqual({ id: a.body.id, is_global: false });
+    expect(put.body).toEqual({ id: a.body.id, is_global: true });
     const list = (await request(app).get(`/api/projects/${pid}/intents`)).body;
     expect(list[0].scenarios).toEqual([{ id: s1, name: 'S1' }, { id: s2, name: 'S2' }]);
-    expect((await request(app).get(`/api/scenarios/${s2}/intents`)).body[0]).toMatchObject({ name: 'INT_A', is_global: false });
+    expect((await request(app).get(`/api/scenarios/${s2}/intents`)).body[0]).toMatchObject({ name: 'INT_A', is_global: true });
   });
 
   it('keeps the global flag per scenario', async () => {
     const { app, s1, s2 } = await twoScenarios();
     const a = await request(app).post(`/api/scenarios/${s1}/intents`).send({ name: 'INT_A' });
     await request(app).put(`/api/scenarios/${s1}/intents/${a.body.id}`).send({ is_global: true });
-    await request(app).put(`/api/scenarios/${s2}/intents/${a.body.id}`).send({});
+    await request(app).put(`/api/scenarios/${s2}/intents/${a.body.id}`).send({ is_global: false });
     expect((await request(app).get(`/api/scenarios/${s1}/intents`)).body[0].is_global).toBe(true);
     expect((await request(app).get(`/api/scenarios/${s2}/intents`)).body[0].is_global).toBe(false);
   });

@@ -1,3 +1,4 @@
+import { Textarea } from '@/components/ui/textarea';
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -77,7 +78,7 @@ export function DependenciesPage() {
   return (
     <DictionaryMaster
       kind="dependency"
-      commentKey="description"
+      subtitle={(item) => item.description}
       listActions={<DictionaryTransfer kind="dependencies" />}
       base="/dependencies"
       items={items}
@@ -85,9 +86,12 @@ export function DependenciesPage() {
       meta={(i) => (i.values.length ? null : { text: 'нет значений', warn: true })}
       usedIn={(i) => i.used_by.map((s) => ({ id: s.id, name: s.name }))}
       body={(d, patch) => (
+        <>
+        <DictCard title="Описание"><Textarea rows={2} aria-label="Описание зависимости" value={d.description} onChange={(event) => patch({ description: event.target.value })} /></DictCard>
         <DictCard title="Возможные значения">
           <ValuesList value={d.values} onChange={(values) => patch({ values })} />
         </DictCard>
+        </>
       )}
       emptyText="Зависимостей пока нет"
       createTitle="Новая зависимость"

@@ -150,6 +150,13 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
       }, baseline.current);
       baseline.current = saved;
       savedDraft.current = d;
+      // Сервер назначает связь со справочником и право редактирования. Не затираем правки, сделанные во время запроса.
+      if (draftRef.current === d && JSON.stringify(d.dependencies) !== JSON.stringify(saved.dependencies)) {
+        const next = { ...d, dependencies: saved.dependencies };
+        savedDraft.current = next;
+        draftRef.current = next;
+        setDraft(next);
+      }
     } catch (e) {
       if (e instanceof ApiError && e.code === 'edit_conflict') {
         setConflict(e.details as { current: Scenario | null });
@@ -158,6 +165,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     }
     qc.invalidateQueries({ queryKey: ['scenarios', projectId] });
     qc.invalidateQueries({ queryKey: ['scenario', scenario.id] });
+    qc.invalidateQueries({ queryKey: ['dependency-dictionary', projectId] });
     qc.invalidateQueries({ queryKey: ['history', scenario.id] });
   };
   const status = useAutosave(draft, saveDraft, { enabled: !conflict && !resolving && !deleted, resetKey });

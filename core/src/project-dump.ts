@@ -1,3 +1,4 @@
+import { backfillDependencyLinks } from './dependency-links';
 import { badRequest, notFound } from './errors';
 import type { Db } from './sqlite';
 
@@ -81,7 +82,7 @@ const TABLES: { name: string; where: string; fk: Record<string, string>; remap?:
   { name: 'prompts', where: IN_PROJECT, fk: {} },
   { name: 'scenario_intents', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', intent_id: 'intents' } },
   { name: 'scenario_prompts', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', prompt_id: 'prompts' } },
-  { name: 'scenario_dependencies', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', entity_id: 'entities' } },
+  { name: 'scenario_dependencies', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', entity_id: 'entities', dictionary_id: 'dependency_dictionary' } },
   { name: 'scenario_entities', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', entity_id: 'entities' } },
   { name: 'scenario_states', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', part_id: 'scenario_parts', prompt_id: 'prompts' } },
   { name: 'scenario_steps', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', part_id: 'scenario_parts', intent_id: 'intents', prompt_id: 'prompts' } },
@@ -147,6 +148,7 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
         if (typeof row.id === 'number') map.set(row.id, Number(info.lastInsertRowid));
       }
     }
+    backfillDependencyLinks(db, pid);
     return pid;
   })();
 }

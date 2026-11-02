@@ -97,6 +97,7 @@ export function intentsRouter(db: Db): RouterT {
     const created = db.transaction(() => {
       const c = create(s.project_id, req.body);
       connect(db, 'intent', sid, c.id);
+      if (typeof req.body?.is_global === 'boolean') setGlobal(db, sid, c.id, req.body.is_global);
       return c;
     })();
     res.status(201).json(created);

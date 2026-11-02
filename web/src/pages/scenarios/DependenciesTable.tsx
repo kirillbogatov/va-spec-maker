@@ -1,13 +1,16 @@
 import { Trash2, TriangleAlert } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Combobox } from '@base-ui/react/combobox';
-import { AddButton, Card, HEAD, ROW } from './Card';
+import { AddButton, Card, ROW } from './Card';
 import { TagInput } from '@/components/TagInput';
 import { cn, GHOST } from '@/lib/utils';
-import { useProjectId } from '@/hooks/project';
+import { usePath, useProjectId } from '@/hooks/project';
 import { api } from '@/lib/api';
 import type { Dependency, EntityListItem } from '@/lib/types';
+import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 
 interface Props {
   dependencies: Dependency[];
@@ -16,7 +19,7 @@ interface Props {
   onChange: (update: (deps: Dependency[]) => Dependency[]) => void;
 }
 
-const COLS = 'md:grid-cols-[minmax(0,260px)_minmax(0,1fr)_32px]';
+const COLS = 'md:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(0,1fr)_32px]';
 
 /** Название зависимости: свободный ввод с подсказками из справочника. */
 function NameCombobox({ value, names, onType, onPick }: { value: string; names: string[]; onType: (v: string) => void; onPick: (v: string) => void }) {
@@ -54,37 +57,52 @@ function NameCombobox({ value, names, onType, onPick }: { value: string; names: 
 }
 
 export function DependenciesTable({ dependencies, entities, onChange }: Props) {
+  const sort = useColumnSort();
+  const sorted = sort.rows(dependencies, (dependency, column) => column === 'values' ? (dependency.type === 'bool' ? ['true', 'false'] : dependency.options).join(' ') : column === 'description' ? dependency.description ?? '' : dependency.name || entities.find((e) => e.id === dependency.entity_id)?.name || '');
   const projectId = useProjectId();
+  const path = usePath();
   const { data: dictionary = [] } = useQuery({ queryKey: ['dependency-dictionary', projectId], queryFn: () => api.dependencyDictionary.list(projectId) });
 
   const patch = (ref: string, p: Partial<Dependency>) =>
     onChange((deps) => deps.map((d) => (d.ref === ref ? { ...d, ...p } : d)));
   const add = () =>
-    onChange((deps) => [...deps, { ref: crypto.randomUUID(), entity_id: null, name: '', type: 'enum', options: [] }]);
+    onChange((deps) => [...deps, { ref: crypto.randomUUID(), entity_id: null, name: '', description: '', type: 'enum', options: [] }]);
 
   /** Выбрав запись справочника, подставляем её значения как варианты списка. */
   const pick = (ref: string, name: string) => {
     const d = dictionary.find((x) => x.name === name);
-    if (d) patch(ref, { entity_id: null, name: d.name, type: d.values.length ? 'enum' : 'string', options: d.values });
+    if (d) patch(ref, { dictionary_id: d.id, editable: false, entity_id: null, name: d.name, description: d.description ?? '', type: d.values.length ? 'enum' : 'string', options: d.values });
   };
 
   return (
     <Card flush title="Внешние зависимости" action={<AddButton onClick={add}>Добавить</AddButton>}>
-      <div className={cn(ROW, HEAD, COLS)}>
-        <span>Зависимость</span>
-        <span>Значения</span>
+      <div className={cn(ROW, COLS, 'flex flex-wrap items-center border-t-0 py-1 text-xs font-medium text-muted-foreground md:grid')}>
+        <SortHeader column="name" sort={sort}>Зависимость</SortHeader>
+        <SortHeader column="values" sort={sort}>Значения</SortHeader>
+        <SortHeader column="description" sort={sort}>Описание</SortHeader>
         <span />
       </div>
-      {dependencies.map((d) => (
+      {sorted.map((d) => {
+        const locked = d.dictionary_id != null && d.editable === false;
+        const inheritedValues = d.type === 'bool' ? ['true', 'false'] : d.options;
+        const recordId = d.dictionary_id ?? dictionary.find((record) => record.name === d.name)?.id;
+        return (
         <div key={d.ref} className={cn(ROW, COLS, 'md:items-start')}>
+          <div>
           <NameCombobox
             value={d.name || (d.entity_id !== null ? entities.find((e) => e.id === d.entity_id)?.name ?? '' : '')}
             names={dictionary.map((x) => x.name)}
-            onType={(name) => patch(d.ref, { name, entity_id: null })}
+            onType={(name) => patch(d.ref, { name, entity_id: null, ...(locked ? { dictionary_id: null, editable: true } : {}) })}
             onPick={(name) => pick(d.ref, name)}
           />
+          {recordId != null && <Link to={path(`/dependencies/${recordId}`)} className="mt-1 inline-block text-xs text-brand hover:underline">{locked ? 'Из справочника' : 'В справочнике'} →</Link>}
+          </div>
           <div>
-            {d.type === 'bool' ? (
+            {locked ? (
+              <div role="group" aria-label="Значения зависимости" className="flex min-h-9 flex-wrap items-center gap-1.5 py-1">
+                {inheritedValues.length ? inheritedValues.map((value) => <span key={value} className="rounded-md bg-secondary px-2 py-1 text-[13px] text-secondary-foreground">{value}</span>) : <span className="text-sm text-muted-foreground">Нет значений</span>}
+              </div>
+            ) : d.type === 'bool' ? (
               <p className="pt-1.5 text-sm text-muted-foreground">true / false</p>
             ) : (
               <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
@@ -99,11 +117,12 @@ export function DependenciesTable({ dependencies, entities, onChange }: Props) {
               </div>
             )}
           </div>
+          <Textarea rows={1} className={cn(GHOST, 'field-sizing-content min-h-9 rounded-md px-2 py-1.5 text-sm')} aria-label="Описание зависимости" readOnly={locked} title={locked ? 'Описание редактируется в справочнике зависимостей' : undefined} placeholder={locked ? 'Нет описания' : 'Описание'} value={d.description ?? ''} onChange={(e) => patch(d.ref, { description: e.target.value })} />
           <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label="Удалить зависимость" onClick={() => onChange((deps) => deps.filter((x) => x.ref !== d.ref))}>
             <Trash2 className="size-4" />
           </Button>
         </div>
-      ))}
+      ); })}
       {dependencies.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Внешних зависимостей нет</p>}
     </Card>
   );

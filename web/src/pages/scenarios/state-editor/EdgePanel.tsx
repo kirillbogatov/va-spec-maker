@@ -1,4 +1,4 @@
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,9 +9,11 @@ import type { Dependency, EntityListItem, IntentListItem, Step } from '@/lib/typ
 import { ConditionsCell } from '../ConditionsCell';
 import { DialogLabel, IntentSelect } from '../StepsTable';
 import { PanelHeader, PanelRoot, PanelSection } from './PanelParts';
+import { planConditionStates } from './conditionStates';
 
 interface Props {
   step: Step;
+  steps: Step[];
   states: string[];
   /** Описания состояний по имени. */
   descriptions: Record<string, string>;
@@ -23,8 +25,8 @@ interface Props {
   targetPrompt?: string;
   onSelectState: (name: string) => void;
   onPatch: (p: Partial<Step>) => void;
+  onCreateConditionStates: () => void;
   onRemove: () => void;
-  onClose: () => void;
 }
 
 function StateSelect({ value, states, descriptions, label, onChange }: { value: string; states: string[]; descriptions: Record<string, string>; label: string; onChange: (v: string) => void }) {
@@ -45,7 +47,8 @@ function StateSelect({ value, states, descriptions, label, onChange }: { value: 
 }
 
 /** Инспектор перехода (одна строка Transition table): «откуда» (состояние, интент, условия) и «куда» (целевое состояние, ответ системы). */
-export function EdgePanel({ step, states, descriptions, intents, dependencies, entities, issues, targetPrompt, onPatch, onRemove, onClose, onSelectState }: Props) {
+export function EdgePanel({ step, steps, states, descriptions, intents, dependencies, entities, issues, targetPrompt, onPatch, onCreateConditionStates, onRemove, onSelectState }: Props) {
+  const plan = planConditionStates(step, dependencies, entities, steps);
   const errors = issues.filter((i) => i.level === 'error');
   const target = splitNext(step.next_states)[0] ?? '';
   return (
@@ -54,7 +57,6 @@ export function EdgePanel({ step, states, descriptions, intents, dependencies, e
         <TypeToken kind="intent" className="font-sans text-[11px] uppercase tracking-wide">Переход</TypeToken>
         <div className="flex items-center">
           <Button variant="ghost" size="icon" aria-label="Удалить переход" onClick={onRemove}><Trash2 className="size-4" /></Button>
-          <Button variant="ghost" size="icon" aria-label="Закрыть панель" onClick={onClose}><X className="size-4" /></Button>
         </div>
       </PanelHeader>
       {errors.length > 0 && (
@@ -78,6 +80,13 @@ export function EdgePanel({ step, states, descriptions, intents, dependencies, e
         <div>
           <DialogLabel>Условия</DialogLabel>
           <ConditionsCell conditions={step.conditions} freeText={step.condition} mode={step.cond_mode} dependencies={dependencies} entities={entities} onChange={onPatch} stacked />
+          <div className="mt-3 space-y-2 border-t pt-3">
+            <Button size="sm" variant="outline" className="h-auto w-full whitespace-normal py-1.5" disabled={!!plan.error || !plan.combinations.length || !step.state.trim()} onClick={onCreateConditionStates}>Создать состояния для всех сочетаний условий ({plan.combinations.length})</Button>
+            {plan.error ? <p role="status" className="text-xs text-muted-foreground">{plan.error}</p> : <>
+              <p className="text-xs text-muted-foreground">{plan.combinations.length ? 'Только недостающие сочетания условий для этого исходного состояния и интента. Свободные условия сохранятся.' : 'Переходы для всех сочетаний условий уже существуют.'}</p>
+              {!!plan.combinations.length && <p className="text-xs text-muted-foreground">Новые состояния получат ответ и действия выбранного целевого состояния.</p>}
+            </>}
+          </div>
         </div>
       </PanelSection>
       <PanelSection title="Куда">

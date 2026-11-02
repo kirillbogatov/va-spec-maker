@@ -116,6 +116,29 @@ export function uniqueStateName(taken: string[], base = 'ST_NEW'): string {
   return `${base}_${n}`;
 }
 
+/** Копия состояния с входящими условиями и исходящими переходами, без копирования соседних узлов. */
+export function duplicateState(steps: Step[], layout: Layout, source: string): { steps: Step[]; layout: Layout; name: string } {
+  const taken = [...Object.keys(layout), ...steps.flatMap((s) => [s.state.trim(), ...splitNext(s.next_states)])];
+  const name = uniqueStateName(taken, source);
+  const next = steps.flatMap((s) => {
+    if (s.kind !== 'transition') return [s];
+    const outgoing = s.state.trim() === source;
+    const targets = splitNext(s.next_states);
+    if (!outgoing && !targets.includes(source)) return [s];
+    const copy: Step = {
+      ...s,
+      key: crypto.randomUUID(),
+      conditions: s.conditions.map((c) => ({ ...c })),
+      state: outgoing ? name : s.state,
+      // У входящего перехода копируется только ветка к выбранному состоянию.
+      // Петля копии замыкается на саму копию.
+      next_states: outgoing ? targets.map((t) => t === source ? name : t).join(' ') : name,
+    };
+    return [s, copy];
+  });
+  return { steps: next, layout: { ...layout, [name]: { ...(layout[source] ?? { x: 0, y: 0 }) } }, name };
+}
+
 export const newTransition = (from: string, to: string): Step => ({
   key: crypto.randomUUID(), kind: 'transition', state: from, intent_id: null, request_params: '',
   condition: '', conditions: [], prompt_id: null, system_action: '', next_states: to,

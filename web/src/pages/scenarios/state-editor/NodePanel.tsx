@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { Copy, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,11 +20,11 @@ interface Props {
   entryName: string;
   onRename: (to: string) => void;
   onRemove: () => void;
-  onClose: () => void;
+  onDuplicate: () => void;
 }
 
 /** Редактор узла: имя, описание, ответ ассистента, действие системы. */
-export function NodePanel({ name, info, prompts, onPatchInfo, isEntry, isTerminal, entryName, onRename, onRemove, onClose }: Props) {
+export function NodePanel({ name, info, prompts, onPatchInfo, isEntry, isTerminal, entryName, onRename, onRemove, onDuplicate }: Props) {
   const [value, setValue] = useState(name);
   const promptOptions = [{ value: 'none', label: '— не выбран —' }, ...prompts.map((p) => ({ value: String(p.id), label: p.name, hint: p.hint }))];
   return (
@@ -35,8 +35,8 @@ export function NodePanel({ name, info, prompts, onPatchInfo, isEntry, isTermina
           {isEntry ? <span className="text-[10px] font-semibold uppercase tracking-wide text-brand">Старт</span> : isTerminal ? <span className="text-[10px] font-semibold uppercase tracking-wide text-ent">Конец</span> : null}
         </div>
         <div className="flex items-center">
+          <Button variant="ghost" size="icon" aria-label="Дублировать состояние" title="Дублировать состояние вместе с условиями" onClick={onDuplicate}><Copy className="size-4" /></Button>
           <Button variant="ghost" size="icon" aria-label="Удалить состояние" onClick={onRemove}><Trash2 className="size-4" /></Button>
-          <Button variant="ghost" size="icon" aria-label="Закрыть панель" onClick={onClose}><X className="size-4" /></Button>
         </div>
       </PanelHeader>
       <PanelSection title="Состояние">

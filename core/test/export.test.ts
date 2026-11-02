@@ -105,7 +105,7 @@ describe('renderDocx', () => {
     expect(pos.every((n) => n >= 0)).toBe(true);
     expect([...pos].sort((a, b) => a - b)).toEqual(pos);
     expect(xml).toContain('w:orient="landscape"');
-    expect(xml.match(/<w:tbl>/g)).toHaveLength(5);
+    expect(xml.match(/<w:tbl>/g)).toHaveLength(6);
   });
 
   it('numbers lists and renders example requests', async () => {
@@ -196,7 +196,7 @@ describe('export route', () => {
     });
     const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
     expect(md.match(/^# .*$/gm)).toEqual(['# Обогрев']);
-    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Сущности', '## Промпты', '## Переходы между состояниями', '## Ошибки']);
+    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Промпты', '## Переходы между состояниями', '## Ошибки']);
     expect(md.match(/^### .*$/gm)).toEqual(['### Включение', '### Выключение']);
     expect(md).toContain('Как включить');
     const [on, off] = md.split('### Выключение');
@@ -229,7 +229,7 @@ describe('export route', () => {
       }],
     });
     const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
-    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Сущности', '## Промпты', '## Переходы между состояниями', '## Ошибки']);
+    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Промпты', '## Переходы между состояниями', '## Ошибки']);
     expect(md).toContain('| В состояние | Запрос пользователя | Условия | Действие системы | Ответ ассистента |');
     expect(md).not.toContain('Глобальные переходы');
     expect(md).toContain('| INT_SPARE |');

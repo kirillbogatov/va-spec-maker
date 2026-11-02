@@ -58,6 +58,9 @@ export type DependencyType = 'string' | 'enum' | 'bool';
 /** Параметр или проверка, от которой зависит запуск сценария. entity_id задан: имя берётся из сущности. */
 export interface Dependency {
   ref: string; entity_id: number | null; name: string; type: DependencyType; options: string[];
+  description?: string;
+  dictionary_id?: number | null;
+  editable?: boolean;
 }
 /** Значение зависимости сценария (dep) или значение сущности проекта (entity_id, dep пуст). */
 export type ConditionOp = '=' | '!=' | '<' | '>';

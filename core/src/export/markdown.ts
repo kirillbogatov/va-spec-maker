@@ -1,6 +1,6 @@
 import type { ProjectSpec, ScenarioDoc } from './model';
 import {
-  entitiesTable, intentsTable, promptsTable, transitionsTable,
+  dependenciesTable, entitiesTable, intentsTable, promptsTable, transitionsTable,
   changelogTable, type Cell, type TableDef,
 } from './tables';
 import { STRINGS, type SpecLang } from './i18n';
@@ -27,15 +27,16 @@ function table({ head, rows }: TableDef): string {
   ].join('\n');
 }
 
-function section(spec: ProjectSpec, date: string | null, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = []): string[] {
+function section(spec: ProjectSpec, date: string | null, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = spec.changelog ?? []): string[] {
   const t = STRINGS[lang];
   const out: string[] = [`# ${spec.project.name}`];
   if (date) out.push(`_${t.specFrom(date)}_`);
   if (spec.project.description) out.push(spec.project.description);
-  if (changelog.length) out.push(`## ${t.changelog}`, table(changelogTable(changelog, lang)));
+  if (changelog.length) out.push(`## ${t.changelog}`, table(changelogTable(changelog, lang, !parts)));
 
   out.push(`## ${t.intents}`, table(intentsTable(spec, lang)));
-  out.push(`## ${t.entities}`, table(entitiesTable(spec, lang)));
+  if (spec.entities.length) out.push(`## ${t.entities}`, table(entitiesTable(spec, lang)));
+  if (spec.dependencies.length) out.push(`## ${t.dependencies}`, table(dependenciesTable(spec, lang)));
   out.push(`## ${t.prompts}`, table(promptsTable(spec, lang)));
   out.push(`## ${t.transitions}`);
   if (!parts || parts.length === 1) out.push(table(transitionsTable(parts ? parts[0].transitions : spec.transitions, lang)));

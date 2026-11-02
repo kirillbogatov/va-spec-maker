@@ -1,3 +1,4 @@
+import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,7 +38,7 @@ const toPayload = (d: Intent): Omit<Intent, 'id' | 'project_id'> => {
 };
 
 // Колонки строки на широком экране: интент, фразы, сущности, «Вкл.», стрелка
-const COLS = 'xl:grid-cols-[230px_minmax(0,1fr)_260px_56px_96px]';
+const COLS = 'xl:grid-cols-[minmax(140px,1fr)_minmax(140px,1.4fr)_minmax(140px,1.2fr)_56px_96px]';
 
 /** Свёрнутая строка: сущности жетонами обязательные залиты цветом. */
 function EntityTokens({ value, entities }: { value: IntentEntity[]; entities: EntityListItem[] }) {
@@ -444,9 +445,11 @@ function IntentRowLoader({ link, siblings, defaultOpen, focusName, onToggleGloba
 }
 
 export function IntentsTable({ scenarioId }: { scenarioId: number }) {
+  const sort = useColumnSort();
   const mode = useIntentMode(useProjectId());
   const projectId = useProjectId();
   const qc = useQueryClient();
+  const matchKeywordsForSort = useKeywordMatcher(projectId);
   const [created, setCreated] = useState<number | null>(null);
   // Только что созданный интент: его название редактируется сразу
   const [fresh, setFresh] = useState<number | null>(null);
@@ -461,6 +464,16 @@ export function IntentsTable({ scenarioId }: { scenarioId: number }) {
   const owners = items.flatMap((i, n) => {
     const d = phraseQueries[n]?.data;
     return d ? [{ id: i.id, name: d.name, phrases: d.phrases }] : [];
+  });
+  const { data: entityList = [] } = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId) });
+  const sorted = sort.rows(items, (item, column) => {
+    const detail = phraseQueries[items.indexOf(item)]?.data;
+    if (column === 'values' && mode === 'keywords') return detail?.phrases.flatMap((phrase) => matchKeywordsForSort(phrase)).join(' ') ?? '';
+    if (column === 'values') return detail?.values.filter((value) => modeShows(mode, value.kind)).map((value) => value.text).join(' ') ?? item.hint;
+    if (column === 'entities') return detail?.entities.map((entity) => entityList.find((e) => e.id === entity.entity_id)?.name ?? '').join(' ') ?? '';
+    if (column === 'enabled') return item.enabled;
+    if (column === 'global') return !!item.is_global;
+    return item.name;
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['intents'] });
@@ -490,15 +503,14 @@ export function IntentsTable({ scenarioId }: { scenarioId: number }) {
         connectLabel="Подключить существующий интент"
       />
       <section className="overflow-hidden rounded-xl border bg-card" aria-label="Интенты сценария">
-        <div className={cn('hidden gap-x-3 px-4 py-2 text-xs font-medium text-muted-foreground xl:grid', COLS)}>
-          <span>Интент</span>
-          <span>{MODE_TITLE[mode]}</span>
-          <span>Сущности</span>
-          <span>Вкл.</span>
-          <span title="Срабатывает из любого состояния">Глобальный</span>
-          <span />
+        <div className={cn('flex flex-wrap items-center gap-x-3 border-b px-4 py-1 text-xs font-medium text-muted-foreground xl:grid', COLS)}>
+          <SortHeader column="name" sort={sort}>Интент</SortHeader>
+          <SortHeader column="values" sort={sort}>{MODE_TITLE[mode]}</SortHeader>
+          <SortHeader column="entities" sort={sort}>Сущности</SortHeader>
+          <SortHeader column="enabled" sort={sort}>Вкл.</SortHeader>
+          <SortHeader column="global" sort={sort}>Глобальный</SortHeader>
         </div>
-        {items.map((i) => (
+        {sorted.map((i) => (
           <IntentRowLoader
             key={i.id}
             link={i}

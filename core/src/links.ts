@@ -13,7 +13,7 @@ const LINK = {
 export function connect(db: Db, kind: LinkKind, scenarioId: number, id: number): void {
   const l = LINK[kind];
   const next = (db.prepare(`SELECT COALESCE(MAX(position), -1) + 1 AS n FROM ${l.table} WHERE scenario_id = ?`).get(scenarioId) as { n: number }).n;
-  const { changes } = db.prepare(`INSERT OR IGNORE INTO ${l.table}(scenario_id, ${l.col}, position) VALUES (?, ?, ?)`).run(scenarioId, id, next);
+  const { changes } = kind === 'intent' ? db.prepare('INSERT OR IGNORE INTO scenario_intents(scenario_id, intent_id, position, is_global) VALUES (?, ?, ?, 1)').run(scenarioId, id, next) : db.prepare(`INSERT OR IGNORE INTO ${l.table}(scenario_id, ${l.col}, position) VALUES (?, ?, ?)`).run(scenarioId, id, next);
   if (changes) logLink(db, scenarioId, kind, id, 'connect');
 }
 

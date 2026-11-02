@@ -95,17 +95,21 @@ function block(m: Measure, lines: Line[], x: number, top: number, w: number, tex
   return top;
 }
 
-const BW = 188;
-const CW = 152;
+export const BW = 188;
+export const CW = 188;
 const LABEL: Style = { size: 9, weight: 500, fill: C.faint, upper: true, spacing: 0.45 };
 
 interface Box { width: number; height: number; svg: (x: number, y: number) => string }
 
-function stateBox(m: Measure, s: SchemeState): Box {
+export function stateBox(m: Measure, s: SchemeState): Box {
   const lines: Line[] = [];
   const L = 14;
   const inner = BW - L - 10;
-  let y = 8;
+  const pill = `S${s.number}`;
+  const pillW = Math.ceil(width(m, pill, { size: 9.5, weight: 500, mono: true, fill: C.st })) + 12;
+  lines.push({ x: 8 + pillW / 2, y: base(6, 15, 9.5), anchor: 'middle', runs: [{ text: pill, style: { size: 9.5, weight: 500, mono: true, fill: C.st } }] });
+  lines.push({ x: 8 + pillW + 5, y: base(6, 15, 9), runs: [{ text: 'Состояние', style: LABEL }] });
+  let y = 26;
   if (s.tag) {
     const tag = { start: ['Старт', C.brand], end: ['Конец', C.ent], unreachable: ['Недостижимо', C.bad] }[s.tag];
     lines.push({ x: L, y: base(y, 12, 9), runs: [{ text: tag[0], style: { size: 9, weight: 600, fill: tag[1], upper: true, spacing: 0.6 } }] });
@@ -115,8 +119,10 @@ function stateBox(m: Measure, s: SchemeState): Box {
   if (s.description.trim()) y = block(m, lines, L, y, inner, s.description.trim(), { size: 11, fill: C.muted }, 15);
   y += 6;
   const rule = y;
+  const rules = [rule];
   y += 5;
   const section = (label: string, fill: () => void) => {
+    if (label === 'Действие') { rules.push(y); y += 5; }
     y = block(m, lines, L, y, inner, label, LABEL, 12);
     fill();
     y += 3;
@@ -136,15 +142,14 @@ function stateBox(m: Measure, s: SchemeState): Box {
     width: BW, height,
     svg: (x, y0) => `<g transform="translate(${x} ${y0})">`
       + `<rect width="${BW}" height="${height}" rx="8" fill="#fff" ${border}/>`
-      + `<line x1="0" x2="${BW}" y1="${rule}" y2="${rule}" stroke="${C.line}"/>`
-      + `<circle cx="0" cy="0" r="10" fill="${C.st}"/>`
-      + textEl({ x: 0, y: 3.6, anchor: 'middle', runs: [{ text: String(s.number), style: { size: 10.5, weight: 600, fill: '#fff' } }] })
+      + rules.map((rule) => `<line x1="0" x2="${BW}" y1="${rule}" y2="${rule}" stroke="${C.line}"/>`).join('')
+      + `<rect x="8" y="6" width="${pillW}" height="15" rx="7.5" fill="#f1eafa"/>`
       + lines.map(textEl).join('')
       + '</g>',
   };
 }
 
-function edgeBox(m: Measure, e: SchemeEdge): Box {
+export function edgeBox(m: Measure, e: SchemeEdge): Box {
   const lines: Line[] = [];
   const P = 8;
   const inner = CW - 2 * P;
@@ -152,12 +157,14 @@ function edgeBox(m: Measure, e: SchemeEdge): Box {
   const pillText = `E${e.number}`;
   const pillW = Math.ceil(width(m, pillText, { size: 9.5, weight: 500, mono: true, fill: C.int })) + 12;
   lines.push({ x: P + pillW / 2, y: base(y, 15, 9.5), anchor: 'middle', runs: [{ text: pillText, style: { size: 9.5, weight: 500, mono: true, fill: C.int } }] });
-  const total = (e.intent ? 1 : 0) + e.conds.length;
-  const head = total > 1 ? `Условия · ${e.mode === 'any' ? 'любое' : 'все'}` : total ? 'Условия' : 'Без условий';
+  const head = 'Переход';
   lines.push({ x: P + pillW + 5, y: base(y, 15, 9), runs: [{ text: head, style: { size: 9, weight: 600, fill: C.faint, upper: true, spacing: 0.45 } }] });
   const pillY = y;
   y += 17;
   const cond: Style = { size: 10, mono: true, fill: C.fg };
+  const rules: number[] = [];
+  const section = (title: string) => { rules.push(y); y += 5; y = block(m, lines, P, y, inner, title, LABEL, 12); };
+  section('Интент');
   if (e.intent) {
     const pre: Style = { ...cond, fill: C.ent };
     const preW = width(m, 'интент ', pre);
@@ -166,7 +173,11 @@ function edgeBox(m: Measure, e: SchemeEdge): Box {
       y += 14;
     });
   }
+  if (!e.intent) y = block(m, lines, P, y, inner, 'без интента', cond, 14);
+  y += 4;
+  section(e.conds.length > 1 ? `Условия · ${e.mode === 'any' ? 'любое' : 'все'}` : 'Условия');
   for (const c of e.conds) y = block(m, lines, P, y, inner, c, cond, 14);
+  if (!e.conds.length) y = block(m, lines, P, y, inner, '—', { ...cond, fill: C.muted }, 14);
   if (e.example.trim()) y = block(m, lines, P, y + 2, inner, `«${e.example.trim()}»`, { size: 10.5, italic: true, fill: C.muted }, 14);
   const height = y + 6;
   return {
@@ -174,6 +185,7 @@ function edgeBox(m: Measure, e: SchemeEdge): Box {
     svg: (x, y0) => `<g transform="translate(${x} ${y0})">`
       + `<rect width="${CW}" height="${height}" rx="8" fill="#fff" stroke="${C.int}" stroke-width="1.2"/>`
       + `<rect x="${P}" y="${pillY}" width="${pillW}" height="15" rx="7.5" fill="${C.intBg}"/>`
+      + rules.map((rule) => `<line x1="0" x2="${CW}" y1="${rule}" y2="${rule}" stroke="${C.line}"/>`).join('')
       + lines.map(textEl).join('')
       + '</g>',
   };
@@ -207,7 +219,7 @@ function ruleTable(m: Measure, title: string, rows: SchemeRule[], x: number, top
       r.trigger.map((t, i) => [t, i === r.trigger.length - 1 && r.trigger.length > 1 ? muted : mono] as [string, Style]),
       r.prompt ? [[r.prompt.name, { ...mono, fill: C.prm }], ...(r.prompt.text.trim() ? [[`«${r.prompt.text.trim()}»`, muted] as [string, Style]] : [])] : [['—', muted]],
       [[r.action.trim() || '—', r.action.trim() ? text : muted]],
-      r.targets.length ? r.targets.map((t) => [numbers.has(t) ? `${numbers.get(t)} ${t}` : t, { ...mono, fill: C.st }] as [string, Style]) : [['—', muted]],
+      r.targets.length ? r.targets.map((t) => [numbers.has(t) ? `S${numbers.get(t)} ${t}` : t, { ...mono, fill: C.st }] as [string, Style]) : [['—', muted]],
     ];
     const top0 = y + 5;
     let bottom = top0;
@@ -287,12 +299,12 @@ export async function buildSchemeSvg(input: SchemeInput, m: Measure): Promise<st
   const ls: Style = { size: 10.5, fill: C.muted };
   let lx = PAD;
   for (const item of legend) {
-    const iw = item.icon ? 22 : 0;
+    const iw = item.icon === 'num' ? 32 : item.icon ? 22 : 0;
     const w = iw + width(m, item.text, ls);
     if (lx > PAD && lx + w > PAD + cw) { lx = PAD; y += 18; }
     if (item.icon === 'num') {
-      parts.push(`<circle cx="${lx + 7.5}" cy="${y + 8}" r="7.5" fill="${C.st}"/>`);
-      lines.push({ x: lx + 7.5, y: y + 11.2, anchor: 'middle', runs: [{ text: '1', style: { size: 9, weight: 600, fill: '#fff' } }] });
+      parts.push(`<rect x="${lx}" y="${y + 1}" width="26" height="15" rx="7.5" fill="#f1eafa"/>`);
+      lines.push({ x: lx + 13, y: y + 11.2, anchor: 'middle', runs: [{ text: 'S1', style: { size: 9.5, weight: 500, mono: true, fill: C.st } }] });
     }
     if (item.icon === 'card') parts.push(`<rect x="${lx}" y="${y + 2}" width="18" height="12" rx="3.5" fill="none" stroke="${C.int}" stroke-width="1.2"/>`);
     lines.push({ x: lx + iw, y: base(y, 16, 10.5), runs: [{ text: item.text, style: ls }] });

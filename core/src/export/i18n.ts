@@ -7,6 +7,7 @@ export interface SpecStrings {
   specFrom: (date: string) => string;
   intents: string;
   entities: string;
+  dependencies: string;
   prompts: string;
   transitions: string;
   errors: string;
@@ -30,6 +31,7 @@ export interface SpecStrings {
   globalHead: string[];
   changelog: string;
   changelogHead: string[];
+  changelogProjectHead: string[];
 }
 
 export const STRINGS: Record<SpecLang, SpecStrings> = {
@@ -37,6 +39,7 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     specFrom: (d) => `Спецификация от ${d}`,
     intents: 'Интенты',
     entities: 'Сущности',
+    dependencies: 'Внешние зависимости',
     prompts: 'Промпты',
     transitions: 'Переходы между состояниями',
     errors: 'Ошибки',
@@ -55,16 +58,18 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     examplePhrasesHead: 'Фразы для обучения',
     entitiesHead: ['Сущность', 'Тип', 'Значения', 'Несколько значений'],
     promptsHead: ['Промпт', 'Ответ ассистента'],
-    dependenciesHead: ['Сценарий', 'Зависимость', 'Тип', 'Значения'],
+    dependenciesHead: ['Зависимость', 'Значения', 'Описание'],
     transitionHead: ['Из состояния', 'В состояние', 'Запрос пользователя', 'Условия', 'Действие системы', 'Ответ ассистента'],
     globalHead: ['В состояние', 'Запрос пользователя', 'Условия', 'Действие системы', 'Ответ ассистента'],
     changelog: 'Журнал изменений',
-    changelogHead: ['Задача', 'Автор', 'Описание'],
+    changelogHead: ['Дата', 'Задача', 'Автор', 'Описание'],
+    changelogProjectHead: ['Дата', 'Сценарий', 'Задача', 'Автор', 'Описание'],
   },
   en: {
     specFrom: (d) => `Specification dated ${d}`,
     intents: 'Intents',
     entities: 'Entities',
+    dependencies: 'External dependencies',
     prompts: 'Prompts',
     transitions: 'State transitions',
     errors: 'Errors',
@@ -83,10 +88,11 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     examplePhrasesHead: 'Example phrases',
     entitiesHead: ['Entity', 'Type', 'Values', 'Multiple values'],
     promptsHead: ['Prompt', 'Assistant response'],
-    dependenciesHead: ['Scenario', 'Dependency', 'Type', 'Values'],
+    dependenciesHead: ['Dependency', 'Values', 'Description'],
     transitionHead: ['From state', 'To state', 'User request', 'Conditions', 'System action', 'Assistant response'],
     globalHead: ['To state', 'User request', 'Conditions', 'System action', 'Assistant response'],
     changelog: 'Change log',
-    changelogHead: ['Task', 'Author', 'Description'],
+    changelogHead: ['Date', 'Task', 'Author', 'Description'],
+    changelogProjectHead: ['Date', 'Scenario', 'Task', 'Author', 'Description'],
   },
 };

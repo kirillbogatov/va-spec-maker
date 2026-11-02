@@ -4,7 +4,7 @@ import {
 } from 'docx';
 import type { ProjectSpec, ScenarioDoc } from './model';
 import {
-  changelogTable, entitiesTable, intentsTable, promptsTable, transitionsTable,
+  changelogTable, dependenciesTable, entitiesTable, intentsTable, promptsTable, transitionsTable,
   type Cell, type TableDef,
 } from './tables';
 import { STRINGS, type SpecLang } from './i18n';
@@ -95,7 +95,7 @@ const gap = () => new Paragraph({ children: [], spacing: { after: 120 } });
 const subheading = (text: string) =>
   new Paragraph({ children: [run(text, { size: 28, bold: true })], spacing: { before: 160, after: 100 }, keepNext: true });
 
-function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = []): Block[] {
+function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = spec.changelog ?? []): Block[] {
   const t = STRINGS[lang];
   const transitions: Block[] =
     !parts || parts.length === 1
@@ -107,9 +107,10 @@ function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['p
           gap(),
         ]);
   return [
-    ...(changelog.length ? [heading(t.changelog), tableBlock(changelogTable(changelog, lang)), gap()] : []),
+    ...(changelog.length ? [heading(t.changelog), tableBlock(changelogTable(changelog, lang, !parts)), gap()] : []),
     heading(t.intents), tableBlock(intentsTable(spec, lang)), gap(),
-    heading(t.entities), tableBlock(entitiesTable(spec, lang)), gap(),
+    ...(spec.entities.length ? [heading(t.entities), tableBlock(entitiesTable(spec, lang)), gap()] : []),
+    ...(spec.dependencies.length ? [heading(t.dependencies), tableBlock(dependenciesTable(spec, lang)), gap()] : []),
     heading(t.prompts), tableBlock(promptsTable(spec, lang)), gap(),
     heading(t.transitions), ...transitions, gap(),
     heading(t.errors), tableBlock(transitionsTable(spec.errors, lang)),

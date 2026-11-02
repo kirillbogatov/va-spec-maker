@@ -1,3 +1,4 @@
+import { syncScenarioDependencies } from '../dependency-links';
 import { importScenario } from '../scenario-import';
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
@@ -77,9 +78,9 @@ export function scenariosRouter(db: Db): RouterT {
     }
     const dependencies = (
       db
-        .prepare('SELECT ref, entity_id, name, type, options FROM scenario_dependencies WHERE scenario_id = ? ORDER BY position, id')
-        .all(id) as { options: string }[]
-    ).map((d) => ({ ...d, options: JSON.parse(d.options) as string[] }));
+        .prepare('SELECT ref, entity_id, name, description, type, options, dictionary_id, editable FROM scenario_dependencies WHERE scenario_id = ? ORDER BY position, id')
+        .all(id) as { options: string; dictionary_id: number | null; editable: number }[]
+    ).map((d) => ({ ...d, editable: d.dictionary_id === null || !!d.editable, options: JSON.parse(d.options) as string[] }));
     const entities = (db
       .prepare('SELECT entity_id, followup_prompt, required, is_array FROM scenario_entities WHERE scenario_id = ? ORDER BY position, id')
       .all(id) as { entity_id: number; followup_prompt: string; required: number; is_array: number }[]).map((e) => ({ ...e, required: !!e.required, is_array: !!e.is_array }));
@@ -125,6 +126,9 @@ export function scenariosRouter(db: Db): RouterT {
       ref: requireString(d?.ref, 'Идентификатор зависимости'),
       entity_id: d?.entity_id == null ? null : parseId(d.entity_id),
       name: optString(d?.name).trim(),
+      description: optString(d?.description),
+      dictionary_id: d?.dictionary_id == null ? null : parseId(d.dictionary_id),
+      editable: false,
       type: DEP_TYPES.includes(d?.type) ? (d.type as string) : 'string',
       options: (Array.isArray(d?.options) ? d.options : []).map((o: unknown) => optString(o).trim()).filter(Boolean),
     }));
@@ -207,6 +211,7 @@ export function scenariosRouter(db: Db): RouterT {
     });
     if (parts.length === 0) throw badRequest('В сценарии должна быть хотя бы одна вкладка');
     db.transaction(() => {
+      syncScenarioDependencies(db, cur.project_id, dependencies, cur.dependencies as unknown as Parameters<typeof syncScenarioDependencies>[3]);
       db.prepare('UPDATE scenarios SET name = ?, description = ? WHERE id = ?').run(name, optString(b.description), id);
       db.prepare('DELETE FROM scenario_parts WHERE scenario_id = ?').run(id);
       db.prepare('DELETE FROM scenario_states WHERE scenario_id = ?').run(id);
@@ -216,10 +221,10 @@ export function scenariosRouter(db: Db): RouterT {
       entities.forEach((e: any, i: number) => insEnt.run(id, i, e.entity_id, e.followup_prompt, e.required, e.is_array));
       db.prepare('DELETE FROM scenario_dependencies WHERE scenario_id = ?').run(id);
       const insDep = db.prepare(
-        'INSERT INTO scenario_dependencies(scenario_id, position, ref, entity_id, name, type, options) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO scenario_dependencies(scenario_id, position, ref, entity_id, name, description, type, options, dictionary_id, editable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       );
       dependencies.forEach((d: any, i: number) =>
-        insDep.run(id, i, d.ref, d.entity_id, d.name, d.type, JSON.stringify(d.options)),
+        insDep.run(id, i, d.ref, d.entity_id, d.name, d.description, d.type, JSON.stringify(d.options), d.dictionary_id, d.editable ? 1 : 0),
       );
       const insPart = db.prepare('INSERT INTO scenario_parts(scenario_id, position, name, description, layout) VALUES (?, ?, ?, ?, ?)');
       const insState = db.prepare('INSERT INTO scenario_states(scenario_id, part_id, name, description, prompt_id, system_action) VALUES (?, ?, ?, ?, ?, ?)');

@@ -1,3 +1,4 @@
+import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
@@ -11,7 +12,7 @@ import { toast } from 'sonner';
 import { downloadBlob } from '@/lib/download';
 import type { ChangelogRow } from '@/lib/types';
 import { cn, GHOST } from '@/lib/utils';
-import { AddButton, Card, HEAD, ROW } from './Card';
+import { AddButton, Card, ROW } from './Card';
 
 const COLS = 'md:grid-cols-[minmax(0,145px)_minmax(0,180px)_minmax(0,180px)_minmax(0,1fr)_32px]';
 const FIELD = cn(GHOST, 'h-8 w-full rounded-md border px-2.5 text-sm max-md:h-10 md:-ml-2.5 md:w-[calc(100%+0.625rem)]');
@@ -26,6 +27,7 @@ export function ScenarioChangelog({ scenarioId }: { scenarioId: number }) {
 
 function Editor({ scenarioId, initial }: { scenarioId: number; initial: ChangelogRow[] }) {
   const qc = useQueryClient();
+  const sort = useColumnSort();
   const [rows, setRows] = useState<Row[]>(() => initial.map((r) => ({ ...r, key: crypto.randomUUID() })));
   const baseline = useRef(initial);
   const savedRows = useRef(rows);
@@ -90,14 +92,14 @@ function Editor({ scenarioId, initial }: { scenarioId: number; initial: Changelo
           <Button variant="outline" onClick={() => downloadBlob(new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' }), 'История изменений — черновик.json')}>Скачать строки</Button>
         </div>
       </div>}
-      <div className={cn(ROW, HEAD, COLS)}>
-        <span>Дата</span>
-        <span>Задача</span>
-        <span>Автор</span>
-        <span>Описание изменений</span>
+      <div className={cn(ROW, COLS, 'flex flex-wrap items-center border-t-0 py-1 text-xs font-medium text-muted-foreground md:grid')}>
+        <SortHeader column="date" sort={sort}>Дата</SortHeader>
+        <SortHeader column="task" sort={sort}>Задача</SortHeader>
+        <SortHeader column="author" sort={sort}>Автор</SortHeader>
+        <SortHeader column="description" sort={sort}>Описание изменений</SortHeader>
         <span />
       </div>
-      {rows.map((r, i) => (
+      {sort.rows(rows, (row, column) => row[column as 'date' | 'task' | 'author' | 'description'] ?? '').map((r, i) => (
         <div key={r.key} className={cn(ROW, COLS, 'md:items-start')}>
           <Input type="date" className={cn(FIELD, 'min-w-0')} aria-label={`Дата, строка ${i + 1}`} value={r.date ?? ''} onChange={(e) => patch(r.key, { date: e.target.value })} />
           <Input className={FIELD} value={r.task} aria-label={`Задача, строка ${i + 1}`} onChange={(e) => patch(r.key, { task: e.target.value })} />

@@ -102,9 +102,9 @@ export function promptsTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef
 export function dependenciesTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef {
   return {
     head: STRINGS[lang].dependenciesHead,
-    widths: [25, 30, 15, 30],
+    widths: [25, 30, 45],
     rows: spec.dependencies.map((d) => ({
-      cells: [text(d.scenario), text(d.name), text(d.type), d.values.length ? list(d.values) : dash('')],
+      cells: [text(d.name), d.values.length ? list(d.values) : dash(''), dash(d.description ?? '')],
     })),
   };
 }
@@ -139,10 +139,12 @@ export const globalsTable = (rows: TransitionRow[], lang: SpecLang = 'ru'): Tabl
   })),
 });
 
-export interface ChangelogRow { task: string; author: string; description: string }
+export interface ChangelogRow { scenario?: string; date?: string; task: string; author: string; description: string }
 
-export const changelogTable = (rows: ChangelogRow[], lang: SpecLang = 'ru'): TableDef => ({
-  head: STRINGS[lang].changelogHead,
-  widths: [20, 20, 60],
-  rows: rows.map((r): Row => ({ cells: [dash(r.task), dash(r.author), dash(r.description)] })),
+export const changelogTable = (rows: ChangelogRow[], lang: SpecLang = 'ru', withScenario = false): TableDef => ({
+  head: withScenario ? STRINGS[lang].changelogProjectHead : STRINGS[lang].changelogHead,
+  widths: withScenario ? [12, 18, 14, 14, 42] : [14, 18, 18, 50],
+  rows: rows.map((r): Row => ({
+    cells: [dash(r.date ?? ''), ...(withScenario ? [dash(r.scenario ?? '')] : []), dash(r.task), dash(r.author), dash(r.description)],
+  })),
 });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { useAutosave } from '@/hooks/useAutosave';
 import { api } from '@/lib/api';
 import { cn, uniqueName } from '@/lib/utils';
 import type { Prompt, PromptListItem } from '@/lib/types';
+import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 
 type Draft = Omit<Prompt, 'id' | 'project_id'>;
 
@@ -31,6 +32,7 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
     if (!d.name.trim()) return;
     await api.prompts.save(prompt.id, { ...d, full_answers: d.full_answers.filter((a) => a.trim()) });
     qc.invalidateQueries({ queryKey: ['prompts'] });
+    qc.invalidateQueries({ queryKey: ['prompt', prompt.id] });
   });
   const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
   // Всегда есть хотя бы одно поле ввода
@@ -144,11 +146,17 @@ function PromptRowLoader({ link, startRenaming, onDisconnect, onRemove }: { link
 }
 
 export function PromptsTable({ scenarioId }: { scenarioId: number }) {
+  const sort = useColumnSort();
   const projectId = useProjectId();
   const qc = useQueryClient();
   // Только что созданный промпт: его название редактируется сразу
   const [fresh, setFresh] = useState<number | null>(null);
   const { data: items = [], isSuccess } = useQuery({ queryKey: ['prompts', 'scenario', scenarioId], queryFn: () => api.prompts.listByScenario(scenarioId) });
+  const details = useQueries({ queries: items.map((item) => ({ queryKey: ['prompt', item.id], queryFn: () => api.prompts.get(item.id) })) });
+  const sorted = sort.rows(items, (item, column) => {
+    const detail = details[items.indexOf(item)]?.data;
+    return column === 'full' ? detail?.full_answers.join(' ') ?? item.hint : item.name;
+  });
   // Название промпта уникально в рамках всего проекта, а не только сценария
   const { data: all = [] } = useQuery({ queryKey: ['prompts', projectId], queryFn: () => api.prompts.list(projectId) });
 
@@ -175,11 +183,11 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
         connectLabel="Подключить существующий промпт"
       />
       <section className="overflow-hidden rounded-xl border bg-card" aria-label="Промпты сценария">
-        <div className="hidden gap-x-3 px-4 py-2 text-xs font-medium text-muted-foreground md:grid md:grid-cols-[230px_minmax(0,1fr)]">
-          <span>Промпт</span>
-          <span>Ответ ассистента</span>
+        <div className="flex flex-wrap items-center gap-x-3 border-b px-4 py-1 text-xs font-medium text-muted-foreground md:grid md:grid-cols-[230px_minmax(0,1fr)]">
+          <SortHeader column="name" sort={sort}>Промпт</SortHeader>
+          <SortHeader column="full" sort={sort}>Ответ ассистента</SortHeader>
                   </div>
-        {items.map((p) => (
+        {sorted.map((p) => (
           <PromptRowLoader key={p.id} link={p} startRenaming={p.id === fresh} onDisconnect={() => disconnect.mutate(p.id)} onRemove={() => remove.mutate(p.id)} />
         ))}
         {isSuccess && items.length === 0 && (

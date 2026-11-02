@@ -47,10 +47,12 @@ describe('buildSchemeSvg', () => {
     expect(svg).toContain('Перевод &lt;по&gt; номеру');
     expect(svg).toContain('VA_ACTIVATION');
     expect(svg).toContain('>E1<');
-    expect(svg).toContain('УСЛОВИЯ · ВСЕ');
+    expect(svg).toContain('ИНТЕНТ');
+    expect(svg).toContain('УСЛОВИЯ');
+    expect(svg).toContain('>S1<');
     expect(svg).toContain('«да»');
     expect(svg).toContain('ОШИБКИ СЦЕНАРИЯ');
-    expect(svg).toContain('2 ST_DONE');
+    expect(svg).toContain('S2 ST_DONE');
     expect(svg).toContain('marker-end="url(#ar)"');
     expect(svg).not.toContain('ГЛОБАЛЬНЫЕ ПЕРЕХОДЫ');
   });

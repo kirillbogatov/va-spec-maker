@@ -19,6 +19,7 @@ export type IntentMode = 'phrases' | 'patterns' | 'both' | 'keywords';
 export const parseIntentMode = (v: unknown): IntentMode => (v === 'phrases' || v === 'patterns' || v === 'keywords' ? v : 'both');
 
 export interface ProjectSpec {
+  changelog?: { date?: string; scenario?: string; task: string; author: string; description: string }[];
   project: { id: number; name: string; description: string };
   /** Не задан — как «both»: колонки по наличию данных. */
   intentMode?: IntentMode;
@@ -39,7 +40,7 @@ export interface ProjectSpec {
     values: { value: string; synonyms: string[] }[];
   }[];
   prompts: { name: string; full_answers: string[] }[];
-  dependencies: { scenario: string; name: string; type: string; values: string[] }[];
+  dependencies: { scenario: string; name: string; type: string; values: string[]; description?: string }[];
   transitions: TransitionRow[];
   errors: TransitionRow[];
   /** Переходы глобальных интентов (из любого состояния). */
@@ -59,7 +60,7 @@ export interface ScenarioDoc {
   spec: ProjectSpec;
   parts: SpecPart[];
   /** Журнал изменений, который ведут вручную; выводится вверху документа после описания. */
-  changelog: { task: string; author: string; description: string }[];
+  changelog: { date?: string; task: string; author: string; description: string }[];
 }
 
 /**
@@ -80,6 +81,10 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
 
   // Сущности сценария — те, что указаны у его интентов (вкладка «Интенты»)
   const entityIds = new Set<number>();
+  for (const row of db.prepare('SELECT entity_id FROM scenario_entities WHERE scenario_id = ? UNION SELECT entity_id FROM scenario_dependencies WHERE scenario_id = ? AND entity_id IS NOT NULL').all(scenarioId, scenarioId) as { entity_id: number }[]) entityIds.add(row.entity_id);
+  for (const row of db.prepare('SELECT conditions FROM scenario_steps WHERE scenario_id = ?').all(scenarioId) as { conditions: string }[]) {
+    for (const condition of JSON.parse(row.conditions) as { entity_id?: number }[]) if (condition.entity_id !== undefined) entityIds.add(condition.entity_id);
+  }
   const intentIds = new Set(
     (db.prepare('SELECT intent_id FROM scenario_intents WHERE scenario_id = ?').all(scenarioId) as { intent_id: number }[]).map((r) => r.intent_id),
   );
@@ -95,7 +100,7 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
   }
   const spec = buildSpec(db, projectId, { ...project, name: scenario.name, description: scenario.description }, lang, { scenarioId, partId: null, intentIds, promptIds, entityIds });
   const single = parts.length === 1;
-  const changelog = db.prepare('SELECT task, author, description FROM scenario_changelog WHERE scenario_id = ? ORDER BY position, id').all(scenarioId) as ScenarioDoc['changelog'];
+  const changelog = db.prepare('SELECT date, task, author, description FROM scenario_changelog WHERE scenario_id = ? ORDER BY position, id').all(scenarioId) as ScenarioDoc['changelog'];
   return {
     spec: { ...spec, transitions: [] },
     changelog,
@@ -120,7 +125,7 @@ export function loadProjectSpec(db: Db, projectId: number, lang: SpecLang = 'ru'
     | ProjectSpec['project']
     | undefined;
   if (!project) throw notFound('Проект');
-  return buildSpec(db, projectId, project, lang);
+  return { ...buildSpec(db, projectId, project, lang), changelog: db.prepare('SELECT c.date, s.name AS scenario, c.task, c.author, c.description FROM scenario_changelog c JOIN scenarios s ON s.id = c.scenario_id WHERE s.project_id = ? ORDER BY s.id, c.position, c.id').all(projectId) as NonNullable<ProjectSpec['changelog']> };
 }
 
 function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], lang: SpecLang, scope?: Scope): ProjectSpec {
@@ -182,17 +187,21 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
   const dependencies = (
     db
       .prepare(
-        `SELECT s.name AS scenario, d.ref, COALESCE(e.name, d.name) AS name, d.type, d.options
+        `SELECT s.name AS scenario, d.ref, COALESCE(e.name, d.name) AS name, d.description, d.entity_id, d.type, d.options
          FROM scenario_dependencies d
          JOIN scenarios s ON s.id = d.scenario_id
          LEFT JOIN entities e ON e.id = d.entity_id
          WHERE s.project_id = ? AND (? IS NULL OR s.id = ?) ORDER BY s.id, d.position, d.id`,
       )
-      .all(projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null) as { scenario: string; ref: string; name: string; type: string; options: string }[]
+      .all(projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null) as { scenario: string; ref: string; name: string; description: string; entity_id: number | null; type: string; options: string }[]
   ).map((d) => {
     depLabel.set(d.ref, d.name);
-    const values = d.type === 'enum' ? (JSON.parse(d.options) as string[]) : d.type === 'bool' ? ['true', 'false'] : [];
-    return { scenario: d.scenario, name: d.name, type: d.type, values };
+    let values = d.type === 'enum' ? (JSON.parse(d.options) as string[]) : d.type === 'bool' ? ['true', 'false'] : [];
+    if (d.entity_id !== null) {
+      const entity = db.prepare('SELECT type FROM entities WHERE id = ?').get(d.entity_id) as { type: string } | undefined;
+      values = entity?.type === 'boolean' ? ['true', 'false'] : entity?.type === 'string' ? (db.prepare('SELECT value FROM entity_values WHERE entity_id = ? ORDER BY position, id').all(d.entity_id) as { value: string }[]).map((v) => v.value) : [];
+    }
+    return { scenario: d.scenario, name: d.name, type: d.type, values, description: d.description };
   });
 
   // Ответ ассистента и действие системы перехода берутся из состояния, в которое он ведёт.

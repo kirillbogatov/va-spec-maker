@@ -112,7 +112,8 @@ describe('scenarios API', () => {
       .put(`/api/scenarios/${c.body.id}`)
       .send({ name: 'S', dependencies, parts: [{ steps: [{ state: 'A', conditions }] }] });
     expect(put.status).toBe(200);
-    expect(put.body.dependencies).toEqual(dependencies);
+    expect(put.body.dependencies).toMatchObject(dependencies);
+    expect(put.body.dependencies[1].dictionary_id).toEqual(expect.any(Number));
     expect(put.body.parts[0].steps[0].conditions).toEqual(conditions);
     const bad = await request(app)
       .put(`/api/scenarios/${c.body.id}`)
@@ -197,7 +198,7 @@ describe('scenarios API', () => {
       }],
     });
     const intents = (await request(app).get(`/api/scenarios/${c.body.id}/intents`)).body;
-    expect(intents).toMatchObject([{ id: intentId, is_global: false }]);
+    expect(intents).toMatchObject([{ id: intentId, is_global: true }]);
     expect((await request(app).get(`/api/scenarios/${c.body.id}/prompts`)).body.map((p: any) => p.id)).toEqual([pr.body.id]);
     // повторное сохранение не дублирует и не сбрасывает флаг
     await request(app).put(`/api/scenarios/${c.body.id}/intents/${intentId}`).send({ is_global: true });

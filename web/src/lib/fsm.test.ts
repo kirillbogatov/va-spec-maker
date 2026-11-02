@@ -1,6 +1,8 @@
+import { analyzeSteps } from './states';
+import { duplicateState } from './fsm';
 import { describe, expect, it } from 'vitest';
 import { canonicalOrder, ENTRY_STATE, makeEntry, normalizeEntry, moveEdge, newTransition, removeState, renameState, splitLegacySteps, uniqueStateName } from './fsm';
-import type { Step } from './types';
+import type { Step, Layout } from './types';
 
 const step = (key: string, state: string, next: string, p: Partial<Step> = {}): Step => ({
   key, kind: 'transition', state, intent_id: null, request_params: '', condition: '', conditions: [],
@@ -73,5 +75,67 @@ describe('операции над состояниями', () => {
     const b = normalizeEntry([step('1', 'ST_X', 'VA_ACTIVATION'), step('2', 'VA_ACTIVATION', 'ST_X')], {});
     expect(b.steps.map((s) => [s.state, s.next_states])).toEqual([[ENTRY_STATE, 'ST_X'], ['ST_X', ENTRY_STATE]]);
     expect(normalizeEntry([], {}).steps).toEqual([]);
+  });
+});
+
+describe('duplicateState', () => {
+  it('прикрепляет копию к родителю с независимыми условиями и сохраняет свойства состояния', () => {
+    const incoming: Step = {
+      ...newTransition('VA_ACTIVATION', 'ST_CHILD'), intent_id: 7,
+      condition: 'custom check', cond_mode: 'any', request_params: 'params',
+      conditions: [{ dep: 'ready', value: 'yes' }, { dep: '', value: '', keyword_id: 3, op: '!=' }],
+    };
+    const outgoing = newTransition('ST_CHILD', 'END');
+    const layout: Layout = { ST_CHILD: { x: 0, y: 0, description: 'Описание', prompt_id: 5, system_action: 'action' } };
+    const result = duplicateState([incoming, outgoing], layout, 'ST_CHILD');
+    expect(result.name).toBe('ST_CHILD_2');
+    const copied = result.steps.find((s) => s.state === 'VA_ACTIVATION' && s.next_states === result.name)!;
+    expect(copied).toEqual({ ...incoming, key: expect.any(String), next_states: result.name });
+    expect(copied.key).not.toBe(incoming.key);
+    expect(copied.conditions).not.toBe(incoming.conditions);
+    expect(copied.conditions[0]).not.toBe(incoming.conditions[0]);
+    expect(result.layout[result.name]).toEqual(layout.ST_CHILD);
+    expect(result.layout[result.name]).not.toBe(layout.ST_CHILD);
+    expect(result.steps.some((s) => s.state === result.name && s.next_states === 'END')).toBe(true);
+    expect(analyzeSteps(result.steps, () => null, result.layout).unreachable).not.toContain(result.name);
+    expect(layout).not.toHaveProperty(result.name);
+    expect(incoming.next_states).toBe('ST_CHILD');
+  });
+
+  it('сохраняет все родительские переходы и не копирует посторонние ветки старого формата', () => {
+    const a = newTransition('ST_A', 'ST_CHILD ST_OTHER');
+    const b = newTransition('ST_B', 'ST_CHILD');
+    const global: Step = { ...newTransition('', 'ST_CHILD'), kind: 'global' };
+    const error: Step = { ...newTransition('ST_CHILD', 'END'), kind: 'error' };
+    const { steps, name } = duplicateState([a, b, global, error], {}, 'ST_CHILD');
+    expect(steps.filter((s) => s.next_states === name).map((s) => s.state)).toEqual(['ST_A', 'ST_B']);
+    expect(steps).toContain(a);
+    expect(steps).toContain(b);
+    expect(steps.filter((s) => s.kind !== 'transition')).toEqual([global, error]);
+    expect(new Set(steps.map((s) => s.key)).size).toBe(steps.length);
+  });
+
+  it('копирует петлю в петлю нового состояния', () => {
+    const loop = newTransition('ST_LOOP', 'ST_LOOP');
+    const { steps, name } = duplicateState([loop], {}, 'ST_LOOP');
+    expect(steps).toHaveLength(2);
+    expect(steps[1]).toMatchObject({ state: name, next_states: name });
+  });
+
+  it('создаёт уникальные имена с учётом раскладки, исходных и целевых состояний', () => {
+    const steps = [newTransition('ST_CHILD_3', 'ST_CHILD_4')];
+    const layout = { ST_CHILD: { x: 0, y: 0 }, ST_CHILD_2: { x: 0, y: 0 } };
+    const first = duplicateState(steps, layout, 'ST_CHILD');
+    expect(first.name).toBe('ST_CHILD_5');
+    expect(duplicateState(first.steps, first.layout, 'ST_CHILD').name).toBe('ST_CHILD_6');
+  });
+
+  it('дублирует изолированное состояние и конечное состояние без собственной раскладки', () => {
+    const isolated = duplicateState([], { ST_ALONE: { x: 0, y: 0, description: 'Один' } }, 'ST_ALONE');
+    expect(isolated.steps).toEqual([]);
+    expect(isolated.layout[isolated.name].description).toBe('Один');
+    const terminal = duplicateState([newTransition('VA_ACTIVATION', 'END')], {}, 'END');
+    expect(terminal.steps[1]).toMatchObject({ state: 'VA_ACTIVATION', next_states: terminal.name });
+    expect(terminal.layout[terminal.name]).toEqual({ x: 0, y: 0 });
   });
 });

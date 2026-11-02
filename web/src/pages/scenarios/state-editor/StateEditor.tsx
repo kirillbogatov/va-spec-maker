@@ -1,12 +1,17 @@
+import { createConditionStates } from './conditionStates';
+import { BLOCK_W, CARD_W, stateBlock, transitionCard } from '@/lib/stateSvg';
+import { PropertiesLayout } from './PropertiesLayout';
+import { useQueries } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Background, MarkerType, ReactFlow, ReactFlowProvider, useReactFlow, useViewport, type Connection, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Download, Expand, LayoutDashboard, Maximize, Minus, Plus, Shrink } from 'lucide-react';
+import { Download, Expand, Minus, Plus, Shrink, PanelsTopLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { layoutStateGraph, type LayoutResult } from '@/lib/elkLayout';
-import { ENTRY_STATE, newTransition, removeState, renameState, uniqueStateName } from '@/lib/fsm';
+import { duplicateState, ENTRY_STATE, newTransition, removeState, renameState, uniqueStateName } from '@/lib/fsm';
 import { splitNext, type Analysis } from '@/lib/states';
 import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem, StateInfo, Step } from '@/lib/types';
 import { conditionLabel } from '../dependencies';
@@ -55,16 +60,15 @@ export function StateEditor(props: Props) {
   return <ReactFlowProvider><StateEditorInner {...props} /></ReactFlowProvider>;
 }
 
-/** Зум и «Вписать» в панели инструментов. */
+/** Масштаб схемы. */
 function ZoomControls() {
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { zoomIn, zoomOut } = useReactFlow();
   const { zoom } = useViewport();
   return (
     <div className="flex items-center gap-0.5">
       <Button variant="ghost" size="icon" aria-label="Уменьшить" onClick={() => zoomOut({ duration: 150 })}><Minus className="size-4" /></Button>
       <span className="w-11 text-center text-xs tabular-nums text-muted-foreground">{Math.round(zoom * 100)}%</span>
       <Button variant="ghost" size="icon" aria-label="Увеличить" onClick={() => zoomIn({ duration: 150 })}><Plus className="size-4" /></Button>
-      <Button variant="outline" size="sm" onClick={() => fitView({ ...FIT, duration: 200 })}><Maximize className="size-4" /> Вписать</Button>
     </div>
   );
 }
@@ -73,6 +77,8 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   const projectId = useProjectId();
   const keywords = useKeywords(projectId);
   const statePrefix = usePrefixes(projectId).state;
+  const [expanded, setExpanded] = useState(false);
+  const examples = useQueries({ queries: expanded ? [...new Set(steps.map((step) => step.intent_id).filter((id): id is number => id !== null))].map((id) => ({ queryKey: ['intents', 'phrases', id], queryFn: () => api.intents.get(id) })) : [] });
   const [selected, setSelectedRaw] = useState<Selection>(null);
   const setSelected = (s: Selection) => {
     setSelectedRaw(s);
@@ -116,42 +122,65 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
     const id = layout[name]?.prompt_id;
     return id == null ? '' : prompts.find((p) => p.id === id)?.name ?? '';
   };
+  const expandedNodes = useMemo(() => {
+    if (!expanded) return new Map<string, { svg: string; width: number; height: number }>();
+    const scheme = {
+      entry: analysis.states[0], unreachable, hasOut, info: layout,
+      promptOf: (name: string) => { const p = prompts.find((p) => p.id === layout[name]?.prompt_id); return p ? { name: p.name, text: p.hint } : null; },
+    };
+    return new Map(names.map((name, i) => { const block = stateBlock(scheme, name, i + 1); return [name, { svg: block.svg, width: BLOCK_W, height: block.h }]; }));
+  }, [expanded, names, layout, prompts, analysis.states, unreachable, hasOut]);
+  const expandedEdges = useMemo(() => {
+    if (!expanded) return new Map<string, { svg: string; width: number; height: number }>();
+    return new Map(analysis.edges.map((edge, i) => {
+      const st = steps.find((s) => s.key === edge.stepKey);
+      const block = transitionCard({ ...(labels.get(edge.id) ?? { title: '', conds: [] }), example: examples.find((query) => query.data?.id === st?.intent_id)?.data?.phrases.find((phrase) => phrase.trim()) ?? '', any: st?.cond_mode === 'any', bad: (analysis.issues.get(edge.stepKey ?? '') ?? []).some((issue) => issue.level === 'error') }, i + 1);
+      return [edge.id, { svg: block.svg, width: CARD_W, height: block.h }];
+    }));
+  }, [expanded, analysis, steps, labels, examples]);
   const sizes = useMemo(
-    () => new Map(names.map((n) => [n, nodeSize(n, layout[n]?.description ?? '', promptName(n), n === analysis.states[0] || !hasOut.has(n) || unreachable.has(n))])),
+    () => new Map(names.map((n) => [n, expandedNodes.get(n) ?? nodeSize(n, layout[n]?.description ?? '', promptName(n), n === analysis.states[0] || !hasOut.has(n) || unreachable.has(n))])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [names, layout, prompts, analysis.states, hasOut, unreachable],
+    [names, layout, prompts, analysis.states, hasOut, unreachable, expandedNodes],
   );
-  const graphKey = JSON.stringify([names.map((n) => [n, sizes.get(n)]), analysis.edges.map((e) => [e.id, e.from, e.to, labels.get(e.id)])]);
+  const graphKey = JSON.stringify([names.map((n) => [n, sizes.get(n)]), analysis.edges.map((e) => [e.id, e.from, e.to, labels.get(e.id), expandedEdges.get(e.id)])]);
   const [placed, setPlaced] = useState<LayoutResult | null>(null);
+  const [placedKey, setPlacedKey] = useState('');
   const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!expanded) return;
+    let stale = false;
+    void document.fonts.ready.then(() => { if (!stale) setTick((value) => value + 1); });
+    return () => { stale = true; };
+  }, [expanded]);
   const { fitView } = useReactFlow();
   useEffect(() => {
     let stale = false;
     layoutStateGraph(
       names.map((n) => ({ id: n, ...sizes.get(n)! })),
-      analysis.edges.map((e) => ({ id: e.id, source: e.from, target: e.to, label: labelSize(labels.get(e.id)) })),
-    ).then((r) => { if (!stale) setPlaced(r); }, () => { if (!stale) toast.error('Не удалось разложить схему'); });
+      analysis.edges.map((e) => ({ id: e.id, source: e.from, target: e.to, label: expandedEdges.get(e.id) ?? labelSize(labels.get(e.id)) })),
+    ).then((r) => { if (!stale) { setPlaced(r); setPlacedKey(`${graphKey}:${tick}`); } }, () => { if (!stale) toast.error('Не удалось разложить схему'); });
     return () => { stale = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphKey, tick]);
 
-  // Вписываем схему после первой раскладки, при смене набора состояний и переходов и по «Расставить»; правка текста масштаб не трогает.
+  // Масштаб подстраивается после первой раскладки, изменения топологии и переключения вида блоков.
   const topoKey = JSON.stringify([names, analysis.edges.map((e) => [e.id, e.from, e.to])]);
   const fitted = useRef('');
   useEffect(() => {
-    if (!placed) return;
+    if (!placed || placedKey !== `${graphKey}:${tick}`) return;
     const key = `${topoKey}:${tick}`;
     if (fitted.current === key) return;
     fitted.current = key;
     const id = requestAnimationFrame(() => {
-      // На узком экране вся схема нечитаема: показываем крупно входное состояние, «Вписать» вернёт общий вид.
+      // На узком экране сначала показываем крупно входное состояние; общий вид доступен уменьшением масштаба.
       const entry = analysis.states[0];
       if (window.matchMedia('(max-width: 639px)').matches && names.length > 3 && entry) fitView({ nodes: [{ id: entry }], minZoom: 0.7, maxZoom: 0.8, padding: 0.3, duration: 0 });
       else fitView({ ...FIT, duration: 200 });
     });
     return () => cancelAnimationFrame(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placed, topoKey, tick]);
+  }, [placed, placedKey, graphKey, topoKey, tick]);
 
   const nodes = useMemo<Node<StateNodeData>[]>(
     () =>
@@ -164,10 +193,11 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
         data: {
           name, description: layout[name]?.description ?? '', prompt: promptName(name), entry: name === analysis.states[0], terminal: !hasOut.has(name), unreachable: unreachable.has(name),
           selected: selected?.type === 'node' && selected.name === name,
+          expanded: expandedNodes.get(name),
         },
       })) : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [placed, names, sizes, layout, prompts, analysis.states, hasOut, unreachable, selected],
+    [placed, names, sizes, layout, prompts, analysis.states, hasOut, unreachable, selected, expandedNodes],
   );
 
   const edges = useMemo<Edge<TransitionEdgeData>[]>(() => {
@@ -184,11 +214,12 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
         data: {
           stepKey: e.stepKey, card: labels.get(e.id) ?? { title: '', conds: [] }, labelBox: route.label, segments: route.segments,
           bad,
+          expanded: expandedEdges.get(e.id),
           onSelect: (key: string) => setSelected({ type: 'edge', key }),
         },
       }];
     });
-  }, [placed, analysis, labels, selected]);
+  }, [placed, analysis, labels, selected, expandedEdges]);
 
   /** Раскладка автоматическая; layout хранит только множество состояний (в том числе без переходов). */
   const commit = (next: Step[], nextLayout?: Layout) => onChange({ steps: next, layout: nextLayout ?? layout });
@@ -226,6 +257,11 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
     setSelected(null);
     undoable(`Состояние «${name}» удалено вместе с переходами`, removeState(steps, layout, name));
   };
+  const duplicateNode = (source: string) => {
+    const { name, ...next } = duplicateState(steps, layout, source);
+    undoable(`Создана копия «${name}»`, next);
+    setSelected({ type: 'node', name });
+  };
   const removeEdge = (key: string) => {
     setSelected(null);
     undoable('Переход удалён', { steps: steps.filter((s) => s.key !== key), layout });
@@ -235,20 +271,20 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   const patchEdge = (key: string, p: Partial<Step>) => commit(steps.map((s) => (s.key === key ? { ...s, ...p } : s)));
 
   // Развёрнутая схема занимает весь экран: остаются только холст и панель свойств; Esc сворачивает.
-  const [expanded, setExpanded] = useState(false);
+  const [wide, setWide] = useState(false);
   useEffect(() => {
-    if (!expanded) return;
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented) setExpanded(false); };
+    if (!wide) return;
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented) setWide(false); };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [expanded]);
+  }, [wide]);
   const firstExpand = useRef(true);
   useEffect(() => {
     if (firstExpand.current) { firstExpand.current = false; return; }
     const id = requestAnimationFrame(() => fitView({ ...FIT, duration: 200 }));
     return () => cancelAnimationFrame(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded]);
+  }, [wide]);
 
   const [exporting, setExporting] = useState(false);
   const exportSvg = async () => {
@@ -279,14 +315,15 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
           isTerminal={!hasOut.has(selected.name)}
           entryName={ENTRY_STATE}
           onRename={(to) => rename(selected.name, to)}
+          onDuplicate={() => duplicateNode(selected.name)}
           onRemove={() => removeNode(selected.name)}
-          onClose={() => setSelected(null)}
         />
       )}
       {selectedStep && (
         <EdgePanel
           key={selectedStep.key}
           step={selectedStep}
+          steps={steps}
           states={names}
           descriptions={Object.fromEntries(names.map((n) => [n, layout[n]?.description ?? '']))}
           intents={intents}
@@ -296,8 +333,16 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
           targetPrompt={promptName(splitNext(selectedStep.next_states)[0] ?? '')}
           onSelectState={(name) => setSelected({ type: 'node', name })}
           onPatch={(p) => patchEdge(selectedStep.key!, p)}
+          onCreateConditionStates={() => {
+            try {
+              const { count, ...next } = createConditionStates(steps, layout, selectedStep.key!, dependencies, entities, keywords, statePrefix);
+              if (!count) return;
+              undoable(`Создано состояний: ${count}`, next);
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : 'Не удалось создать состояния');
+            }
+          }}
           onRemove={() => removeEdge(selectedStep.key!)}
-          onClose={() => setSelected(null)}
         />
       )}
       {!selected && showPart && partPanel}
@@ -328,28 +373,21 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   );
 
   return (
-    <div
-      className={cn(
-        'grid gap-3',
-        expanded
-          ? 'fixed inset-0 z-40 grid-rows-[minmax(0,1fr)_minmax(0,40dvh)] bg-page p-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-1'
-          : 'lg:h-[calc(100dvh-10rem)] lg:min-h-[28rem] lg:grid-cols-[minmax(0,1fr)_290px]',
-      )}
-    >
-      <div className={cn('flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card', expanded ? 'h-full min-h-0' : 'h-[65dvh] min-h-80 lg:h-full')}>
+    <PropertiesLayout wide={wide} inspector={inspector}>
+      <div className={cn('flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card', wide ? 'h-full min-h-0' : 'h-[65dvh] min-h-80 lg:h-full')}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-2 py-1.5">
           <Button size="sm" onClick={addNode}><Plus className="size-4" /> {parent ? 'Дочернее состояние' : 'Состояние'}</Button>
-          <Button variant="outline" size="sm" onClick={() => setTick((t) => t + 1)}><LayoutDashboard className="size-4" /> Расставить</Button>
           {exportMeta && (
             <Button variant="outline" size="sm" onClick={exportSvg} disabled={exporting || names.length === 0} title="Скачать схему вкладки в SVG">
               <Download className="size-4" /> SVG
             </Button>
           )}
+          <Button variant="outline" size="sm" aria-pressed={expanded} onClick={() => { setExpanded((value) => !value); setTick((value) => value + 1); }}><PanelsTopLeft className="size-4" /> {expanded ? 'Свернуть блоки' : 'Развернуть блоки'}</Button>
           {tabs}
           <div className="ml-auto flex items-center gap-2">
             <ZoomControls />
-            <Button variant="outline" size="sm" onClick={() => setExpanded((v) => !v)} aria-pressed={expanded} title={expanded ? 'Свернуть схему (Esc)' : 'Развернуть схему на весь экран'}>
-              {expanded ? <Shrink className="size-4" /> : <Expand className="size-4" />} {expanded ? 'Свернуть' : 'Развернуть'}
+            <Button variant="outline" size="sm" onClick={() => setWide((v) => !v)} aria-pressed={wide} title={wide ? 'Свернуть схему (Esc)' : 'Развернуть схему на весь экран'}>
+              {wide ? <Shrink className="size-4" /> : <Expand className="size-4" />} {wide ? 'Свернуть' : 'Развернуть'}
             </Button>
           </div>
         </div>
@@ -375,8 +413,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
         </div>
         <p className="border-t px-3 py-1.5 text-xs text-muted-foreground md:hidden">Для редактирования схемы удобнее экран шире 900px; панорама и зум работают пальцами.</p>
       </div>
-      <aside aria-label="Свойства" className={cn('min-w-0 overflow-y-auto rounded-xl border bg-card p-4 lg:h-full', expanded && 'h-full')}>{inspector}</aside>
-    </div>
+    </PropertiesLayout>
   );
 }
 

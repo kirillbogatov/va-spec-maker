@@ -1,3 +1,4 @@
+import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 import { useState } from 'react';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -59,6 +60,7 @@ interface Props {
 }
 
 interface RowProps {
+  sorting?: boolean;
   step: Step;
   index: number;
   intents: IntentListItem[];
@@ -120,8 +122,8 @@ function chipText(c: StepCondition, deps: Dependency[], entities: EntityListItem
 
 const MobileLabel = ({ children }: { children: string }) => <span className="mb-0.5 block text-xs text-faint md:hidden">{children}</span>;
 
-function StepRow({ step, index, intents, promptOptions, open, onOpenChange, dependencies, entities, allStates, issues, onPatch, onRemove, onDuplicate, onInsertBelow }: RowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.key! });
+function StepRow({ step, index, intents, promptOptions, open, onOpenChange, dependencies, entities, allStates, issues, onPatch, onRemove, onDuplicate, onInsertBelow, sorting }: RowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.key!, disabled: sorting });
   const statePrefix = usePrefixes(useProjectId()).state;
   const intent = intents.find((i) => i.id === step.intent_id)?.name;
   const isGlobal = step.kind === 'global';
@@ -183,7 +185,7 @@ function StepRow({ step, index, intents, promptOptions, open, onOpenChange, depe
           <Button variant="ghost" size="icon" className={btn} aria-label={`Удалить строку ${index + 1}`} onClick={onRemove}>
             <Trash2 className="size-4" />
           </Button>
-          <button type="button" aria-label={`Перетащить строку ${index + 1}`} className={cn('inline-flex size-8 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring', btn)} {...attributes} {...listeners}>
+          <button type="button" disabled={sorting} aria-label={`Перетащить строку ${index + 1}`} className={cn('inline-flex size-8 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-40', btn)} {...attributes} {...listeners}>
             <GripVertical className="size-4" />
           </button>
         </div>
@@ -263,12 +265,21 @@ function StepRow({ step, index, intents, promptOptions, open, onOpenChange, depe
 }
 
 export function StepsTable({ kind, title, steps, intents, prompts, dependencies, entities, allStates, issues, onChange }: Props) {
+  const sort = useColumnSort();
+  const sorted = sort.rows(steps, (step, column) => {
+    if (column === 'state') return kind === 'global' ? '' : step.state;
+    if (column === 'intent') return intents.find((intent) => intent.id === step.intent_id)?.name ?? '';
+    if (column === 'if') return [...step.conditions.map((condition) => chipText(condition, dependencies, entities)), step.condition].join(' ');
+    if (column === 'then') return [step.next_states, prompts.find((prompt) => prompt.id === step.prompt_id)?.name, step.system_action].filter(Boolean).join(' ');
+    return step.name ?? '';
+  });
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const promptOptions = [{ value: 'none', label: '— не выбран —' }, ...prompts.map((p) => ({ value: String(p.id), label: p.name, hint: p.hint }))];
   const [editKey, setEditKey] = useState<string | null>(null);
   const expand = (s: Step) => setEditKey(s.key!);
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (sort.sorting) return;
     if (!over || active.id === over.id) return;
     const from = steps.findIndex((s) => s.key === active.id);
     const to = steps.findIndex((s) => s.key === over.id);
@@ -296,20 +307,21 @@ export function StepsTable({ kind, title, steps, intents, prompts, dependencies,
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <Button variant="outline" className="max-md:h-10" onClick={add}><Plus className="size-4" /> Правило</Button>
         <p className="text-sm text-muted-foreground">
-          {kind === 'global' ? 'Проверяются сверху вниз; срабатывает первый подошедший переход.' : 'Правила проверяются сверху вниз, срабатывает первое подошедшее.'}
+          {sort.sorting ? 'Сортировка меняет только вид списка. Для изменения приоритета сбросьте сортировку третьим нажатием на заголовок.' : kind === 'global' ? 'Проверяются сверху вниз; срабатывает первый подошедший переход.' : 'Правила проверяются сверху вниз, срабатывает первое подошедшее.'}
         </p>
       </div>
       <div className="overflow-hidden rounded-xl border bg-card">
-        <div className={cn(GRID, 'hidden border-b py-2 text-xs font-medium text-muted-foreground md:grid')}>
-          <span>Название</span><span>Состояние</span><span>Интент</span><span>Если</span><span>То</span><span className="sr-only">Действия и перенос</span>
+        <div className={cn(GRID, 'flex flex-wrap items-center border-b py-1 text-xs font-medium text-muted-foreground md:grid')}>
+          <SortHeader column="name" sort={sort}>Название</SortHeader><SortHeader column="state" sort={sort}>Состояние</SortHeader><SortHeader column="intent" sort={sort}>Интент</SortHeader><SortHeader column="if" sort={sort}>Если</SortHeader><SortHeader column="then" sort={sort}>То</SortHeader><span className="sr-only">Действия и перенос</span>
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={steps.map((s) => s.key!)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={sorted.map((s) => s.key!)} strategy={verticalListSortingStrategy}>
             <datalist id="scenario-states">{allStates.map((s) => <option key={s} value={s} />)}</datalist>
-            {steps.map((s, i) => (
+            {sorted.map((s) => { const i = steps.indexOf(s); return (
               <StepRow
                 key={s.key}
                 step={s}
+                sorting={!!sort.sorting}
                 index={i}
                 intents={intents}
                 promptOptions={promptOptions}
@@ -324,7 +336,7 @@ export function StepsTable({ kind, title, steps, intents, prompts, dependencies,
                 onDuplicate={() => duplicate(i)}
                 onInsertBelow={() => insertBelow(i)}
               />
-            ))}
+            ); })}
           </SortableContext>
         </DndContext>
         {steps.length === 0 && (
