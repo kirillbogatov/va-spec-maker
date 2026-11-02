@@ -68,7 +68,7 @@ export function ScenariosPage() {
             <ListHeader onCreate={() => setCreating(true)} label="Новый сценарий" extra={
               <DropdownMenu>
                 <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="size-10 md:size-8" aria-label="Действия со сценариями" />}><MoreHorizontal className="size-4" /></DropdownMenuTrigger>
-                <DropdownMenuContent align="start"><DropdownMenuItem onClick={() => setImporting(true)}><Upload className="size-4" /> Импорт сценария (.json, .md, .docx)</DropdownMenuItem></DropdownMenuContent>
+                <DropdownMenuContent align="start"><DropdownMenuItem onClick={() => setImporting(true)}><Upload className="size-4" /> Импорт сценария</DropdownMenuItem></DropdownMenuContent>
               </DropdownMenu>
             } />
             {search}

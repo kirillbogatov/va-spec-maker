@@ -121,7 +121,7 @@ function parseHtml(src: string, fallback: string): L3Document {
     if (m[1]) {
       // Devprom закрывает любой заголовок тегом </h1>, поэтому уровень берём только из открывающего тега.
       const head = htmlText(m[3]).replace(/\n/g, ' ');
-      if (/\bid=["']\d+["']/.test(m[2])) {
+      if (m[1] === '1' || /\bid=["']\d+["']/.test(m[2])) {
         title ||= head;
         cur = { title: head, blocks: [], page: true };
         sections.push(cur);

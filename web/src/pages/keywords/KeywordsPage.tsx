@@ -106,6 +106,7 @@ export function KeywordsPage() {
         <TransferMenu
           accept=".txt,text/plain"
           format="TXT"
+          importLabel="ключевых слов"
           onImport={importFile}
           exports={[
             { format: 'TXT', run: () => api.keywords.exportTxt(projectId) },

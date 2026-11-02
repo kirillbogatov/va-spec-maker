@@ -5,8 +5,9 @@ import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 /** Меню «…» над списком справочника: импорт из файла и экспорт в файлы нескольких форматов. */
-export function TransferMenu({ accept, format, onImport, exports }: {
+export function TransferMenu({ accept, format, importLabel = 'справочника', onImport, exports }: {
   accept: string;
+  importLabel?: string;
   /** Название формата импорта для подписи, например «CSV». */
   format: string;
   onImport: (file: File) => void | Promise<void>;
@@ -20,6 +21,7 @@ export function TransferMenu({ accept, format, onImport, exports }: {
         ref={fileRef}
         type="file"
         accept={accept}
+        aria-label={`Файл ${format}`}
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -33,7 +35,7 @@ export function TransferMenu({ accept, format, onImport, exports }: {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => fileRef.current?.click()}>
-            <Upload className="size-4" /> Импорт из {format}
+            <Upload className="size-4" /> Импорт {importLabel}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {exports.map((x) => (

@@ -104,7 +104,7 @@ export function DependenciesTable({ dependencies, entities, onChange }: Props) {
           </Button>
         </div>
       ))}
-      {dependencies.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Внешних зависимостей пока нет. Добавьте параметры, от которых зависит запуск сценария.</p>}
+      {dependencies.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Внешних зависимостей нет</p>}
     </Card>
   );
 }

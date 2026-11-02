@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { ImportProjectDialog } from './ImportProjectDialog';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, Trash2, Upload } from 'lucide-react';
@@ -87,16 +88,7 @@ export function ProjectsPage() {
   };
   const exportDocx = (p: ProjectListItem) =>
     api.exportFile(`/api/projects/${p.id}/export?format=docx&lang=${readSpecLang(p.id)}`, `${p.name}.docx`).catch((e: Error) => toast.error(e.message));
-  const fileRef = useRef<HTMLInputElement>(null);
-  const importJson = async (file: File) => {
-    try {
-      const r = await api.projects.import(JSON.parse(await file.text()));
-      await refresh();
-      toast.success(`Проект «${r.name}» импортирован`);
-    } catch (e) {
-      toast.error(e instanceof SyntaxError ? 'Файл не похож на копию проекта (JSON)' : (e as Error).message);
-    }
-  };
+  const [importing, setImporting] = useState(false);
   const loadDemo = async () => {
     await addDemo();
     await refresh();
@@ -116,19 +108,7 @@ export function ProjectsPage() {
       <main className="mx-auto max-w-[1100px] px-4 py-8 sm:px-6 sm:py-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-balance text-3xl font-semibold tracking-tight">Проекты</h1>
-          <Button variant="outline" className="h-10 sm:h-9" onClick={() => fileRef.current?.click()}><Upload className="size-4" /> Импорт из JSON</Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            aria-label="Файл копии проекта"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (f) void importJson(f);
-            }}
-          />
+          <Button variant="outline" className="h-10 sm:h-9" onClick={() => setImporting(true)}><Upload className="size-4" /> Импорт проекта</Button>
         </div>
 
         {!isLoading && projects.length === 0 && (
@@ -184,6 +164,7 @@ export function ProjectsPage() {
         )}
       </main>
 
+      <ImportProjectDialog open={importing} onOpenChange={setImporting} onDone={refresh} />
       <ProjectDialog
         project={dialog?.project ?? null}
         open={dialog !== null}

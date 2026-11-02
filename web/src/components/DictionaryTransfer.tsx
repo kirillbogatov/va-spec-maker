@@ -13,6 +13,7 @@ export function DictionaryTransfer({ kind }: { kind: DictKind }) {
     <TransferMenu
       accept=".csv,text/csv"
       format="CSV"
+      importLabel={{ intents: 'интентов', entities: 'сущностей', prompts: 'промптов', dependencies: 'зависимостей' }[kind]}
       exports={[
         { format: 'CSV', run: () => downloadDictionary(kind, projectId) },
         { format: 'TXT', run: () => downloadDictionaryDoc(kind, projectId, 'txt') },

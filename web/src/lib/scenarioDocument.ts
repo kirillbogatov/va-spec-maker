@@ -52,12 +52,71 @@ export async function docxMarkdown(data: ArrayBuffer): Promise<string> {
   return out.join('\n\n');
 }
 
+export const IMPORT_TYPES = 'JSON, MD, DOCX, PDF, HTML';
+export const IMPORT_ACCEPT = '.json,application/json,.md,text/markdown,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf,.html,.htm,text/html';
+
+const escapeHtml = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/** Reconstructs text PDF rows by their positions, retaining tables with recognizable column headers. */
+export async function pdfHtml(data: ArrayBuffer): Promise<string> {
+  const pdfjs = await import('pdfjs-dist');
+  const { default: workerUrl } = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+  const task = pdfjs.getDocument({ data });
+  try {
+    const doc = await task.promise;
+    const out: string[] = [];
+    let textCount = 0;
+    for (let pageNo=1; pageNo<=doc.numPages; pageNo++) {
+      const page = await doc.getPage(pageNo);
+      const content = await page.getTextContent();
+      const rows: { y: number; items: { x: number; width: number; text: string; size: number }[] }[] = [];
+      for (const item of content.items) {
+        if (!('str' in item) || !item.str.trim()) continue;
+        textCount += item.str.length;
+        const y = item.transform[5];
+        let row = rows.find(r => Math.abs(r.y-y)<3);
+        if (!row) { row={y,items:[]}; rows.push(row); }
+        row.items.push({x:item.transform[4],width:item.width,text:item.str,size:Math.abs(item.transform[3])});
+      }
+      let columns: number[] | null = null;
+      const endTable = () => { if (columns) out.push('</table>'); columns=null; };
+      for (const row of rows.sort((a,b)=>b.y-a.y)) {
+        const items = row.items.sort((a,b)=>a.x-b.x);
+        const cells: {x:number; end:number; text:string}[] = [];
+        for (const item of items) {
+          const last=cells.at(-1);
+          if (last && item.x-last.end<12) {last.text+=' '+item.text; last.end=item.x+item.width;}
+          else cells.push({x:item.x,end:item.x+item.width,text:item.text});
+        }
+        const isHeader = cells.length>1 && /^(intent|интент|prompt|промпт|entity|сущност|parameter|из состояния|from state|state|в состояние|to state|date|дата|задача|task)/i.test(cells[0].text);
+        if (isHeader) {
+          endTable(); columns=cells.map(c=>c.x); out.push('<table><tr>'+cells.map(c=>'<th>'+escapeHtml(c.text)+'</th>').join('')+'</tr>');
+        } else if (columns && items.length && (cells.length>1 || items[0].x>columns[0]+12)) {
+          const values=columns.map(()=>'');
+          for (const item of items) { let col=0; for(let i=1;i<columns.length;i++) if(item.x>=columns[i]-5) col=i; values[col]+=(values[col]?' ':'')+item.text; }
+          out.push('<tr>'+values.map(v=>'<td>'+escapeHtml(v)+'</td>').join('')+'</tr>');
+        } else {
+          endTable();
+          const text=cells.map(c=>c.text).join(' ');
+          const tag=items[0]?.size>=17 ? 'h1' : items[0]?.size>=13 ? 'h2' : 'p';
+          out.push('<'+tag+'>'+escapeHtml(text)+'</'+tag+'>');
+        }
+      }
+      endTable(); page.cleanup();
+    }
+    if (!textCount) throw new Error('В PDF нет текстового слоя. Используйте PDF с распознанным текстом.');
+    return out.join('\n');
+  } finally { await task.destroy(); }
+}
+
 export async function readScenarioFile(file: File) {
   if (/\.json$/i.test(file.name)) {
     try { return { dump: JSON.parse(await file.text()), warnings: [] as string[] }; }
     catch { throw new Error('Файл не является JSON.'); }
   }
-  if (!/\.(md|docx)$/i.test(file.name)) throw new Error('Выберите файл .json, .md или .docx.');
-  const text = /\.docx$/i.test(file.name) ? await docxMarkdown(await file.arrayBuffer()) : await file.text();
-  return convertScenarioDocument(text, file.name.replace(/\.docx$/i,'.md'), { locateFile: () => wasmUrl });
+  if (!/\.(md|docx|pdf|html|htm)$/i.test(file.name)) throw new Error('Поддерживаются JSON, MD, DOCX, PDF, HTML.');
+  const text = /\.docx$/i.test(file.name) ? await docxMarkdown(await file.arrayBuffer())
+    : /\.pdf$/i.test(file.name) ? await pdfHtml(await file.arrayBuffer()) : await file.text();
+  return convertScenarioDocument(text, file.name.replace(/\.(docx|pdf)$/i,'.md'), { locateFile: () => wasmUrl });
 }
