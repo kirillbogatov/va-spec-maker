@@ -166,12 +166,7 @@ export function edgeBox(m: Measure, e: SchemeEdge): Box {
   const section = (title: string) => { rules.push(y); y += 5; y = block(m, lines, P, y, inner, title, LABEL, 12); };
   section('Интент');
   if (e.intent) {
-    const pre: Style = { ...cond, fill: C.ent };
-    const preW = width(m, 'интент ', pre);
-    wrap(m, e.intent, cond, inner - preW, inner).forEach((t, i) => {
-      lines.push({ x: P, y: base(y, 14, 10), runs: i ? [{ text: t, style: cond }] : [{ text: 'интент ', style: pre }, { text: t, style: cond }] });
-      y += 14;
-    });
+    y = block(m, lines, P, y, inner, e.intent, cond, 14);
   }
   if (!e.intent) y = block(m, lines, P, y, inner, 'без интента', cond, 14);
   y += 4;

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 
 export type SortValue = string | number | boolean;
 interface Sorting { key: string; direction: 'ascending' | 'descending' }
@@ -25,10 +25,10 @@ export function useColumnSort() {
 
 export function SortHeader({ column, sort, children }: { column: string; sort: ReturnType<typeof useColumnSort>; children: ReactNode }) {
   const direction = sort.sorting?.key === column ? sort.sorting.direction : 'none';
-  const Icon = direction === 'ascending' ? ArrowUp : direction === 'descending' ? ArrowDown : ArrowUpDown;
+  const Icon = direction === 'ascending' ? ArrowUp : ArrowDown;
   return <span role="columnheader" aria-sort={direction} className="min-w-0">
     <button type="button" className="inline-flex min-h-8 max-w-full items-center gap-1 rounded px-1 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring" onClick={() => sort.toggle(column)} aria-label={`Сортировать: ${children}`}>
-      <span className="min-w-0">{children}</span><Icon className="size-3 shrink-0" />
+      <span className="min-w-0">{children}</span>{direction !== 'none' && <Icon className="size-3 shrink-0" />}
     </button>
   </span>;
 }
