@@ -10,3 +10,5 @@ export { matchKeywords } from './keywords';
 export { renderTableDocx } from './export/docx';
 export type { Cell, TableDef } from './export/tables';
 export type { KeywordDef } from './keywords';
+
+export { convertScenarioDocument } from './document-import';

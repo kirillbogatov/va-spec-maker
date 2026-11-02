@@ -1,3 +1,4 @@
+import { importScenario } from '../scenario-import';
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
@@ -39,6 +40,9 @@ function cleanLayout(raw: unknown): Layout {
 
 export function scenariosRouter(db: Db): RouterT {
   const r = Router();
+  r.post('/projects/:pid/scenarios/import', (req, res) => {
+    res.status(201).json(importScenario(db, parseId(req.params.pid), req.body?.dump, parseId(req.body?.scenario_id)));
+  });
 
   const loadPart = (part: { id: number; name: string; description: string; layout: string }) => {
     const steps = (

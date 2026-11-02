@@ -98,13 +98,13 @@ export function dumpProject(db: Db, id: number): ProjectDump {
 }
 
 /** Импорт: id пересоздаются, ссылки переписываются. Имена столбцов проверяются по схеме. */
-export function importProject(db: Db, dump: ProjectDump, name?: string): number {
+export function importProject(db: Db, dump: ProjectDump, name?: string, targetProjectId?: number): number {
   if (!dump || dump.version !== 1 || typeof dump.name !== 'string' || !dump.tables || typeof dump.tables !== 'object') {
     throw badRequest('Файл не похож на экспорт проекта VA Spec Maker');
   }
   const tables = upgradeDump(dump.tables);
   return db.transaction(() => {
-    const pid = Number(
+    const pid = targetProjectId ?? Number(
       db
         .prepare('INSERT INTO projects(name, description) VALUES (?, ?)')
         .run(name ?? dump.name, typeof dump.description === 'string' ? dump.description : '').lastInsertRowid,
@@ -121,6 +121,22 @@ export function importProject(db: Db, dump: ProjectDump, name?: string): number 
         if (keys.some((k) => !cols.has(k))) throw badRequest(`Неизвестное поле в таблице ${t.name}`);
         const values = keys.map((k) => {
           if (k === 'project_id') return pid;
+          if (t.name === 'scenario_steps' && k === 'conditions') {
+            let conditions: Record<string, unknown>[];
+            try { conditions = typeof row[k] === 'string' ? JSON.parse(row[k] as string) : row[k] as Record<string, unknown>[]; }
+            catch { throw badRequest('Некорректные условия переходов'); }
+            if (!Array.isArray(conditions)) throw badRequest('Некорректные условия переходов');
+            return JSON.stringify(conditions.map(c => {
+              const next = { ...c };
+              for (const [key, table] of [['entity_id', 'entities'], ['keyword_id', 'keywords']]) {
+                if (c[key] == null) continue;
+                const id = maps[table].get(Number(c[key]));
+                if (id === undefined) throw badRequest('Не найдена ссылка в условии перехода');
+                next[key] = id;
+              }
+              return next;
+            }));
+          }
           const ref = t.fk[k];
           if (!ref) return row[k] as unknown;
           const old = row[k] as number | null;

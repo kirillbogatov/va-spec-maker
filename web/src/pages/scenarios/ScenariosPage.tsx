@@ -1,7 +1,9 @@
+import { ImportScenarioDialog } from './ImportScenarioDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { MoreHorizontal, Upload, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateDialog } from '@/components/CreateDialog';
 import { EmptyDetail, ListHeader, ListItem, MasterDetail, listEmpty, useListFilter } from '@/components/MasterDetail';
@@ -29,6 +31,7 @@ export function ScenariosPage() {
   const navigate = useNavigate();
   const path = usePath();
   const [params, setParams] = useSearchParams();
+  const [importing, setImporting] = useState(false);
   const [creating, setCreatingState] = useState(params.get('new') === '1');
   // ?new=1 приходит из команды «Создать сценарий» в поиске
   const setCreating = (o: boolean) => {
@@ -60,7 +63,12 @@ export function ScenariosPage() {
         onBack={() => navigate(path('/scenarios'))}
         list={
           <>
-            <ListHeader onCreate={() => setCreating(true)} label="Новый сценарий" />
+            <ListHeader onCreate={() => setCreating(true)} label="Новый сценарий" extra={
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="size-10 md:size-8" aria-label="Действия со сценариями" />}><MoreHorizontal className="size-4" /></DropdownMenuTrigger>
+                <DropdownMenuContent align="start"><DropdownMenuItem onClick={() => setImporting(true)}><Upload className="size-4" /> Импорт сценария (.json, .md, .docx)</DropdownMenuItem></DropdownMenuContent>
+              </DropdownMenu>
+            } />
             {search}
             <ul className="flex-1 overflow-y-auto pb-2">
               {filtered.map((s) => (
@@ -90,6 +98,10 @@ export function ScenariosPage() {
           <EmptyDetail text="Выберите сценарий слева" />
         )}
       </MasterDetail>
+      <ImportScenarioDialog open={importing} onOpenChange={setImporting} projectId={projectId} onDone={(sid) => {
+        qc.invalidateQueries();
+        navigate(path(`/scenarios/${sid}`));
+      }} />
       <CreateDialog open={creating} onOpenChange={setCreating} title="Новый сценарий" prefix={prefixes.scenario} existingNames={items.map((s) => s.name)} onCreate={(n) => create.mutate(n)} />
     </>
   );

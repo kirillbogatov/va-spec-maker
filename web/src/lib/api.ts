@@ -97,6 +97,7 @@ export const api = {
     remove: (id: number) => req<void>('DELETE', `/api/prompts/${id}`),
   },
   scenarios: {
+    import: (pid: number, dump: unknown, scenario_id: number) => req<{ id: number; name: string }>('POST', `/api/projects/${pid}/scenarios/import`, { dump, scenario_id }),
     list: (pid: number) => req<ScenarioListItem[]>('GET', `/api/projects/${pid}/scenarios`),
     get: (id: number) => req<Scenario>('GET', `/api/scenarios/${id}`),
     create: (pid: number, name: string) => req<{ id: number; name: string }>('POST', `/api/projects/${pid}/scenarios`, { name }),
