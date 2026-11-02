@@ -9,14 +9,15 @@ import { CreateDialog } from '@/components/CreateDialog';
 import { EmptyDetail, ListHeader, ListItem, MasterDetail, listEmpty, useListFilter } from '@/components/MasterDetail';
 import { usePath, useProjectId } from '@/hooks/project';
 import { usePrefixes } from '@/lib/prefixes';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import type { Scenario } from '@/lib/types';
 import { ScenarioForm, type ScenarioTab } from './ScenarioForm';
 
 function ScenarioEditor({ id, tab }: { id: number; tab: ScenarioTab }) {
   // gcTime: 0 — форма инициализируется из ответа один раз, кэш не должен подсовывать устаревшие данные
-  const { data } = useQuery({ queryKey: ['scenario', id], queryFn: () => api.scenarios.get(id), gcTime: 0 });
-  if (!data) return null;
-  return <ScenarioForm key={id} scenario={data} tab={tab} />;
+  const { data, error } = useQuery({ queryKey: ['scenario', id], queryFn: () => api.scenarios.get(id), gcTime: 0 });
+  if (!data) return error ? <p role="alert" className="p-4">{error.message}</p> : null;
+  return <ScenarioForm key={id} scenario={data} tab={tab} deleted={error instanceof ApiError && error.status === 404} />;
 }
 
 const isDesktop = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
@@ -40,7 +41,8 @@ export function ScenariosPage() {
   };
   const { data: items = [], isSuccess } = useQuery({ queryKey: ['scenarios', projectId], queryFn: () => api.scenarios.list(projectId) });
   const { filtered, search, filtering } = useListFilter(items, 'сценариях');
-  const selected = items.find((s) => String(s.id) === id);
+  // Сохраняем редактор с черновиком при удалении в другой вкладке.
+  const selected = items.find((s) => String(s.id) === id) ?? qc.getQueryData<Scenario>(['scenario', Number(id)]);
   const create = useMutation({
     mutationFn: (name: string) => api.scenarios.create(projectId, name),
     onSuccess: (s) => {

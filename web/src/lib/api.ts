@@ -5,7 +5,7 @@ import type { EntityKind } from './entityTypes';
 import type { IntentMode } from './intentMode';
 import type { SpecLang } from './specLang';
 
-import { request } from './backend';
+import { request, type RequestOptions } from './backend';
 import { downloadResponse } from './download';
 import { markScenarioEdited } from './scenarioEdits';
 
@@ -21,8 +21,8 @@ export class ApiError extends Error {
   }
 }
 
-export async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
-  const r = await request(method, url, body);
+export async function req<T>(method: string, url: string, body?: unknown, options?: RequestOptions): Promise<T> {
+  const r = await request(method, url, body, options);
   if (r.status >= 400) {
     const j = (r.body ?? {}) as { error?: string; message?: string; details?: unknown };
     throw new ApiError(r.status, j.error ?? 'error', j.message ?? 'Ошибка', j.details);
@@ -101,11 +101,13 @@ export const api = {
     list: (pid: number) => req<ScenarioListItem[]>('GET', `/api/projects/${pid}/scenarios`),
     get: (id: number) => req<Scenario>('GET', `/api/scenarios/${id}`),
     create: (pid: number, name: string) => req<{ id: number; name: string }>('POST', `/api/projects/${pid}/scenarios`, { name }),
-    save: (id: number, body: Omit<Scenario, 'id' | 'project_id'>) => req<Scenario>('PUT', `/api/scenarios/${id}`, body),
+    save: (id: number, body: Omit<Scenario, 'id' | 'project_id'>, expected?: Scenario) =>
+      req<Scenario>('PUT', `/api/scenarios/${id}`, body, expected ? { expected } : undefined),
     remove: (id: number) => req<void>('DELETE', `/api/scenarios/${id}`),
     history: (id: number) => req<HistoryEntry[]>('GET', `/api/scenarios/${id}/history`),
     changelog: (id: number) => req<ChangelogRow[]>('GET', `/api/scenarios/${id}/changelog`),
-    saveChangelog: (id: number, rows: ChangelogRow[]) => req<ChangelogRow[]>('PUT', `/api/scenarios/${id}/changelog`, { rows }),
+    saveChangelog: (id: number, rows: ChangelogRow[], expected?: ChangelogRow[]) =>
+      req<ChangelogRow[]>('PUT', `/api/scenarios/${id}/changelog`, { rows }, expected ? { expected } : undefined),
   },
   exportFile: async (url: string, fallback: string) => downloadResponse(await request('GET', url), fallback),
   preview: (scenarioId: number, lang: SpecLang, intentMode: IntentMode) => req<string>('GET', `/api/scenarios/${scenarioId}/preview?lang=${lang}&intentMode=${intentMode}`),

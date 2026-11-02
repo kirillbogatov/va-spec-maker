@@ -9,6 +9,7 @@ import { DemoBadge } from '@/components/DemoBadge';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/hooks/useAuth';
 import { DEMO } from '@/lib/demoMode';
+import { onBackendChange } from '@/lib/backend';
 import App from './App';
 
 const onError = (e: Error) => toast.error(e.message);
@@ -17,6 +18,7 @@ const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError }),
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: false } },
 });
+onBackendChange(() => { void queryClient.invalidateQueries(); });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

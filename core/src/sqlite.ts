@@ -11,6 +11,7 @@ export interface Db {
   exec(sql: string): void;
   transaction<T>(fn: () => T): () => T;
   serialize(): Uint8Array;
+  close(): void;
 }
 export interface OpenOpts { data?: Uint8Array; locateFile?: (file: string) => string }
 
@@ -41,6 +42,7 @@ export async function openSqlite(opts: OpenOpts = {}): Promise<Db> {
   };
 
   return {
+    close: () => raw.close(),
     prepare: (sql) => ({
       get(...p) {
         let out: any;

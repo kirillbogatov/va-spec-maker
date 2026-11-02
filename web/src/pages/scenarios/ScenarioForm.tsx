@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ellipsis, Trash2 } from 'lucide-react';
@@ -12,7 +12,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn, GHOST } from '@/lib/utils';
 import { usePath, useProjectId } from '@/hooks/project';
 import { useAutosave } from '@/hooks/useAutosave';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import { downloadBlob } from '@/lib/download';
+import { toast } from 'sonner';
 import type { Dependency, Layout, Scenario, ScenarioPart, Step } from '@/lib/types';
 import { DependenciesTable } from './DependenciesTable';
 import { reconcile } from './dependencies';
@@ -57,12 +59,32 @@ function initialDraft(scenario: Scenario): Draft {
   };
 }
 
-export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: ScenarioTab }) {
+export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Scenario; tab: ScenarioTab; deleted?: boolean }) {
   const projectId = useProjectId();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const path = usePath();
   const [draft, setDraft] = useState<Draft>(() => initialDraft(scenario));
+  const baseline = useRef(scenario);
+  const savedDraft = useRef(draft);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const [resetKey, setResetKey] = useState(0);
+  const [conflict, setConflict] = useState<{ current: Scenario | null } | null>(null);
+  const [resolving, setResolving] = useState(false);
+  useEffect(() => {
+    if (deleted) setConflict({ current: null });
+  }, [deleted]);
+  // Фоновое обновление обновляет чистую форму, но никогда не заменяет черновик.
+  useEffect(() => {
+    if (draftRef.current !== savedDraft.current || conflict) return;
+    if (JSON.stringify(scenario) === JSON.stringify(baseline.current)) return;
+    baseline.current = scenario;
+    const next = initialDraft(scenario);
+    savedDraft.current = next;
+    setDraft(next);
+    setResetKey((key) => key + 1);
+  }, [scenario]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Имя хранится вместе с ключом: после удаления вкладки диалог ещё закрывается и не должен потерять заголовок
   const [confirmPart, setConfirmPart] = useState<{ key: string; name: string } | null>(null);
@@ -118,16 +140,51 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
   const logicHasErrors = hasIssueErrors('transition');
   const errorsHaveErrors = hasIssueErrors('error');
 
-  const status = useAutosave(draft, async (d) => {
+  const saveDraft = async (d: Draft) => {
     if (!d.name.trim()) return;
-    await api.scenarios.save(scenario.id, {
-      ...d,
-      parts: d.parts.map((p) => ({ ...p, steps: canonicalOrder(p.steps) })),
-      entities: d.entities.filter((e) => e.entity_id !== null),
-    });
+    try {
+      const saved = await api.scenarios.save(scenario.id, {
+        ...d,
+        parts: d.parts.map((p) => ({ ...p, steps: canonicalOrder(p.steps) })),
+        entities: d.entities.filter((e) => e.entity_id !== null),
+      }, baseline.current);
+      baseline.current = saved;
+      savedDraft.current = d;
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'edit_conflict') {
+        setConflict(e.details as { current: Scenario | null });
+      }
+      throw e;
+    }
     qc.invalidateQueries({ queryKey: ['scenarios', projectId] });
+    qc.invalidateQueries({ queryKey: ['scenario', scenario.id] });
     qc.invalidateQueries({ queryKey: ['history', scenario.id] });
-  });
+  };
+  const status = useAutosave(draft, saveDraft, { enabled: !conflict && !resolving && !deleted, resetKey });
+
+  const resolveConflict = async (keepDraft: boolean) => {
+    if (!conflict?.current) return;
+    setResolving(true);
+    try {
+      if (keepDraft) {
+        // Если сохранённая версия снова поменялась, проверка вернёт новый конфликт.
+        baseline.current = conflict.current;
+        await saveDraft(draftRef.current);
+      } else {
+        const current = await api.scenarios.get(scenario.id);
+        baseline.current = current;
+        const next = initialDraft(current);
+        savedDraft.current = next;
+        setDraft(next);
+      }
+      setConflict(null);
+      if (!keepDraft || draftRef.current === savedDraft.current) setResetKey((key) => key + 1);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const setDependencies = (update: (deps: Dependency[]) => Dependency[]) =>
     setDraft((d) => {
@@ -184,6 +241,20 @@ export function ScenarioForm({ scenario, tab }: { scenario: Scenario; tab: Scena
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {conflict && (
+        <div role="alert" className="shrink-0 border-b bg-muted px-4 py-3 md:px-8">
+          <p className="font-medium">{conflict.current ? 'Сценарий изменён в другой вкладке' : 'Сценарий удалён в другой вкладке'}</p>
+          <p className="mt-1 text-sm">Автосохранение приостановлено. Ваш черновик остаётся в редакторе.</p>
+          {conflict.current && <p className="mt-1 text-sm break-words">Сохранённая версия: «{conflict.current.name}». {conflict.current.description}</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {conflict.current && <>
+              <Button variant="outline" disabled={resolving} onClick={() => void resolveConflict(false)}>Загрузить сохранённую версию</Button>
+              <Button disabled={resolving} onClick={() => void resolveConflict(true)}>Сохранить мой черновик поверх</Button>
+            </>}
+            <Button variant="outline" onClick={() => downloadBlob(new Blob([JSON.stringify({ ...baseline.current, ...draft }, null, 2)], { type: 'application/json' }), `${draft.name || 'scenario'} — черновик.json`)}>Скачать черновик</Button>
+          </div>
+        </div>
+      )}
       <header className="shrink-0 border-b bg-page px-4 pt-3 md:px-8 md:pt-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Input

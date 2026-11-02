@@ -4,12 +4,11 @@ import { openDemo } from './helpers';
 test.describe('UJ-8 Разобраться, что и когда менялось в сценарии', () => {
   test('ED-07-16 журнал изменений доступен для ручного заполнения и виден в предпросмотре', async ({ page }) => {
     await openDemo(page, 'scenarios/1/history');
-    await expect(page.getByText('Журнал изменений').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'История изменений', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Добавить' }).first().click();
-    const fields = page.getByRole('textbox');
-    await fields.nth(1).fill('TASK-E2E');
-    await fields.nth(2).fill('Автор E2E');
-    await fields.nth(3).fill('Проверка журнала');
+    await page.getByRole('textbox', { name: 'Задача, строка 1', exact: true }).fill('TASK-E2E');
+    await page.getByRole('textbox', { name: 'Автор, строка 1', exact: true }).fill('Автор E2E');
+    await page.getByRole('textbox', { name: 'Описание изменений, строка 1', exact: true }).fill('Проверка журнала');
     await page.waitForTimeout(1500);
     await page.getByRole('tab', { name: /^Предпросмотр/ }).click();
     await expect(page.getByText('Журнал изменений').first()).toBeVisible();
