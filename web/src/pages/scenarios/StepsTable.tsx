@@ -21,12 +21,11 @@ import { depLabel } from './dependencies';
 /** Поле следующего состояния с подсказками под ним: клик по состоянию подставляет его вместо введённого. */
 function NextStateCell({ value, states, label, onChange, className }: { value: string; states: string[]; label: string; onChange: (v: string) => void; className?: string }) {
   const [focused, setFocused] = useState(false);
-  const prefix = usePrefixes(useProjectId()).state;
   const q = value.trim().toLowerCase();
   const hints = states.filter((s) => s !== value.trim() && s.toLowerCase().includes(q)).slice(0, 8);
   return (
     <div>
-      <Input className={cn(className ?? GHOST, 'bg-background')} value={value} aria-label={label} placeholder={`${prefix}…`} autoComplete="off"
+      <Input className={cn(className ?? GHOST, 'bg-background')} value={value} aria-label={label} autoComplete="off"
         onChange={(e) => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 120)} />
       {focused && hints.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-1">
@@ -216,13 +215,13 @@ function StepRow({ step, index, intents, promptOptions, open, onOpenChange, depe
         <div className="-mx-1 min-h-0 flex-1 space-y-5 overflow-y-auto px-1 pb-1">
           <div>
             <DialogLabel>Название</DialogLabel>
-            <Input className={FIELD} value={step.name ?? ''} onChange={(e) => onPatch({ name: e.target.value })} aria-label={`Название, строка ${index + 1}`} placeholder="Например, «Не расслышали»" />
+            <Input className={FIELD} value={step.name ?? ''} onChange={(e) => onPatch({ name: e.target.value })} aria-label={`Название, строка ${index + 1}`} />
           </div>
           <section className="space-y-3.5 rounded-lg border bg-muted/30 p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-brand">Если</h3>
             <div className={isGlobal ? 'hidden' : undefined}>
               <DialogLabel>Состояние</DialogLabel>
-              <Input className={cn(FIELD, 'font-mono text-[13px]')} list="scenario-states" value={step.state} onFocus={(e) => { if (!step.state.trim() && statePrefix) { onPatch({ state: statePrefix }); const el = e.currentTarget; requestAnimationFrame(() => el.setSelectionRange(statePrefix.length, statePrefix.length)); } }} onChange={(e) => onPatch({ state: e.target.value })} aria-label={`Состояние, строка ${index + 1}`} placeholder={`${statePrefix}…`} />
+              <Input className={cn(FIELD, 'font-mono text-[13px]')} list="scenario-states" value={step.state} onFocus={(e) => { if (!step.state.trim() && statePrefix) { onPatch({ state: statePrefix }); const el = e.currentTarget; requestAnimationFrame(() => el.setSelectionRange(statePrefix.length, statePrefix.length)); } }} onChange={(e) => onPatch({ state: e.target.value })} aria-label={`Состояние, строка ${index + 1}`} />
             </div>
             <div>
               <DialogLabel>Интент</DialogLabel>
@@ -241,7 +240,7 @@ function StepRow({ step, index, intents, promptOptions, open, onOpenChange, depe
             </div>
             <div className={isGlobal ? 'hidden' : undefined}>
               <DialogLabel>Действие системы</DialogLabel>
-              <Textarea rows={1} className={cn(FIELD, 'field-sizing-content min-h-9')} value={step.system_action} onChange={(e) => onPatch({ system_action: e.target.value })} aria-label={`Действие системы, строка ${index + 1}`} placeholder="Не задано" />
+              <Textarea rows={1} className={cn(FIELD, 'field-sizing-content min-h-9')} value={step.system_action} onChange={(e) => onPatch({ system_action: e.target.value })} aria-label={`Действие системы, строка ${index + 1}`} />
             </div>
             <div>
               <DialogLabel>Следующее состояние</DialogLabel>

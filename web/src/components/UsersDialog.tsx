@@ -126,8 +126,8 @@ function PasswordForm({ withLogin, onCancel, onSubmit }: { withLogin: boolean; o
 
   return (
     <form className="space-y-3" onSubmit={submit}>
-      {withLogin && <Input autoFocus placeholder="Логин" autoComplete="off" value={login} onChange={(e) => setLogin(e.target.value)} />}
-      <Input autoFocus={!withLogin} type="text" placeholder="Пароль (от 8 символов)" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+      {withLogin && <label className="grid gap-1 text-sm"><span>Логин</span><Input autoFocus aria-label="Логин" autoComplete="off" value={login} onChange={(e) => setLogin(e.target.value)} /></label>}
+      <label className="grid gap-1 text-sm"><span>Пароль (от 8 символов)</span><Input autoFocus={!withLogin} type="text" aria-label="Пароль (от 8 символов)" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
       {withLogin && (
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} /> Администратор

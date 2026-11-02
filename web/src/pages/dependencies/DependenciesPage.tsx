@@ -23,7 +23,6 @@ function ValuesList({ value, onChange }: { value: string[]; onChange: (v: string
         <Input
           className="h-10 md:h-9"
           aria-label="Новое значение"
-          placeholder="Новое значение"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {

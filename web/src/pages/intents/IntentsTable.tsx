@@ -241,7 +241,6 @@ function PhrasesEditor({ value, others, words, numbers, mode, onChange }: { valu
             rows={5}
             className="rounded-md bg-background font-mono text-[12.5px] md:text-[12.5px]"
             aria-label="Значения списком"
-            placeholder="По одному значению в строке"
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
           />
@@ -266,7 +265,6 @@ function PhrasesEditor({ value, others, words, numbers, mode, onChange }: { valu
             <Input
               className={cn(ADD_ROW, 'rounded-none border-0 pl-8 font-mono text-[12.5px] shadow-none focus-visible:ring-0 placeholder:font-sans placeholder:text-sm md:text-[12.5px]')}
               aria-label={addKind === 'phrase' ? 'Добавить тренировочную фразу' : 'Добавить паттерн'}
-              placeholder={addKind === 'phrase' ? 'фраза' : 'паттерн'}
               value={text}
               onChange={(e) => { setText(e.target.value); setError(''); }}
               onBlur={() => text.trim() && add(text)}

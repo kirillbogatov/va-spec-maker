@@ -41,9 +41,9 @@ export function AuthPage() {
           <h1 className="text-balance text-xl font-semibold">{setup ? 'Создайте администратора' : 'Вход'}</h1>
           {setup && <p className="mt-1 text-sm text-muted-foreground">Это первый запуск. Администратор сможет добавлять других пользователей.</p>}
         </div>
-        <Input autoFocus placeholder="Логин" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} />
-        <Input type="password" placeholder="Пароль" autoComplete={setup ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
-        {setup && <Input type="password" placeholder="Повторите пароль" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} />}
+        <label className="grid gap-1 text-sm"><span>Логин</span><Input autoFocus aria-label="Логин" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} /></label>
+        <label className="grid gap-1 text-sm"><span>Пароль</span><Input type="password" aria-label="Пароль" autoComplete={setup ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        {setup && <label className="grid gap-1 text-sm"><span>Повторите пароль</span><Input type="password" aria-label="Повторите пароль" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} /></label>}
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}

@@ -89,7 +89,6 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
                       rows={1}
                       className="field-sizing-content min-h-8 resize-none rounded-md bg-background px-2 py-1 text-sm leading-6 max-md:min-h-10 md:text-sm"
                       aria-label={answers.length > 1 ? `Ответ ассистента ${i + 1}` : 'Ответ ассистента'}
-                      placeholder="Устанавливаю температуру на Х градусов"
                       value={a}
                       onChange={(e) => setAnswer(i, e.target.value)}
                       onBlur={() => !a.trim() && answers.length > 1 && patch({ full_answers: answers.filter((_, j) => j !== i) })}

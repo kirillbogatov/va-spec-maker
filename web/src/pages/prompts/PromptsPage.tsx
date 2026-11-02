@@ -60,7 +60,6 @@ export function PromptsPage() {
                   rows={1}
                   className="min-h-10 resize-none rounded-md px-3 py-2 pr-10 text-[15px] leading-6 md:text-[15px]"
                   aria-label={`Ответ ассистента, вариант ${i + 1}`}
-                  placeholder="Устанавливаю температуру на Х градусов"
                   value={a}
                   onChange={(e) => patch({ full_answers: d.full_answers.map((x, j) => (j === i ? e.target.value : x)) })}
                 />

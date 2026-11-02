@@ -88,7 +88,6 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], numbers = [
             rows={6}
             className="font-mono text-[13px]"
             aria-label="Значения списком"
-            placeholder="По одному значению в строке"
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
           />
@@ -111,7 +110,6 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], numbers = [
           <Input
             className={cn(GHOST, 'h-full min-w-0 flex-1 rounded-none border-0 shadow-none focus-visible:ring-0')}
             aria-label={addKind === 'phrase' ? 'Добавить тренировочную фразу' : 'Добавить паттерн'}
-            placeholder={addKind === 'phrase' ? '+ фраза' : '+ паттерн'}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {

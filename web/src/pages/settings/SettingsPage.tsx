@@ -27,7 +27,6 @@ export function SettingsPage() {
                 <Input
                   className="font-mono"
                   value={prefixes[f.key]}
-                  placeholder={f.hint}
                   spellCheck={false}
                   autoComplete="off"
                   onChange={(e) => writePrefix(projectId, f.key, e.target.value.replace(/\s/g, ''))}

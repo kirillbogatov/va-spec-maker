@@ -77,7 +77,6 @@ export function PartPanel({ part, canRemove, onChange, onRemove, onClose }: Pane
         value={part.name}
         onChange={(e) => onChange({ name: e.target.value })}
         aria-label="Название вкладки"
-        placeholder="Название вкладки — подзаголовок в State transitions"
       />
       <Textarea
         rows={3}
@@ -85,7 +84,6 @@ export function PartPanel({ part, canRemove, onChange, onRemove, onClose }: Pane
         value={part.description}
         onChange={(e) => onChange({ description: e.target.value })}
         aria-label="Описание вкладки"
-        placeholder="Описание сценария этой вкладки"
       />
     </div>
   );

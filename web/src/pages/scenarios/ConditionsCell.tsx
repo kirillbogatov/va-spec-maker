@@ -92,7 +92,7 @@ export function ConditionsCell({ conditions, freeText, mode = 'all', dependencie
           </Select>
         ) : (
           <Input className={cn(ctl, 'min-w-0 flex-1 px-2')} type={input} step={input === 'number' ? 'any' : undefined} value={c.value} aria-invalid={!validValue(input, c.value) || undefined}
-            onChange={(e) => patch(i, { value: e.target.value })} aria-label="Значение" placeholder={input === 'text' ? 'Значение' : undefined} />
+            onChange={(e) => patch(i, { value: e.target.value })} aria-label="Значение" />
         );
         if (stacked) {
           if (editing === i) editor = (
@@ -125,7 +125,7 @@ export function ConditionsCell({ conditions, freeText, mode = 'all', dependencie
       })}
       {texts.map((t, i) => (
         <div key={`t${i}`} className="flex items-center gap-1">
-          <Input className={cn(ctl, 'min-w-0 flex-1 px-2')} placeholder="Своё условие (текст)" value={t} onChange={(e) => setTexts(texts.map((x, j) => (j === i ? e.target.value.replace(/\r?\n/g, ' ') : x)))} aria-label={`Своё условие ${i + 1}`} />
+          <Input className={cn(ctl, 'min-w-0 flex-1 px-2')} value={t} onChange={(e) => setTexts(texts.map((x, j) => (j === i ? e.target.value.replace(/\r?\n/g, ' ') : x)))} aria-label={`Своё условие ${i + 1}`} />
           <Button variant="ghost" size="icon" className="size-7 shrink-0" aria-label={`Удалить своё условие ${i + 1}`} onClick={() => { setTexts(texts.filter((_, j) => j !== i)); if (texts.length === 1) setShowText(false); }}>
             <X className="size-3.5" />
           </Button>

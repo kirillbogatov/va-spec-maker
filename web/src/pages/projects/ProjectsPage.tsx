@@ -54,8 +54,8 @@ function ProjectDialog({ project, open, onOpenChange, onSubmit }: {
             onOpenChange(false);
           }}
         >
-          <Input autoFocus placeholder="Название" aria-label="Название проекта" value={name} onChange={(e) => setName(e.target.value)} />
-          <Textarea rows={3} placeholder="Описание (необязательно)" aria-label="Описание проекта" value={description} onChange={(e) => setDescription(e.target.value)} />
+          <Input autoFocus aria-label="Название проекта" value={name} onChange={(e) => setName(e.target.value)} />
+          <Textarea rows={3} aria-label="Описание проекта" value={description} onChange={(e) => setDescription(e.target.value)} />
           <DialogFooter>
             <Button type="submit" disabled={!valid}>{project ? 'Сохранить' : 'Создать'}</Button>
           </DialogFooter>

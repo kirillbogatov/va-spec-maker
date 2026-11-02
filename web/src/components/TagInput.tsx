@@ -5,12 +5,11 @@ import { splitTags } from '@/lib/parse';
 interface Props {
   value: string[];
   onChange: (v: string[]) => void;
-  placeholder?: string;
   /** true — запятая завершает тег; false — только Enter/потеря фокуса (для вопросов с запятыми) */
   commaSplit?: boolean;
 }
 
-export function TagInput({ value, onChange, placeholder, commaSplit = true }: Props) {
+export function TagInput({ value, onChange, commaSplit = true }: Props) {
   const [text, setText] = useState('');
   const commit = (raw: string) => {
     const add = commaSplit ? splitTags(raw) : raw.trim() ? [raw.trim()] : [];
@@ -35,7 +34,6 @@ export function TagInput({ value, onChange, placeholder, commaSplit = true }: Pr
       <input spellCheck={false}
         className="min-h-7 min-w-24 flex-1 bg-transparent py-0.5 text-sm outline-none placeholder:text-muted-foreground"
         value={text}
-        placeholder={value.length ? '' : placeholder}
         onChange={(e) => {
           const t = e.target.value;
           if (commaSplit && t.includes(',')) commit(t);

@@ -262,7 +262,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             aria-label="Название сценария"
-            placeholder="Название сценария"
           />
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:gap-3">
             <SaveIndicator state={status} />
@@ -321,7 +320,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
         <div className={column}>
           <div className={cn(inner, 'grid min-w-0 gap-4')}>
             <Card title="Описание">
-              <Textarea rows={1} className={cn(GHOST, 'min-h-0 resize-none rounded-md')} placeholder="Добавьте описание" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+              <Textarea rows={1} className={cn(GHOST, 'min-h-0 resize-none rounded-md')} aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             </Card>
             <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} />
           </div>

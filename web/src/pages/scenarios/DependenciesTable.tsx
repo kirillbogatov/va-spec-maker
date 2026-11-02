@@ -32,7 +32,6 @@ function NameCombobox({ value, names, onType, onPick }: { value: string; names: 
       <Combobox.Input
         spellCheck={false}
         aria-label="Название зависимости"
-        placeholder="Выберите или введите название"
         className={cn(GHOST, 'h-8 w-full rounded-md border px-2.5 text-sm outline-none placeholder:text-muted-foreground max-md:h-10 md:-ml-2.5 md:w-[calc(100%+0.625rem)]')}
       />
       {names.length > 0 && (
@@ -95,7 +94,7 @@ export function DependenciesTable({ dependencies, entities, onChange }: Props) {
                   </span>
                 )}
                 <div className="min-w-32 flex-1">
-                  <TagInput value={d.options} onChange={(options) => patch(d.ref, { options, type: 'enum' })} placeholder="Вариант" />
+                  <TagInput value={d.options} onChange={(options) => patch(d.ref, { options, type: 'enum' })} aria-label="Вариант" />
                 </div>
               </div>
             )}

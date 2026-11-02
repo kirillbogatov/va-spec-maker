@@ -27,7 +27,6 @@ function SynonymsList({ value, onChange }: { value: string[]; onChange: (v: stri
         <Input
           className="h-10 md:h-9"
           aria-label="Новый синоним"
-          placeholder="Новый синоним"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {

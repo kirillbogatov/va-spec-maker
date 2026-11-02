@@ -51,9 +51,9 @@ export function ChangePasswordDialog({ open, onOpenChange }: Props) {
           <DialogTitle>Сменить пароль</DialogTitle>
         </DialogHeader>
         <form className="space-y-3" onSubmit={submit}>
-          <Input autoFocus type="password" placeholder="Текущий пароль" autoComplete="current-password" value={oldPassword} onChange={(e) => setOld(e.target.value)} />
-          <Input type="password" placeholder="Новый пароль (от 8 символов)" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <Input type="password" placeholder="Повторите новый пароль" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+          <label className="grid gap-1 text-sm"><span>Текущий пароль</span><Input autoFocus type="password" aria-label="Текущий пароль" autoComplete="current-password" value={oldPassword} onChange={(e) => setOld(e.target.value)} /></label>
+          <label className="grid gap-1 text-sm"><span>Новый пароль (от 8 символов)</span><Input type="password" aria-label="Новый пароль (от 8 символов)" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+          <label className="grid gap-1 text-sm"><span>Повторите новый пароль</span><Input type="password" aria-label="Повторите новый пароль" autoComplete="new-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} /></label>
           {error && (
             <p role="alert" className="text-sm text-destructive">
               {error}

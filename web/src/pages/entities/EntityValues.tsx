@@ -36,7 +36,6 @@ function Synonyms({ value, label, onChange }: { value: string[]; label: string; 
         spellCheck={false}
         aria-label={`Новый синоним для ${label}`}
         className="h-8 w-28 min-w-0 rounded-md bg-transparent px-2 text-[13px] outline-none placeholder:text-faint hover:bg-muted focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-ring"
-        placeholder="+ синоним"
         value={text}
         onChange={(e) => {
           if (e.target.value.includes(',')) {
@@ -86,7 +85,6 @@ export function EntityValues({ values, onChange }: { values: EntityValue[]; onCh
                 className={cn(GHOST, 'h-10 px-2 font-mono text-[15px] font-medium md:h-9')}
                 value={v.value}
                 autoFocus={v.value === '' && i === values.length - 1}
-                placeholder="Значение"
                 onChange={(e) => patchValue(i, { value: e.target.value })}
                 aria-label={`Значение ${i + 1}`}
               />

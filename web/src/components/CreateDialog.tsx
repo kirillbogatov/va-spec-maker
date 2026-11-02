@@ -49,7 +49,7 @@ export function CreateDialog({ open, onOpenChange, title, onCreate, withType = f
             submit();
           }}
         >
-          <Input autoFocus onFocus={(e) => { const n = e.currentTarget.value.length; e.currentTarget.setSelectionRange(n, n); }} placeholder="Название" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={duplicate} />
+          <Input autoFocus onFocus={(e) => { const n = e.currentTarget.value.length; e.currentTarget.setSelectionRange(n, n); }} aria-label="Название" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={duplicate} />
           {duplicate && <p role="alert" className="text-sm text-destructive">Элемент с таким названием уже существует</p>}
           {withType && <EntityTypeFields kind={kind} onChange={setKind} />}
           <DialogFooter>
