@@ -170,13 +170,13 @@ export function ListItem({ to, children, count, dim, meta, warn }: ListItemProps
 export const listEmpty = 'px-4 py-3 text-sm text-muted-foreground';
 export const listSearch = 'bg-muted placeholder:text-muted-foreground';
 
-/** Фильтр по названию списка: поле появляется, когда элементов больше шести. */
-export function useListFilter<T extends { name: string }>(items: T[], where: string) {
+/** Поиск по названию и дополнительным значениям в одном поле. */
+export function useListFilter<T extends { name: string }>(items: T[], where: string, searchValues?: (item: T) => string[]) {
   const [q, setQ] = useState('');
   const t = q.trim().toLowerCase();
-  const filtered = t ? items.filter((i) => i.name.toLowerCase().includes(t)) : items;
+  const filtered = t ? items.filter((i) => [i.name, ...(searchValues?.(i) ?? [])].some((value) => value.toLowerCase().includes(t))) : items;
   const search =
-    items.length > 6 ? (
+    (searchValues ? items.length > 0 : items.length > 6) ? (
       <div className="relative px-3 pb-2 pt-2">
         <Search className="pointer-events-none absolute left-5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <input

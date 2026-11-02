@@ -99,6 +99,7 @@ export function KeywordsPage() {
       mono
       base="/lists/keywords"
       items={items}
+      searchValues={(i) => i.synonyms}
       meta={(i) => (i.synonyms.length ? { text: String(i.synonyms.length) } : { text: 'нет синонимов', warn: true })}
       subtitle={(i) => i.synonyms.join(', ')}
       usedIn={(i) => i.used_by}

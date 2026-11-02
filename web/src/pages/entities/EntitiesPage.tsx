@@ -73,6 +73,7 @@ export function EntitiesPage() {
       mono
       base="/entities"
       items={items}
+      searchValues={(i) => i.values.flatMap((v) => [v.value, ...v.synonyms])}
       loading={isPending}
       meta={(i) => (i.type !== 'string' ? { text: entityTypeLabel(i.type) } : i.values.length ? null : { text: 'нет значений', warn: true })}
       usedIn={(i) => {

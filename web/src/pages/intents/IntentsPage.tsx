@@ -40,6 +40,7 @@ export function IntentsPage() {
       mono
       base="/lists/intents"
       items={items}
+      searchValues={(i) => i.values.map((v) => v.text)}
       loading={loading}
       groupOf={(i) => (i.scenarios.length ? 'Подключены к сценариям' : null)}
       fallbackGroup="Не используются"

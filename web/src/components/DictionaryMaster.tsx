@@ -33,6 +33,8 @@ interface Props<T extends DictItem> {
   base: string;
   /** Порядок элементов задаёт вызывающий; внутри группы он сохраняется. */
   items: T[];
+  /** Дополнительные значения для поиска вместе с названием. */
+  searchValues?: (item: T) => string[];
   /** Элементы ещё догружаются: не выбираем первый и не показываем пустое состояние. */
   loading?: boolean;
   /** Идентификаторы (интенты, сущности, промпты) набираются моноширинным шрифтом. */
@@ -117,7 +119,7 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
   const navigate = useNavigate();
   const path = usePath();
   const [creating, setCreating] = useState(false);
-  const { filtered, search, filtering } = useListFilter(p.items, SEARCH_WHERE[p.kind]);
+  const { filtered, search, filtering } = useListFilter(p.items, SEARCH_WHERE[p.kind], p.searchValues);
   const selected = p.items.find((i) => String(i.id) === itemId);
 
   // Группы: в порядке первого появления, «без группы» — в конце
