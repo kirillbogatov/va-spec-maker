@@ -438,12 +438,12 @@ function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis
         className={cn('flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card focus-visible:outline-2 focus-visible:outline-ring', wide ? 'h-full min-h-0' : 'h-[65dvh] min-h-80 lg:h-full')}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-2 py-1.5">
           <Button size="sm" onClick={addNode}><Plus className="size-4" /> Состояние</Button>
+          <Button variant="outline" size="sm" aria-pressed={expanded} onClick={() => { setExpanded((value) => !value); setTick((value) => value + 1); }}><PanelsTopLeft className="size-4" /> {expanded ? 'Свернуть блоки' : 'Развернуть блоки'}</Button>
           {exportMeta && (
             <Button variant="outline" size="sm" onClick={exportSvg} disabled={exporting} title="Скачать все вкладки сценария в SVG">
               <Download className="size-4" /> SVG
             </Button>
           )}
-          <Button variant="outline" size="sm" aria-pressed={expanded} onClick={() => { setExpanded((value) => !value); setTick((value) => value + 1); }}><PanelsTopLeft className="size-4" /> {expanded ? 'Свернуть блоки' : 'Развернуть блоки'}</Button>
           <div className="ml-auto flex items-center gap-2">
             <ZoomControls />
             <Button variant="outline" size="sm" onClick={() => setWide(!wide)} aria-pressed={wide} title={wide ? 'Свернуть схему (Esc)' : 'Развернуть схему на весь экран'}>
