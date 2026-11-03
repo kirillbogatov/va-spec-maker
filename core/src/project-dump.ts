@@ -1,3 +1,4 @@
+import { readPreconditions, restoreImportedPreconditions } from './part-preconditions';
 import { backfillDependencyLinks } from './dependency-links';
 import { badRequest, notFound } from './errors';
 import type { Db } from './sqlite';
@@ -111,17 +112,25 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
         .run(name ?? dump.name, typeof dump.description === 'string' ? dump.description : '').lastInsertRowid,
     );
     const maps: Record<string, Map<number, number>> = {};
+    const importedParts: number[] = [];
     for (const t of TABLES) {
       const cols = new Set((db.prepare(`PRAGMA table_info(${t.name})`).all() as { name: string }[]).map((c) => c.name));
       const map = (maps[t.name] = new Map());
       const rows = tables[t.name];
       if (rows !== undefined && !Array.isArray(rows)) throw badRequest(`Некорректная таблица ${t.name}`);
       for (const original of rows ?? []) {
-        const row = t.remap ? t.remap(original, maps) : original;
+        let row = t.remap ? t.remap(original, maps) : original;
+        if (t.name === 'scenario_steps' && row.match_any_intent !== undefined) {
+          const flag = row.match_any_intent;
+          if (flag !== true && flag !== false && flag !== 0 && flag !== 1) throw badRequest('Некорректное поле match_any_intent');
+          row = { ...row, match_any_intent: flag === true || flag === 1 ? 1 : 0 };
+          if (row.match_any_intent === 1) row.intent_id = null;
+        }
         const keys = Object.keys(row).filter((k) => k !== 'id' && !LEGACY[t.name]?.includes(k));
         if (keys.some((k) => !cols.has(k))) throw badRequest(`Неизвестное поле в таблице ${t.name}`);
         const values = keys.map((k) => {
           if (k === 'project_id') return pid;
+          if (t.name === 'scenario_parts' && k === 'preconditions') return JSON.stringify(readPreconditions(row[k], true));
           if (t.name === 'scenario_steps' && k === 'conditions') {
             let conditions: Record<string, unknown>[];
             try { conditions = typeof row[k] === 'string' ? JSON.parse(row[k] as string) : row[k] as Record<string, unknown>[]; }
@@ -145,9 +154,11 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
         });
         const q = keys.map((k) => `"${k}"`).join(', ');
         const info = db.prepare(`INSERT INTO ${t.name}(${q}) VALUES (${keys.map(() => '?').join(', ')})`).run(...values);
+        if (t.name === 'scenario_parts') importedParts.push(Number(info.lastInsertRowid));
         if (typeof row.id === 'number') map.set(row.id, Number(info.lastInsertRowid));
       }
     }
+    restoreImportedPreconditions(db, pid, maps, importedParts);
     backfillDependencyLinks(db, pid);
     return pid;
   })();

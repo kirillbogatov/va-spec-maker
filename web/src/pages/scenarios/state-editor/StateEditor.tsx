@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { layoutStateGraph, type LayoutResult } from '@/lib/elkLayout';
 import { duplicateState, ENTRY_STATE, newTransition, removeState, renameState, uniqueStateName } from '@/lib/fsm';
-import { splitNext, type Analysis } from '@/lib/states';
+import { splitNext, stepIntentLabel, type Analysis } from '@/lib/states';
 import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem, ScenarioPart, StateInfo, Step } from '@/lib/types';
 import { conditionLabel } from '../dependencies';
 import { useProjectId } from '@/hooks/project';
@@ -31,6 +31,9 @@ const edgeTypes = { transition: TransitionEdge };
 type Selection = { type: 'node'; name: string } | { type: 'edge'; key: string } | null;
 
 interface Props {
+  /** Хранится в форме сценария, чтобы переключение подсценариев не сбрасывало полный экран. */
+  wide: boolean;
+  onWideChange: (wide: boolean) => void;
   /** Только переходы (kind = transition). */
   steps: Step[];
   layout: Layout;
@@ -64,18 +67,19 @@ export function StateEditor(props: Props) {
 
 /** Масштаб схемы. */
 function ZoomControls() {
-  const { zoomIn, zoomOut } = useReactFlow();
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
   const { zoom } = useViewport();
   return (
     <div className="flex items-center gap-0.5">
       <Button variant="ghost" size="icon" aria-label="Уменьшить" onClick={() => zoomOut({ duration: 150 })}><Minus className="size-4" /></Button>
       <span className="w-11 text-center text-xs tabular-nums text-muted-foreground">{Math.round(zoom * 100)}%</span>
       <Button variant="ghost" size="icon" aria-label="Увеличить" onClick={() => zoomIn({ duration: 150 })}><Plus className="size-4" /></Button>
+      <Button variant="ghost" size="sm" onClick={() => fitView({ ...FIT, duration: 200 })}>Вся схема</Button>
     </div>
   );
 }
 
-function StateEditorInner({ steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, focusState, exportMeta }: Props) {
+function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, focusState, exportMeta }: Props) {
   const canvas = useRef<HTMLDivElement>(null);
   const projectId = useProjectId();
   const keywords = useKeywords(projectId);
@@ -101,7 +105,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusState]);
 
-  const intentTitle = (s: Step) => intents.find((i) => i.id === s.intent_id)?.name ?? 'без интента';
+  const intentTitle = (s: Step) => stepIntentLabel(s, (id) => intents.find((i) => i.id === id)?.name ?? null);
   const condsOf = (s: Step) => [...s.conditions.map((c) => conditionLabel(c, dependencies, entities, keywords)), ...s.condition.split('\n').map((l) => l.trim())].filter(Boolean);
   const edgeText = (s: Step) => {
     const conds = condsOf(s);
@@ -156,7 +160,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
     void document.fonts.ready.then(() => { if (!stale) setTick((value) => value + 1); });
     return () => { stale = true; };
   }, [expanded]);
-  const { fitView } = useReactFlow();
+  const { fitView, viewportInitialized } = useReactFlow();
   useEffect(() => {
     let stale = false;
     layoutStateGraph(
@@ -170,20 +174,39 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   // Масштаб подстраивается после первой раскладки, изменения топологии и переключения вида блоков.
   const topoKey = JSON.stringify([names, analysis.edges.map((e) => [e.id, e.from, e.to])]);
   const fitted = useRef('');
+  const [viewportReady, setViewportReady] = useState(false);
   useEffect(() => {
-    if (!placed || placedKey !== `${graphKey}:${tick}`) return;
+    if (!placed || placedKey !== `${graphKey}:${tick}` || !viewportInitialized) return;
+    if (names.length === 0) { setViewportReady(true); return; }
     const key = `${topoKey}:${tick}`;
     if (fitted.current === key) return;
-    fitted.current = key;
-    const id = requestAnimationFrame(() => {
+    let stale = false;
+    const id = requestAnimationFrame(async () => {
+      // Первый кадр показываем сразу в рассчитанной позиции, без пролёта из (0, 0).
+      const duration = viewportReady ? 200 : 0;
       // На узком экране сначала показываем крупно входное состояние; общий вид доступен уменьшением масштаба.
       const entry = analysis.states[0];
-      if (window.matchMedia('(max-width: 639px)').matches && names.length > 3 && entry) fitView({ nodes: [{ id: entry }], minZoom: 0.7, maxZoom: 0.8, padding: 0.3, duration: 0 });
-      else fitView({ ...FIT, duration: 200 });
+      if (window.matchMedia('(max-width: 639px)').matches && names.length > 3 && entry) await fitView({ nodes: [{ id: entry }], minZoom: 0.7, maxZoom: 0.8, padding: 0.3, duration: 0 });
+      else {
+        const positions = names.flatMap((name) => {
+          const position = placed.nodes.get(name);
+          const size = sizes.get(name);
+          return position && size ? [{ ...position, ...size }] : [];
+        });
+        const graphWidth = positions.length ? Math.max(...positions.map((n) => n.x + n.width)) - Math.min(...positions.map((n) => n.x)) : 0;
+        const graphHeight = positions.length ? Math.max(...positions.map((n) => n.y + n.height)) - Math.min(...positions.map((n) => n.y)) : 0;
+        const viewport = canvas.current?.querySelector('.react-flow');
+        const readable = viewport && graphWidth && graphHeight
+          ? Math.min(viewport.clientWidth / graphWidth, viewport.clientHeight / graphHeight) >= 0.6
+          : true;
+        if (!readable && entry) await fitView({ nodes: [{ id: entry }], minZoom: 0.7, maxZoom: 0.85, padding: 0.25, duration });
+        else await fitView({ ...FIT, duration });
+      }
+      if (!stale) { fitted.current = key; setViewportReady(true); }
     });
-    return () => cancelAnimationFrame(id);
+    return () => { stale = true; cancelAnimationFrame(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placed, placedKey, graphKey, topoKey, tick]);
+  }, [placed, placedKey, graphKey, topoKey, tick, viewportInitialized]);
 
   const nodes = useMemo<Node<StateNodeData>[]>(
     () =>
@@ -274,7 +297,6 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   const patchEdge = (key: string, p: Partial<Step>) => commit(steps.map((s) => (s.key === key ? { ...s, ...p } : s)));
 
   // Развёрнутая схема занимает весь экран: остаются только холст и панель свойств; Esc сворачивает.
-  const [wide, setWide] = useState(false);
   useEffect(() => {
     if (!wide) return;
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented) setWide(false); };
@@ -425,13 +447,14 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
           {tabs}
           <div className="ml-auto flex items-center gap-2">
             <ZoomControls />
-            <Button variant="outline" size="sm" onClick={() => setWide((v) => !v)} aria-pressed={wide} title={wide ? 'Свернуть схему (Esc)' : 'Развернуть схему на весь экран'}>
+            <Button variant="outline" size="sm" onClick={() => setWide(!wide)} aria-pressed={wide} title={wide ? 'Свернуть схему (Esc)' : 'Развернуть схему на весь экран'}>
               {wide ? <Shrink className="size-4" /> : <Expand className="size-4" />} {wide ? 'Свернуть' : 'Развернуть'}
             </Button>
           </div>
         </div>
         <div className="relative min-h-0 flex-1 bg-background">
           {placed ? <ReactFlow
+            style={{ opacity: viewportReady ? 1 : 0, pointerEvents: viewportReady ? 'auto' : 'none' }}
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
@@ -449,6 +472,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
           >
             <Background gap={22} size={1} color="var(--border)" />
           </ReactFlow> : <p className="p-4 text-sm text-muted-foreground">Раскладываю схему…</p>}
+          {placed && !viewportReady && <p role="status" className="absolute inset-0 p-4 text-sm text-muted-foreground">Подготовка схемы…</p>}
         </div>
         <p className="border-t px-3 py-1.5 text-xs text-muted-foreground md:hidden">Для редактирования схемы удобнее экран шире 900px; панорама и зум работают пальцами.</p>
       </div>

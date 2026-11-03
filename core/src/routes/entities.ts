@@ -1,3 +1,4 @@
+import { conditionScenarios } from '../part-preconditions';
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { HttpError, notFound } from '../errors';
@@ -45,7 +46,7 @@ export function entitiesRouter(db: Db): RouterT {
         synonyms: string;
       }[]
     ).map((v) => ({ value: v.value, synonyms: JSON.parse(v.synonyms) as string[] }));
-    return { ...e, multiple_values: !!e.multiple_values, values, used_by: usedBy(id) };
+    return { ...e, multiple_values: !!e.multiple_values, values, used_by: usedBy(id), scenario_ids: conditionScenarios(db, 'entity_id', id).map(s => s.id) };
   };
 
   r.get('/projects/:pid/entities', (req, res) => {
@@ -90,6 +91,8 @@ export function entitiesRouter(db: Db): RouterT {
   r.delete('/entities/:id', (req, res) => {
     const id = parseId(req.params.id);
     load(id);
+    const scenarios = conditionScenarios(db, 'entity_id', id);
+    if (scenarios.length) throw new HttpError(409, 'in_use', 'Сущность используется в условиях сценария: сначала уберите эти условия', { scenarios });
     const intents = usedBy(id);
     if (intents.length && req.query.force !== '1') {
       throw new HttpError(409, 'in_use', 'Сущность используется в интентах', { intents });

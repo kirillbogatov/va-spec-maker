@@ -79,6 +79,7 @@ export function PromptsPage() {
       )}
       emptyText="Промптов пока нет"
       createTitle="Новый промпт"
+      createDialogTitle="Добавить промпт"
       createPrefix={prefixes.prompt}
       deleteTitle={(d) => `Удалить промпт «${d.name}»?`}
       deleteDescription={(d) =>

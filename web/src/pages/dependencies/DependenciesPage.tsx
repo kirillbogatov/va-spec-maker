@@ -130,7 +130,7 @@ export function DependenciesPage() {
       usedIn={(i) => i.used_by.map((s) => ({ id: s.id, name: s.name }))}
       body={(d, patch) => (
         <>
-        <DictCard title="Описание"><Textarea rows={2} aria-label="Описание зависимости" value={d.description} onChange={(event) => patch({ description: event.target.value })} /></DictCard>
+        <DictCard title="Описание"><Textarea rows={1} className="resize-y rounded-md bg-background" aria-label="Описание зависимости" value={d.description} onChange={(event) => patch({ description: event.target.value })} /></DictCard>
         <DictCard title="Возможные значения">
           <ValuesList
             value={d.values}
@@ -145,6 +145,7 @@ export function DependenciesPage() {
       )}
       emptyText="Зависимостей пока нет"
       createTitle="Новая зависимость"
+      createDialogTitle="Добавить зависимость"
       createPrefix={prefixes.dependency}
       deleteTitle={(d) => `Удалить зависимость ${d.name}?`}
       deleteDescription={(d) =>

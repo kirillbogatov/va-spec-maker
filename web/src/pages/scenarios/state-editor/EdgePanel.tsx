@@ -75,7 +75,7 @@ export function EdgePanel({ step, steps, states, descriptions, intents, dependen
         </div>
         <div>
           <DialogLabel>Интент</DialogLabel>
-          <IntentSelect intents={intents} value={step.intent_id} onChange={(intent_id) => onPatch({ intent_id })} label="Интент" hideValueHint fieldClassName={FIELD} />
+          <IntentSelect intents={intents} value={step.intent_id} anyIntent={step.match_any_intent} onChange={(intent_id, match_any_intent) => onPatch({ intent_id, match_any_intent })} label="Интент" hideValueHint fieldClassName={FIELD} />
         </div>
         <div>
           <DialogLabel>Условия</DialogLabel>

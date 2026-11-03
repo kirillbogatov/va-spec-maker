@@ -23,19 +23,21 @@ export function renameDependencyValues(db: Db, dictionaryId: number, renames: { 
     if (!refs.has(link.scenario_id)) refs.set(link.scenario_id, new Set());
     refs.get(link.scenario_id)!.add(link.ref);
   }
-  const update = db.prepare('UPDATE scenario_steps SET conditions = ? WHERE id = ?');
-  for (const [scenarioId, dependencies] of refs) {
-    const steps = db.prepare('SELECT id, conditions FROM scenario_steps WHERE scenario_id = ?').all(scenarioId) as { id: number; conditions: string }[];
-    for (const step of steps) {
-      const conditions = JSON.parse(step.conditions) as { dep: string; value: string; entity_id?: number; concept_id?: number }[];
-      let changed = false;
-      for (const c of conditions) {
-        if (c.entity_id !== undefined || c.concept_id !== undefined || !dependencies.has(c.dep)) continue;
-        for (const rename of renames) {
-          if (c.value === rename.from && rename.from !== rename.to) { c.value = rename.to; changed = true; }
+  for (const [table, column] of [['scenario_steps', 'conditions'], ['scenario_parts', 'preconditions']] as const) {
+    const update = db.prepare(`UPDATE ${table} SET ${column} = ? WHERE id = ?`);
+    for (const [scenarioId, dependencies] of refs) {
+      const rows = db.prepare(`SELECT id, ${column} AS conditions FROM ${table} WHERE scenario_id = ?`).all(scenarioId) as { id: number; conditions: string }[];
+      for (const row of rows) {
+        const conditions = JSON.parse(row.conditions) as { dep: string; value: string; entity_id?: number; concept_id?: number; keyword_id?: number }[];
+        let changed = false;
+        for (const c of conditions) {
+          if (c.entity_id !== undefined || c.concept_id !== undefined || c.keyword_id !== undefined || !dependencies.has(c.dep)) continue;
+          for (const rename of renames) {
+            if (c.value === rename.from && rename.from !== rename.to) { c.value = rename.to; changed = true; }
+          }
         }
+        if (changed) update.run(JSON.stringify(conditions), row.id);
       }
-      if (changed) update.run(JSON.stringify(conditions), step.id);
     }
   }
 }

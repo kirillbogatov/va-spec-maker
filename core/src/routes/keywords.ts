@@ -1,3 +1,4 @@
+import { conditionScenarios } from '../part-preconditions';
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { HttpError, notFound } from '../errors';
@@ -22,6 +23,7 @@ export function keywordsRouter(db: Db): RouterT {
     const steps = db
       .prepare(`SELECT t.scenario_id, t.conditions FROM scenario_steps t JOIN scenarios s ON s.id = t.scenario_id WHERE s.project_id = ? AND t.conditions LIKE '%keyword_id%'`)
       .all(pid) as { scenario_id: number; conditions: string }[];
+    steps.push(...db.prepare('SELECT p.scenario_id, p.preconditions AS conditions FROM scenario_parts p JOIN scenarios s ON s.id = p.scenario_id WHERE s.project_id = ?').all(pid));
     for (const s of steps) {
       for (const c of JSON.parse(s.conditions) as { keyword_id?: number }[]) {
         if (c.keyword_id !== undefined) found.get(c.keyword_id)?.add(s.scenario_id);
@@ -134,6 +136,8 @@ export function keywordsRouter(db: Db): RouterT {
   r.delete('/keywords/:id', (req, res) => {
     const id = parseId(req.params.id);
     load(id);
+    const scenarios = conditionScenarios(db, 'keyword_id', id);
+    if (scenarios.length) throw new HttpError(409, 'in_use', 'Ключевое слово используется в условиях сценария: сначала уберите эти условия', { scenarios });
     db.prepare('DELETE FROM keywords WHERE id = ?').run(id);
     res.status(204).end();
   });

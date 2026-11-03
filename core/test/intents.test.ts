@@ -17,7 +17,7 @@ describe('intents API', () => {
     const get = await request(app).get(`/api/intents/${c.body.id}`);
     expect(get.body).toMatchObject({ name: 'INT_SEAT_HEATING', enabled: true, phrases: [], entities: [] });
     const list = await request(app).get(`/api/projects/${pid}/intents`);
-    expect(list.body).toEqual([{ id: c.body.id, name: 'INT_SEAT_HEATING', enabled: true, phrase_count: 0, hint: '', scenarios: [] }]);
+    expect(list.body).toEqual([{ id: c.body.id, name: 'INT_SEAT_HEATING', enabled: true, phrase_count: 0, pattern_count: 0, hint: '', scenarios: [] }]);
   });
 
   it('PUT replaces phrases and entities', async () => {

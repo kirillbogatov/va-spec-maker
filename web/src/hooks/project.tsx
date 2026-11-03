@@ -7,15 +7,18 @@ import type { ProjectListItem } from '@/lib/types';
 interface Ctx {
   project: ProjectListItem | null;
   isLoading: boolean;
+  isError: boolean;
+  isFetching: boolean;
+  retry: () => void;
 }
 const ProjectCtx = createContext<Ctx | null>(null);
 
 /** Текущий проект определяется по адресу /p/:projectId. */
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { projectId } = useParams();
-  const { data = [], isLoading } = useQuery({ queryKey: ['projects'], queryFn: api.projects.list });
+  const { data = [], isLoading, isError, isFetching, refetch } = useQuery({ queryKey: ['projects'], queryFn: api.projects.list });
   const project = data.find((p) => String(p.id) === projectId) ?? null;
-  return <ProjectCtx.Provider value={{ project, isLoading }}>{children}</ProjectCtx.Provider>;
+  return <ProjectCtx.Provider value={{ project, isLoading, isError, isFetching, retry: () => { void refetch(); } }}>{children}</ProjectCtx.Provider>;
 }
 
 export function useProject(): Ctx {

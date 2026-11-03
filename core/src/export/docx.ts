@@ -116,15 +116,19 @@ const subheading = (text: string) =>
 
 function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = spec.changelog ?? []): Block[] {
   const t = STRINGS[lang];
-  const transitions: Block[] =
-    !parts || parts.length === 1
-      ? [tableBlock(transitionsTable(parts ? parts[0].transitions : spec.transitions, lang))]
-      : parts.flatMap((p): Block[] => [
-          subheading(p.title),
+  const transitionParts = parts ?? spec.parts;
+  const transitions: Block[] = !transitionParts?.length
+    ? [tableBlock(transitionsTable(spec.transitions, lang))]
+    : transitionParts.flatMap((p): Block[] => {
+        const conditions = [...(p.preconditions ?? []), ...(p.precondition ?? '').split(/\r?\n/)].filter((line) => line.trim());
+        return [
+          subheading(`${p.scenario ? `${p.scenario} · ` : ''}${p.title}`),
           ...(p.description.trim() ? [new Paragraph({ children: run(p.description), spacing: { after: 120 } })] : []),
-          tableBlock(transitionsTable(p.transitions, lang)),
-          gap(),
-        ]);
+          ...(conditions.length ? [subheading(t.preconditions), ...(p.precond_mode === 'any' ? [new Paragraph({ children: run(t.anyPreconditions), keepNext: true })] : []),
+            ...cellParagraphs({ list: conditions, numbered: true })] : []),
+          tableBlock(transitionsTable(p.transitions, lang)), gap(),
+        ];
+      });
   return [
     ...(changelog.length ? [heading(t.changelog), tableBlock(changelogTable(changelog, lang, !parts)), gap()] : []),
     heading(t.intents), tableBlock(intentsTable(spec, lang)), gap(),

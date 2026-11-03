@@ -22,6 +22,15 @@ export async function convertScenarioDocument(text: string, filename: string, op
     const entityIds = new Map<string, number>();
     const extra: string[] = [];
     let heading = '';
+    let inTransitions = false;
+    let inPart = false;
+    let inPreconditions = false;
+    let explicitParts = 0;
+    const partMetadata = new Map<number, { description: string[]; conditions: string[] }>();
+    const metadata = () => {
+      if (!partMetadata.has(part)) partMetadata.set(part, { description: [], conditions: [] });
+      return partMetadata.get(part)!;
+    };
     let recognized = 0;
     const changelogHasDate = db.prepare('PRAGMA table_info(scenario_changelog)').all().some(c => c.name === 'date');
     const stateHasCode = db.prepare('PRAGMA table_info(scenario_states)').all().some(c => c.name === 'result_code');
@@ -30,13 +39,27 @@ export async function convertScenarioDocument(text: string, filename: string, op
     for (const block of section.blocks) {
       if (block.kind === 'heading') {
         heading = block.text;
-        if (block.level >= 3) part = db.prepare('INSERT INTO scenario_parts(scenario_id,name) VALUES (?,?)').run(sid, heading).lastInsertRowid;
+        if (block.level === 2) {
+          inTransitions = /переходы между состояниями|state transitions/i.test(heading);
+          inPart = false;
+          inPreconditions = false;
+        } else if (block.level === 3 && inTransitions) {
+          if (explicitParts++ === 0) db.prepare('UPDATE scenario_parts SET name = ? WHERE id = ?').run(heading, part);
+          else part = db.prepare('INSERT INTO scenario_parts(scenario_id,name,position) VALUES (?,?,?)').run(sid, heading, explicitParts - 1).lastInsertRowid;
+          inPart = true;
+          inPreconditions = false;
+          metadata();
+        } else if (block.level === 4 && inPart) {
+          inPreconditions = /^(предусловия|preconditions)$/i.test(heading);
+        }
       } else if (block.kind === 'text') {
-        if (/режим|operating mode/i.test(heading)) db.prepare('UPDATE scenarios SET mode = ? WHERE id = ?').run(/только online|online only/i.test(block.text) ? 'online' : 'online_offline', sid);
+        if (inPart && inPreconditions) metadata().conditions.push(...lines(block.text));
+        else if (inPart) metadata().description.push(block.text);
+        else if (/режим|operating mode/i.test(heading)) db.prepare('UPDATE scenarios SET mode = ? WHERE id = ?').run(/только online|online only/i.test(block.text) ? 'online' : 'online_offline', sid);
         else if (/диаграмм|diagram/i.test(heading)) db.prepare('UPDATE scenarios SET diagram_url = ? WHERE id = ?').run(block.text,sid);
         else extra.push(block.text);
       }
-      else tables.push({ head: block.rows[0]?.map(s => s.toLowerCase()) ?? [], rows: block.rows.slice(1), heading, part });
+      else tables.push({ head: block.rows[0]?.map(s => s.toLowerCase()) ?? [], rows: block.rows.slice(1), heading: inTransitions ? 'State transitions' : heading, part });
     }
     const getObject = (table: string, name: string, map: Map<string, number>) => {
       if (map.has(name)) return map.get(name)!;
@@ -94,6 +117,31 @@ export async function convertScenarioDocument(text: string, filename: string, op
         }
       }
     }
+    for (const [partId, meta] of partMetadata) {
+      const structured: { dep: string; value: string; op?: string; entity_id?: number; keyword_id?: number }[] = [];
+      const free: string[] = [];
+      let mode = 'all';
+      for (const text of meta.conditions) {
+        if (/^(Любое условие \(ИЛИ\)|Any condition \(OR\))$/.test(text)) { mode = 'any'; continue; }
+        if (/^(Все условия \(И\)|All conditions \(AND\))$/.test(text)) continue;
+        const concept = /^(В запросе (?:есть ключевое слово|нет ключевого слова)|Request (?:has keyword|has no keyword)):\s*(.+)$/i.exec(text);
+        if (concept) {
+          const id = getObject('keywords', concept[2], new Map());
+          structured.push({ dep: '', value: '', keyword_id: id, op: /нет|has no/i.test(concept[1]) ? '!=' : '=' });
+          continue;
+        }
+        const pair = /^\[([^\]]+)\]\s*(<=|>=|!=|=|<|>)\s*(.*)$/.exec(text);
+        if (pair) {
+          const entity = entityIds.get(pair[1]);
+          const dependency = db.prepare('SELECT ref FROM scenario_dependencies WHERE scenario_id = ? AND name = ? ORDER BY position,id').get(sid,pair[1]);
+          if (entity !== undefined) { structured.push({ dep: '', entity_id: entity, op: pair[2], value: pair[3] }); continue; }
+          if (dependency) { structured.push({ dep: String(dependency.ref), op: pair[2], value: pair[3] }); continue; }
+        }
+        free.push(text);
+      }
+      db.prepare('UPDATE scenario_parts SET description = ?, preconditions = ?, precondition = ?, precond_mode = ? WHERE id = ?')
+        .run(meta.description.join('\n\n'), JSON.stringify(structured), free.join('\n'), mode, partId);
+    }
     for (const t of tables) {
       const at = (re: RegExp) => t.head.findIndex(h => re.test(h));
       const from = at(/^из состояния|^from state|^state$/);
@@ -120,7 +168,9 @@ export async function convertScenarioDocument(text: string, filename: string, op
         const global = /глобаль|global/i.test(t.heading);
         const request = lines(row[at(/запрос|user request|intent/)]);
         const intent = request.shift() ?? '';
-        const iid = intent ? getObject('intents', nameOf(intent), intentIds) : null;
+        const anyIntent = /^(любой интент|any intent)$/i.test(intent.trim());
+        const anyScenarioIntent = /^(любой интент сценария|any scenario intent)$/i.test(intent.trim());
+        const iid = intent && !anyIntent && !anyScenarioIntent ? getObject('intents', nameOf(intent), intentIds) : null;
         const prompt = nameOf(row[at(/ответ ассистента|assistant response|prompt/)]);
         const prid = prompt ? getObject('prompts', prompt, promptIds) : null;
         const target = clean(row[to]);
@@ -133,7 +183,7 @@ export async function convertScenarioDocument(text: string, filename: string, op
             if (stateHasCode) db.prepare('UPDATE scenario_states SET result_code = ? WHERE part_id = ? AND name = ?').run(code,t.part,state);
           }
         }
-        db.prepare('INSERT INTO scenario_steps(scenario_id,part_id,position,kind,state,next_states,intent_id,prompt_id,request_params,condition,system_action) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(sid,t.part,position,error ? 'error' : global ? 'global' : 'transition',global ? '' : clean(row[from]),target,iid,error ? prid : null,request.join('\n'),conditionText(row[at(/услов|condition/)]),error ? clean(row[at(/действие|system action|business logic/)]) : '');
+        db.prepare('INSERT INTO scenario_steps(scenario_id,part_id,position,kind,state,next_states,intent_id,match_any_intent,prompt_id,request_params,condition,system_action) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(sid,t.part,position,error ? 'error' : global ? 'global' : 'transition',global ? '' : clean(row[from]),target,iid,anyIntent ? 1 : 0,error ? prid : null,request.join('\n'),conditionText(row[at(/услов|condition/)]),error ? clean(row[at(/действие|system action|business logic/)]) : '');
       }
     }
     // Attach entity references named in intent definitions.

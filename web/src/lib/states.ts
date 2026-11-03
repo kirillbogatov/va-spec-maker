@@ -30,6 +30,13 @@ const conditionSignature = (s: Step) =>
   JSON.stringify([s.conditions.map((c) => `${c.entity_id !== undefined ? `#${c.entity_id}` : c.dep}${c.op ?? '='}${c.value}`).sort(), s.condition.trim()]);
 const hasNoConditions = (s: Step) => s.conditions.length === 0 && !s.condition.trim();
 
+/** Явный wildcard отличается от незаполненного интента и старого правила ошибок. */
+export function stepIntentLabel(step: Step, intentName: (id: number | null) => string | null, empty = 'без интента'): string {
+  if (step.match_any_intent) return 'Любой интент';
+  if (step.kind === 'error' && step.intent_id === null) return 'Любой интент сценария';
+  return intentName(step.intent_id) ?? empty;
+}
+
 export function analyzeSteps(all: Step[], intentName: (id: number | null) => string | null, info: Layout = {}): Analysis {
   // Глобальные строки — не часть графа состояний: у них нет исходного состояния
   const steps = all.filter((s) => s.kind !== 'global');
@@ -59,11 +66,10 @@ export function analyzeSteps(all: Step[], intentName: (id: number | null) => str
         referenced.add(t);
         if (!known.has(t)) {
           dangling.add(t);
-          add(s.key, { level: 'warn', text: `У состояния «${t}» нет исходящих переходов — если оно не конечное, добавьте их` });
         }
       }
       if (s.kind === 'transition' && from) {
-        edges.push({ id: `${s.key ?? index}|${t}`, stepKey: s.key, from, to: t, label: intentName(s.intent_id) ?? '' });
+        edges.push({ id: `${s.key ?? index}|${t}`, stepKey: s.key, from, to: t, label: stepIntentLabel(s, intentName, '') });
       }
     }
   });
@@ -78,8 +84,8 @@ export function analyzeSteps(all: Step[], intentName: (id: number | null) => str
   // а переход без условий (запасной) — стоять последним.
   const groups = new Map<string, Step[]>();
   for (const s of steps) {
-    if (s.kind !== 'transition' || !s.state.trim() || s.intent_id === null) continue;
-    const k = `${s.state.trim()}\u0000${s.intent_id}`;
+    if (s.kind !== 'transition' || !s.state.trim() || (s.intent_id === null && !s.match_any_intent)) continue;
+    const k = `${s.state.trim()}\u0000${s.match_any_intent ? '*' : s.intent_id}`;
     groups.set(k, [...(groups.get(k) ?? []), s]);
   }
   for (const group of groups.values()) {
@@ -112,7 +118,7 @@ export function globalIssues(steps: Step[], known: string[]): Map<string, StepIs
   for (const s of steps) {
     if (s.kind !== 'global' || !s.key) continue;
     const list: StepIssue[] = [];
-    if (s.intent_id === null) list.push({ level: 'error', text: 'Не выбран интент' });
+    if (s.intent_id === null && !s.match_any_intent) list.push({ level: 'error', text: 'Не выбран интент' });
     const targets = splitNext(s.next_states);
     if (targets.length === 0) list.push({ level: 'warn', text: 'Не указано следующее состояние' });
     for (const t of targets) if (!TERMINAL.test(t) && !known.includes(t)) list.push({ level: 'warn', text: `Состояния «${t}» нет в схеме` });

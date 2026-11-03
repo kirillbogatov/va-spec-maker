@@ -2,7 +2,7 @@ import { combineSvgPages } from '@/lib/svgPages';
 import { api } from '@/lib/api';
 import { downloadBlob } from '@/lib/download';
 import type { SchemeRule, SchemeState } from '@/lib/schemeSvg';
-import { analyzeSteps, splitNext, type Analysis } from '@/lib/states';
+import { analyzeSteps, splitNext, stepIntentLabel, type Analysis } from '@/lib/states';
 import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem, ScenarioPart, Step } from '@/lib/types';
 import { conditionLabel } from '../dependencies';
 
@@ -54,13 +54,13 @@ async function buildExportSchemeSvg(a: SchemeExportArgs): Promise<string> {
     if (!s) return [];
     return [{
       id: e.id, from: e.from, to: e.to, number: i + 1,
-      intent: intentName(s.intent_id), conds: conds(s), mode: s.cond_mode ?? 'all',
+      intent: stepIntentLabel(s, intentName), conds: conds(s), mode: s.cond_mode ?? 'all',
       example: s.intent_id == null ? '' : phrases.get(s.intent_id) ?? '',
     }];
   });
   const rule = (s: Step, where: string): SchemeRule => ({
     rule: s.name ?? '',
-    trigger: [intentName(s.intent_id) ?? 'любой интент', ...conds(s), where],
+    trigger: [stepIntentLabel(s, intentName), ...conds(s), where],
     prompt: prompt(s.prompt_id),
     action: s.system_action,
     targets: splitNext(s.next_states),

@@ -10,10 +10,13 @@ export interface SpecStrings {
   dependencies: string;
   prompts: string;
   transitions: string;
+  preconditions: string;
+  anyPreconditions: string;
   errors: string;
   required: string;
   yes: string;
   no: string;
+  anyIntent: string;
   anyScenarioIntent: string;
   anyOf: string;
   conceptPresent: string;
@@ -42,10 +45,13 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     dependencies: 'Внешние зависимости',
     prompts: 'Промпты',
     transitions: 'Переходы между состояниями',
+    preconditions: 'Предусловия',
+    anyPreconditions: 'Любое условие (ИЛИ)',
     errors: 'Ошибки',
     required: 'обязательно',
     yes: 'да',
     no: 'нет',
+    anyIntent: 'Любой интент',
     anyScenarioIntent: 'Любой интент сценария',
     anyOf: 'Любое из:',
     conceptPresent: 'В запросе есть ключевое слово',
@@ -72,10 +78,13 @@ export const STRINGS: Record<SpecLang, SpecStrings> = {
     dependencies: 'External dependencies',
     prompts: 'Prompts',
     transitions: 'State transitions',
+    preconditions: 'Preconditions',
+    anyPreconditions: 'Any condition (OR)',
     errors: 'Errors',
     required: 'required',
     yes: 'yes',
     no: 'no',
+    anyIntent: 'Any intent',
     anyScenarioIntent: 'Any scenario intent',
     anyOf: 'Any of:',
     conceptPresent: 'Request has keyword',

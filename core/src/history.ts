@@ -79,9 +79,12 @@ export interface ScenarioSnapshot {
   parts: {
     name: string;
     description: string;
+    preconditions?: unknown[];
+    precondition?: string;
+    precond_mode?: 'all' | 'any';
     layout: Record<string, { description: string; prompt_id: number | null; system_action: string }>;
     steps: {
-      name: string; kind: string; state: string; intent_id: number | null; request_params: string; condition: string;
+      name: string; kind: string; state: string; intent_id: number | null; match_any_intent?: boolean; request_params: string; condition: string;
       conditions: unknown[]; cond_mode: string; prompt_id: number | null; system_action: string; next_states: string;
     }[];
   }[];
@@ -118,7 +121,7 @@ function indexRows(rows: ScenarioSnapshot['parts'][number]['steps']) {
     const n = (seen.get(base) ?? 0) + 1;
     seen.set(base, n);
     const { state, intent_id, next_states, kind, ...rest } = s;
-    const content = s.kind === 'transition' ? { ...rest, name: '' } : { ...rest, next_states, state };
+    const content = s.kind === 'transition' ? { ...rest, match_any_intent: !!s.match_any_intent, name: '' } : { ...rest, match_any_intent: !!s.match_any_intent, next_states, state };
     return { sig: `${s.kind}:${base}#${n}`, content: json(content), step: s };
   });
 }
@@ -172,6 +175,10 @@ export function logScenarioChanges(db: Db, scenarioId: number, before: ScenarioS
     const where = a.name;
     const inPart = `${where}|`;
     if (b.description !== a.description) log(set(`part-desc:${where}`, 'Изменено описание вкладки {0}', [{ type: 'part', name: where, part: where }]));
+    const partRefs: HistoryRef[] = [{ type: 'part', name: where, part: where }];
+    if (json(b.preconditions ?? []) !== json(a.preconditions ?? [])) log(set(`part-preconditions:${where}`, 'Изменены предусловия вкладки {0}', partRefs));
+    if ((b.precondition ?? '') !== (a.precondition ?? '')) log(set(`part-precondition:${where}`, 'Изменён текст предусловия вкладки {0}', partRefs));
+    if ((b.precond_mode ?? 'all') !== (a.precond_mode ?? 'all')) log(set(`part-precond-mode:${where}`, `Режим предусловий вкладки {0}: ${a.precond_mode === 'any' ? 'любое' : 'все'}`, partRefs));
     const stateRef = (name: string): HistoryRef[] => [{ type: 'state', name, part: where }];
     // Состояние существует, если оно есть на схеме или упомянуто в переходе: так первое сохранение старого сценария не плодит записей
     const namesBefore = stateNames(b);
@@ -198,7 +205,7 @@ export function logScenarioChanges(db: Db, scenarioId: number, before: ScenarioS
       if (old && old.content === r.content) continue;
       const verb = old ? changed : added;
       const kindName = s.kind === 'transition' ? { add: 'Добавлен переход', mod: 'Изменён переход' } : s.kind === 'error' ? { add: 'Добавлена ошибка', mod: 'Изменена ошибка' } : { add: 'Добавлен глобальный переход', mod: 'Изменён глобальный переход' };
-      const title = kindName[old ? 'mod' : 'add'];
+      const title = kindName[old ? 'mod' : 'add'] + (s.match_any_intent ? ' (Любой интент)' : old?.step.match_any_intent ? ' (отключён «Любой интент»)' : '');
       const intents = intentRef(s.intent_id);
       if (s.kind === 'transition') {
         const from = s.state.trim();

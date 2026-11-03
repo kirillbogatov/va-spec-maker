@@ -20,7 +20,7 @@ export function PropertiesLayout({ children, inspector, wide }: { children: Reac
     try { localStorage.setItem(STORAGE_KEY, String(value)); } catch { /* Ширина сохраняется в текущей сессии. */ }
   };
   return (
-    <div ref={root} style={{ '--properties-width': `${width}px` } as CSSProperties} className={cn('grid gap-3 lg:grid-cols-[minmax(0,1fr)_min(var(--properties-width),55%)]', wide ? 'fixed inset-0 z-40 grid-rows-[minmax(0,1fr)_minmax(0,40dvh)] lg:grid-rows-1 bg-page p-3' : 'lg:h-[calc(100dvh-10rem)] lg:min-h-[28rem]')}>
+    <div ref={root} style={{ '--properties-width': `${width}px` } as CSSProperties} className={cn('grid gap-3 lg:grid-cols-[minmax(0,1fr)_min(var(--properties-width),55%)]', wide ? 'fixed inset-0 z-40 grid-rows-[minmax(0,1fr)_minmax(0,40dvh)] bg-page p-3 lg:grid-rows-1' : 'lg:h-[calc(100dvh-10rem)] lg:min-h-[28rem]')}>
       {children}
       <aside ref={panel} aria-label="Свойства" className="relative min-h-0 min-w-0 rounded-xl border bg-card lg:h-full">
         <div className="h-full overflow-y-auto rounded-xl p-4">{inspector}</div>

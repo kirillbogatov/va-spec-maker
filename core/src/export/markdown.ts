@@ -38,11 +38,17 @@ function section(spec: ProjectSpec, _date: string | null, lang: SpecLang, parts?
   if (spec.dependencies.length) out.push(`## ${t.dependencies}`, table(dependenciesTable(spec, lang)));
   out.push(`## ${t.prompts}`, table(promptsTable(spec, lang)));
   out.push(`## ${t.transitions}`);
-  if (!parts || parts.length === 1) out.push(table(transitionsTable(parts ? parts[0].transitions : spec.transitions, lang)));
+  const transitionParts = parts ?? spec.parts;
+  if (!transitionParts?.length) out.push(table(transitionsTable(spec.transitions, lang)));
   else {
-    for (const p of parts) {
-      out.push(`### ${p.title}`);
+    for (const p of transitionParts) {
+      out.push(`### ${p.scenario ? `${p.scenario} · ` : ''}${p.title}`);
       if (p.description.trim()) out.push(p.description);
+      const conditions = [...(p.preconditions ?? []), ...(p.precondition ?? '').split(/\r?\n/)].filter((line) => line.trim());
+      if (conditions.length) {
+        out.push(`#### ${t.preconditions}`, ...(p.precond_mode === 'any' ? [t.anyPreconditions] : []),
+          conditions.map((line, index) => `${index + 1}. ${esc(line)}`).join('\n'));
+      }
       out.push(table(transitionsTable(p.transitions, lang)));
     }
   }

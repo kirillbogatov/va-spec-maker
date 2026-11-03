@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { createElement, Fragment, type ReactNode } from 'react';
 import { parseTextLinks } from '@va/core';
 
 /** Минимальный рендер того Markdown, который выдаёт экспорт: заголовки, списки, таблицы, **жирный**, _курсив_, <br>. */
@@ -35,6 +35,17 @@ const splitRow = (line: string) =>
 
 export interface Heading { id: string; text: string; level: number; count: number }
 
+const headingPattern = /^(#{1,6}) (.*)$/;
+const orderedItem = /^(\d+)[.)] +(.*)$/;
+const headingClass = [
+  'text-2xl font-semibold tracking-tight',
+  'mt-5 scroll-mt-4 border-b pb-1 text-lg font-semibold',
+  'mt-3 scroll-mt-4 text-base font-semibold',
+  'mt-3 scroll-mt-4 text-sm font-semibold',
+  'mt-2 scroll-mt-4 text-sm font-medium',
+  'mt-2 scroll-mt-4 text-sm font-medium',
+];
+
 const headingId = (i: number) => `md-h-${i}`;
 const plain = (t: string) => t.replace(/\*\*|<br>/g, '').replace(/(?<!\w)_([^_]+)_(?!\w)/g, '$1');
 
@@ -43,18 +54,18 @@ export function extractHeadings(source: string): Heading[] {
   const lines = source.split('\n');
   const out: Heading[] = [];
   lines.forEach((line, i) => {
-    const m = /^(#{1,3}) (.*)$/.exec(line);
+    const m = headingPattern.exec(line);
     if (m) out.push({ id: headingId(i), text: plain(m[2]), level: m[1].length, count: 0 });
     else if (out.length) {
       const h = out[out.length - 1];
-      if (line.startsWith('- ')) h.count++;
+      if (line.startsWith('- ') || orderedItem.test(line)) h.count++;
       else if (line.startsWith('|') && !/^\|[-| ]+\|$/.test(line)) h.count++;
     }
   });
   // первая строка каждой таблицы — шапка
   let k = -1;
   lines.forEach((line, i) => {
-    if (/^#{1,3} /.test(line)) k++;
+    if (headingPattern.test(line)) k++;
     if (line.startsWith('|') && !lines[i - 1]?.startsWith('|') && k >= 0 && out[k]) out[k].count = Math.max(0, out[k].count - 1);
   });
   return out;
@@ -66,6 +77,7 @@ export function MarkdownView({ source }: { source: string }) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
+    const heading = headingPattern.exec(line);
     if (line.startsWith('|')) {
       const rows: string[][] = [];
       while (i < lines.length && lines[i].startsWith('|')) {
@@ -93,17 +105,23 @@ export function MarkdownView({ source }: { source: string }) {
           </table>
         </div>,
       );
-    } else if (line.startsWith('# ')) blocks.push(<h1 key={i} id={headingId(i)} className="text-2xl font-semibold tracking-tight">{inline(line.slice(2))}</h1>);
-    else if (line.startsWith('## ')) blocks.push(<h2 key={i} id={headingId(i)} className="mt-5 scroll-mt-4 border-b pb-1 text-lg font-semibold">{inline(line.slice(3))}</h2>);
-    else if (line.startsWith('### ')) blocks.push(<h3 key={i} id={headingId(i)} className="mt-3 scroll-mt-4 text-base font-semibold">{inline(line.slice(4))}</h3>);
-    else if (line.startsWith('- ')) {
+    } else if (heading) {
+      const level = heading[1].length;
+      blocks.push(createElement(`h${level}`, { key: i, id: headingId(i), className: headingClass[level - 1] }, inline(heading[2])));
+    } else if (line.startsWith('- ')) {
       const items: string[] = [];
       while (i < lines.length && lines[i].startsWith('- ')) items.push(lines[i++].slice(2));
       i--;
       blocks.push(<ul key={i} className="list-disc space-y-1 pl-6 text-sm">{items.map((t, j) => <li key={j}>{inline(t)}</li>)}</ul>);
+    } else if (orderedItem.test(line)) {
+      const start = Number(orderedItem.exec(line)![1]);
+      const items: string[] = [];
+      while (i < lines.length && orderedItem.test(lines[i])) items.push(orderedItem.exec(lines[i++])![2]);
+      i--;
+      blocks.push(<ol key={i} start={start} className="list-decimal space-y-1 pl-6 text-sm">{items.map((t, j) => <li key={j}>{inline(t)}</li>)}</ol>);
     } else {
       const para: string[] = [line];
-      while (i + 1 < lines.length && lines[i + 1].trim() && !/^(#|\||- )/.test(lines[i + 1])) para.push(lines[++i]);
+      while (i + 1 < lines.length && lines[i + 1].trim() && !/^(#|\||- )/.test(lines[i + 1]) && !orderedItem.test(lines[i + 1])) para.push(lines[++i]);
       blocks.push(<p key={i} className="text-sm">{para.map((t, j) => <Fragment key={j}>{j > 0 && <br />}{inline(t)}</Fragment>)}</p>);
     }
   }

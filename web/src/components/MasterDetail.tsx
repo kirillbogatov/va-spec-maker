@@ -1,8 +1,17 @@
-import { useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { createContext, useContext, useId, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Plus, Search, TriangleAlert } from 'lucide-react';
 import { type ObjectKind } from '@/components/TypeToken';
 import { cn } from '@/lib/utils';
+import { PanelVisibilityContext } from '@/lib/panelVisibility';
+
+interface ListControls {
+  listId: string;
+  hide: () => void;
+  hideButton: RefObject<HTMLButtonElement | null>;
+}
+const ListControlsContext = createContext<ListControls | null>(null);
+const listToggleClass = 'hidden size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring md:inline-flex';
 
 interface MasterDetailProps {
   list: ReactNode;
@@ -59,20 +68,60 @@ function useMasterWidth() {
 
 export function MasterDetail({ list, children, selected, onBack, flush }: MasterDetailProps) {
   const stacked = selected === undefined;
+  const panels = useContext(PanelVisibilityContext);
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const listCollapsed = panels?.collapsed ?? localCollapsed;
+  const setListCollapsed = panels?.setCollapsed ?? setLocalCollapsed;
+  const listId = useId();
+  const hideButton = useRef<HTMLButtonElement>(null);
+  const localRestoreButton = useRef<HTMLButtonElement>(null);
+  const restoreButton = panels?.restoreButton ?? localRestoreButton;
+  const previousCollapsed = useRef(listCollapsed);
+  const moveFocus = useRef(false);
+  const toggleList = (collapsed: boolean) => {
+    moveFocus.current = true;
+    setListCollapsed(collapsed);
+  };
+  useLayoutEffect(() => {
+    if (!moveFocus.current && previousCollapsed.current === listCollapsed) return;
+    previousCollapsed.current = listCollapsed;
+    (listCollapsed ? restoreButton.current : hideButton.current)?.focus();
+    moveFocus.current = false;
+  }, [listCollapsed]);
   const { width, startDrag } = useMasterWidth();
   return (
     <div className={cn('flex h-full min-h-0 flex-col md:flex-row', stacked && 'overflow-y-auto md:overflow-visible')}>
       <aside
+        id={listId}
         style={{ '--master-w': `${width}px` } as CSSProperties}
         className={cn(
           'relative flex shrink-0 flex-col border-b bg-background text-foreground md:w-[var(--master-w)] md:border-b-0 md:border-r',
           stacked ? 'max-h-[45vh] md:max-h-none' : 'min-h-0 flex-1 md:flex-none',
-          selected && 'hidden md:flex',
+          selected && 'hidden',
+          listCollapsed && selected !== false ? 'md:hidden' : 'md:flex',
         )}
       >
-        {list}
+        <ListControlsContext.Provider value={selected !== false ? { listId, hide: () => toggleList(true), hideButton } : null}>
+          {list}
+        </ListControlsContext.Provider>
         <div onPointerDown={startDrag} aria-hidden className="absolute -right-1 top-0 z-10 hidden h-full w-2 cursor-col-resize touch-none md:block" />
       </aside>
+      {!panels && listCollapsed && selected !== false && (
+        <div className="hidden w-10 shrink-0 flex-col items-center border-r bg-background py-2 md:flex">
+          <button
+            ref={restoreButton}
+            type="button"
+            aria-label="Показать список"
+            title="Показать список"
+            aria-controls={listId}
+            aria-expanded={false}
+            onClick={() => toggleList(false)}
+            className={listToggleClass}
+          >
+            <PanelLeftOpen className="size-4" aria-hidden />
+          </button>
+        </div>
+      )}
       <section
         className={cn(
           'min-w-0 flex-1 bg-page',
@@ -104,6 +153,7 @@ export function EmptyDetail({ text = 'Выберите элемент слева
 
 /** Шапка списка: компактная кнопка «+ Создать». */
 export function ListHeader({ onCreate, label = 'Создать', extra }: { onCreate: () => void; label?: string; extra?: ReactNode }) {
+  const controls = useContext(ListControlsContext);
   return (
     <div className={cn('flex items-center gap-2 border-b px-3 py-2', extra ? 'justify-between' : 'justify-end')}>
       {extra}
@@ -114,6 +164,20 @@ export function ListHeader({ onCreate, label = 'Создать', extra }: { onCr
       >
         <Plus className="size-3.5" /> {label}
       </button>
+      {controls && (
+        <button
+          ref={controls.hideButton}
+          type="button"
+          aria-label="Скрыть список"
+          title="Скрыть список"
+          aria-controls={controls.listId}
+          aria-expanded={true}
+          onClick={controls.hide}
+          className={listToggleClass}
+        >
+          <PanelLeftClose className="size-4" aria-hidden />
+        </button>
+      )}
     </div>
   );
 }

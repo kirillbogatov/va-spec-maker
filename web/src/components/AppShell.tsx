@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { KeyRound, BookOpen, LayoutGrid, MessageSquareText, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Shapes, SlidersHorizontal, Workflow, type LucideIcon } from 'lucide-react';
+import { KeyRound, BookOpen, LayoutGrid, MessageSquareText, PanelLeftOpen, ScrollText, Search, Shapes, SlidersHorizontal, Workflow, type LucideIcon } from 'lucide-react';
 import { CommandPalette } from '@/components/CommandPalette';
 import { GlobalSaveStatus } from '@/components/GlobalSaveStatus';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { useIntentMode } from '@/lib/intentMode';
 import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
+import { PanelVisibilityContext } from '@/lib/panelVisibility';
 
 const DICTIONARY: { to: string; label: string; icon: LucideIcon; key: 'intents' | 'entities' | 'prompts' | 'deps' | 'keywords' }[] = [
   { to: '/lists/intents', label: 'Интенты', icon: MessageSquareText, key: 'intents' },
@@ -47,22 +48,8 @@ export function AppShell() {
   const navigate = useNavigate();
   const { scenarios, counts } = useCounts();
   const [searching, setSearching] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('sidebar-collapsed') === '1';
-    } catch {
-      return false;
-    }
-  });
-  const toggle = () =>
-    setCollapsed((c) => {
-      try {
-        localStorage.setItem('sidebar-collapsed', c ? '0' : '1');
-      } catch {
-        /* хранилище недоступно — состояние живёт до перезагрузки */
-      }
-      return !c;
-    });
+  const [collapsed, setCollapsed] = useState(false);
+  const restoreButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -85,19 +72,24 @@ export function AppShell() {
     <div className="flex h-dvh flex-col md:flex-row">
       <aside className={cn('hidden shrink-0 flex-col gap-4 overflow-hidden border-r bg-background p-3 md:flex', collapsed ? 'w-16 items-center' : 'w-60')}>
         <div className={cn('flex items-center gap-2', collapsed ? 'flex-col' : 'justify-between px-1')}>
-          <Link to="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight" title="Все проекты">
-            <Logo className="size-7" />
-            {!collapsed && 'VA Spec Maker'}
-          </Link>
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
-            title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
-            className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-          </button>
+          {collapsed ? (
+            <button
+              ref={restoreButton}
+              type="button"
+              aria-label="Развернуть меню и список"
+              title="Развернуть меню и список"
+              aria-expanded={false}
+              onClick={() => setCollapsed(false)}
+              className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <PanelLeftOpen className="size-4" aria-hidden />
+            </button>
+          ) : (
+            <Link to="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight" title="Все проекты">
+              <Logo className="size-7" />
+              VA Spec Maker
+            </Link>
+          )}
         </div>
         {!collapsed && <ProjectSwitcher />}
         <button
@@ -156,7 +148,9 @@ export function AppShell() {
       </aside>
 
       <main className="min-h-0 min-w-0 flex-1 bg-page">
-        <Outlet />
+        <PanelVisibilityContext.Provider value={{ collapsed, setCollapsed, restoreButton }}>
+          <Outlet />
+        </PanelVisibilityContext.Provider>
       </main>
 
       <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-5 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">

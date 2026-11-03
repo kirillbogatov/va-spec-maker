@@ -47,7 +47,7 @@ interface Props<T extends DictItem> {
   meta?: (i: T) => { text: string; warn?: boolean } | null;
   /** Куда ведёт «Используется в»: сценарии. Без функции берутся used_by со scenario_id. */
   usedIn?: (i: T) => ScenarioRef[];
-  /** Поле одной строкой под названием («comment» или «description»). */
+  /** Поле описания в отдельной карточке («comment» или «description»). */
   commentKey?: 'comment' | 'description';
   /** Краткое описание под названием в списке; без функции берётся поле commentKey. */
   subtitle?: (i: T) => string;
@@ -59,6 +59,8 @@ interface Props<T extends DictItem> {
   body: (draft: T, patch: (p: Partial<T>) => void) => ReactNode;
   emptyText: string;
   createTitle?: string;
+  /** Заголовок диалога может быть подробнее подписи кнопки. */
+  createDialogTitle?: string;
   createPrefix?: string;
   deleteTitle: (d: T) => string;
   deleteDescription?: (d: T) => string | undefined;
@@ -178,7 +180,7 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
             <CreateDialog
               open={creating}
               onOpenChange={setCreating}
-              title={p.createTitle ?? ''}
+              title={p.createDialogTitle ?? p.createTitle ?? ''}
               prefix={p.createPrefix}
               existingNames={p.items.map((i) => i.name)}
               withType={p.createWithType}
@@ -263,16 +265,18 @@ function DictEditor<T extends DictItem>({ item, p, onRemoved }: { item: T; p: Pr
             </Link>
           ))}
         </p>
-        {commentKey && (
+      </div>
+      {commentKey && (
+        <DictCard title="Описание">
           <Textarea
             rows={1}
-            className={cn(GHOST, 'min-h-9 resize-none px-2 py-1.5 text-sm')}
-            aria-label="Комментарий"
+            className="resize-y rounded-md bg-background"
+            aria-label="Описание"
             value={comment}
             onChange={(e) => patch({ [commentKey]: e.target.value } as unknown as Partial<T>)}
           />
-        )}
-      </div>
+        </DictCard>
+      )}
       {p.body(draft, patch)}
       <ConfirmDialog
         open={confirm}

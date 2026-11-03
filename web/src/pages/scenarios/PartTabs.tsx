@@ -2,24 +2,24 @@ import { Copy, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { cn, GHOST } from '@/lib/utils';
-import type { ScenarioPart } from '@/lib/types';
+import { cn, FIELD } from '@/lib/utils';
+import type { Dependency, EntityListItem, ScenarioPart } from '@/lib/types';
+import { ConditionsCell } from './ConditionsCell';
 
 interface TabsProps {
   parts: ScenarioPart[];
   activeKey: string;
   onSelect: (key: string) => void;
   onAdd?: () => void;
-  onDuplicate?: () => void;
 }
 
 /** Вкладки подсценариев: у каждой свои состояния и переходы. Одна вкладка без кнопки «+» не показывается. */
-export function PartTabs({ parts, activeKey, onSelect, onAdd, onDuplicate }: TabsProps) {
+export function PartTabs({ parts, activeKey, onSelect, onAdd }: TabsProps) {
   const active = parts.find((p) => p.key === activeKey) ?? parts[0];
   if (parts.length <= 1 && !onAdd) return null;
   return (
     <div role="tablist" aria-label="Вкладки сценария" className="flex flex-wrap items-center gap-1">
-      {parts.length > 1 && parts.map((p) => (
+      {parts.map((p) => (
         <button
           key={p.key}
           type="button"
@@ -34,7 +34,6 @@ export function PartTabs({ parts, activeKey, onSelect, onAdd, onDuplicate }: Tab
           {p.name.trim() || 'Без названия'}
         </button>
       ))}
-      {onDuplicate && <Button variant="ghost" size="icon" aria-label="Создать копию вкладки" title="Создать копию вкладки" onClick={onDuplicate}><Copy className="size-4" /></Button>}
       {onAdd && (
         <Button variant="ghost" size="sm" aria-label="Добавить вкладку" title="Добавить вкладку (подсценарий)" onClick={onAdd}>
           <Plus className="size-4" /> {parts.length > 1 ? '' : 'Подсценарий'}
@@ -47,13 +46,15 @@ export function PartTabs({ parts, activeKey, onSelect, onAdd, onDuplicate }: Tab
 interface PanelProps {
   part: ScenarioPart;
   canRemove: boolean;
-  onChange: (patch: Partial<Pick<ScenarioPart, 'name' | 'description'>>) => void;
+  dependencies: Dependency[];
+  entities: EntityListItem[];
+  onChange: (patch: Partial<Pick<ScenarioPart, 'name' | 'description' | 'preconditions' | 'precondition' | 'precond_mode'>>) => void;
   onDuplicate: () => void;
   onRemove: () => void;
 }
 
 /** Свойства вкладки — показываются справа от схемы по клику на вкладку. */
-export function PartPanel({ part, canRemove, onChange, onDuplicate, onRemove }: PanelProps) {
+export function PartPanel({ part, canRemove, dependencies, entities, onChange, onDuplicate, onRemove }: PanelProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -75,7 +76,7 @@ export function PartPanel({ part, canRemove, onChange, onDuplicate, onRemove }: 
       <label className="block space-y-1">
         <span className="text-xs font-medium text-muted-foreground">Название</span>
         <Input
-          className={cn(GHOST, 'h-9 font-medium')}
+          className={cn(FIELD, 'h-9 rounded-md font-medium')}
           value={part.name}
           onChange={(e) => onChange({ name: e.target.value })}
           aria-label="Название вкладки"
@@ -84,13 +85,29 @@ export function PartPanel({ part, canRemove, onChange, onDuplicate, onRemove }: 
       <label className="block space-y-1">
         <span className="text-xs font-medium text-muted-foreground">Описание</span>
         <Textarea
-          rows={3}
-          className={cn(GHOST, 'min-h-16')}
+          rows={1}
+          className={cn(FIELD, 'resize-y rounded-md')}
           value={part.description}
           onChange={(e) => onChange({ description: e.target.value })}
           aria-label="Описание вкладки"
         />
       </label>
+      <section className="space-y-3 border-t pt-4" aria-label="Предусловия">
+        <h3 className="text-sm font-semibold">Предусловия</h3>
+        <ConditionsCell
+          conditions={part.preconditions ?? []}
+          freeText={part.precondition ?? ''}
+          mode={part.precond_mode ?? 'all'}
+          dependencies={dependencies}
+          entities={entities}
+          stacked
+          onChange={({ conditions, condition, cond_mode }) => onChange({
+            ...(conditions !== undefined ? { preconditions: conditions } : {}),
+            ...(condition !== undefined ? { precondition: condition } : {}),
+            ...(cond_mode !== undefined ? { precond_mode: cond_mode } : {}),
+          })}
+        />
+      </section>
     </div>
   );
 }

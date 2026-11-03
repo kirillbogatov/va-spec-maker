@@ -49,7 +49,7 @@ describe('scenarios API', () => {
       .send({ name: 'S', description: 'описание', parts: [{ name: 'P', steps: [{ key: 'k', ...row }, err] }] });
     expect(put.status).toBe(200);
     // ответ и действие перехода живут в состоянии: в строке перехода они сбрасываются, в строке ошибки сохраняются
-    expect(put.body.parts[0].steps).toEqual([{ ...row, prompt_id: null, system_action: '' }, err]);
+    expect(put.body.parts[0].steps).toEqual([{ ...row, match_any_intent: false, prompt_id: null, system_action: '' }, { ...err, match_any_intent: false }]);
     expect((await request(app).get(`/api/projects/${pid}/scenarios`)).body[0].step_count).toBe(2);
   });
 

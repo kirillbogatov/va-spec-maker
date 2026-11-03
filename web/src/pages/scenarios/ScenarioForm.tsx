@@ -100,6 +100,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [partParam, stateParam]);
   const [showPart, setShowPart] = useState(false);
+  const [schemeWide, setSchemeWide] = useState(false);
   const { data: ownIntents = [] } = useQuery({ queryKey: ['intents', 'scenario', scenario.id], queryFn: () => api.intents.listByScenario(scenario.id) });
   const { data: allIntents = [] } = useQuery({ queryKey: ['intents', projectId], queryFn: () => api.intents.list(projectId) });
   const { data: entities = [] } = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId) });
@@ -197,7 +198,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
   const setDependencies = (update: (deps: Dependency[]) => Dependency[]) =>
     setDraft((d) => {
       const dependencies = update(d.dependencies);
-      return { ...d, dependencies, parts: d.parts.map((p) => ({ ...p, steps: reconcile(dependencies, p.steps) })) };
+      return { ...d, dependencies, parts: d.parts.map((p) => ({ ...p, steps: reconcile(dependencies, p.steps), preconditions: reconcile(dependencies, [{ conditions: p.preconditions ?? [] }])[0].conditions })) };
     });
 
   const updatePart = (key: string, update: (p: ScenarioPart) => ScenarioPart) =>
@@ -297,7 +298,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
           <div
             role="tablist"
             aria-label="Разделы сценария"
-            className="-mb-px flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="-mb-px flex min-w-0 flex-1 flex-wrap gap-x-1 gap-y-0.5"
             onKeyDown={(e) => {
               if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
               const i = TABS.findIndex((t) => t.id === tab);
@@ -316,7 +317,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
                 aria-selected={tab === t.id}
                 tabIndex={tab === t.id ? 0 : -1}
                 className={cn(
-                  'flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:px-3.5',
+                  'flex min-h-10 max-w-full items-center gap-1.5 rounded-t-md border-b-2 px-3 py-2 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:px-3.5',
                   tab === t.id ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -335,7 +336,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
         <div className={column}>
           <div className={cn(inner, 'grid min-w-0 gap-4')}>
             <Card title="Описание">
-              <Textarea rows={1} className={cn(GHOST, 'min-h-0 resize-none rounded-md')} aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+              <Textarea id={`scenario-description-${scenario.id}`} rows={1} className="resize-y rounded-md bg-background" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             </Card>
             <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} />
           </div>
@@ -359,6 +360,8 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-8">
           <StateEditor
             key={part.key}
+            wide={schemeWide}
+            onWideChange={setSchemeWide}
             focusState={stateParam}
             tabs={
               <PartTabs
@@ -366,7 +369,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
                 activeKey={part.key!}
                 onSelect={(key) => { setActiveKey(key); setShowPart(true); }}
                 onAdd={addPart}
-                onDuplicate={copyPart}
               />
             }
             steps={transitions}
@@ -383,6 +385,8 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
             partPanel={
               <PartPanel
                 part={part}
+                dependencies={draft.dependencies}
+                entities={entities}
                 canRemove={draft.parts.length > 1}
                 onDuplicate={copyPart}
                 onChange={(patch) => updatePart(part.key!, (p) => ({ ...p, ...patch }))}

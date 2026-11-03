@@ -91,7 +91,10 @@ CREATE TABLE IF NOT EXISTS scenario_parts (
   position INTEGER NOT NULL DEFAULT 0,
   name TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
-  layout TEXT NOT NULL DEFAULT '{}'
+  layout TEXT NOT NULL DEFAULT '{}',
+  preconditions TEXT NOT NULL DEFAULT '[]',
+  precondition TEXT NOT NULL DEFAULT '',
+  precond_mode TEXT NOT NULL DEFAULT 'all'
 );
 CREATE TABLE IF NOT EXISTS scenario_dependencies (
   id INTEGER PRIMARY KEY,
@@ -165,6 +168,7 @@ CREATE TABLE IF NOT EXISTS scenario_steps (
   kind TEXT NOT NULL DEFAULT 'transition',
   state TEXT NOT NULL DEFAULT '',
   intent_id INTEGER REFERENCES intents(id) ON DELETE SET NULL,
+  match_any_intent INTEGER NOT NULL DEFAULT 0,
   request_params TEXT NOT NULL DEFAULT '',
   condition TEXT NOT NULL DEFAULT '',
   conditions TEXT NOT NULL DEFAULT '[]',
@@ -187,6 +191,10 @@ const hasColumn = (db: Db, table: string, column: string) =>
 export function migrate(db: Db): void {
   // Edition-specific migration numbers overlap; inspect the actual schema.
   const compatibleColumns: [string, string][] = [
+    ["scenario_parts", "preconditions TEXT NOT NULL DEFAULT '[]'"],
+    ["scenario_parts", "precondition TEXT NOT NULL DEFAULT ''"],
+    ["scenario_parts", "precond_mode TEXT NOT NULL DEFAULT 'all'"],
+    ["scenario_steps", "match_any_intent INTEGER NOT NULL DEFAULT 0"],
     ["dependency_dictionary", "description TEXT NOT NULL DEFAULT ''"],
     ["scenario_dependencies", "description TEXT NOT NULL DEFAULT ''"],
     ["scenario_dependencies", "dictionary_id INTEGER REFERENCES dependency_dictionary(id) ON DELETE SET NULL"],

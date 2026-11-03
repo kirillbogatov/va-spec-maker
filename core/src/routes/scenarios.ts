@@ -1,3 +1,4 @@
+import { preconditionMode, readPreconditions, validatePreconditions } from '../part-preconditions';
 import { syncScenarioDependencies } from '../dependency-links';
 import { importScenario } from '../scenario-import';
 import { Router, type RouterT } from '../router';
@@ -6,6 +7,11 @@ import { badRequest, notFound } from '../errors';
 import { connect } from '../links';
 import { clearHistory, listHistory, logCreated, logScenarioChanges, type ScenarioSnapshot } from '../history';
 import { optString, parseId, requireString } from '../validate';
+
+const matchAnyIntent = (value: unknown): boolean => {
+  if (value !== undefined && typeof value !== 'boolean') throw badRequest('Поле match_any_intent должно быть логическим значением');
+  return value === true;
+};
 
 const DEP_TYPES = ['string', 'enum', 'bool'];
 
@@ -46,15 +52,15 @@ export function scenariosRouter(db: Db): RouterT {
     res.status(201).json(importScenario(db, parseId(req.params.pid), req.body?.dump, parseId(req.body?.scenario_id)));
   });
 
-  const loadPart = (part: { id: number; name: string; description: string; layout: string }) => {
+  const loadPart = (part: { id: number; name: string; description: string; layout: string; preconditions: string; precondition: string; precond_mode: string }) => {
     const steps = (
       db
         .prepare(
-          `SELECT name, kind, state, intent_id, request_params, condition, conditions, cond_mode, prompt_id, system_action, next_states
+          `SELECT name, kind, state, intent_id, match_any_intent, request_params, condition, conditions, cond_mode, prompt_id, system_action, next_states
            FROM scenario_steps WHERE part_id = ? ORDER BY position, id`,
         )
-        .all(part.id) as { conditions: string }[]
-    ).map((t) => ({ ...t, conditions: JSON.parse(t.conditions) as StepCondition[] }));
+        .all(part.id) as { conditions: string; match_any_intent: number }[]
+    ).map((t) => ({ ...t, match_any_intent: !!t.match_any_intent, conditions: JSON.parse(t.conditions) as StepCondition[] }));
     const layout: Layout = {};
     for (const { name, ...info } of db
       .prepare('SELECT name, description, prompt_id, system_action FROM scenario_states WHERE part_id = ? ORDER BY id')
@@ -64,7 +70,7 @@ export function scenariosRouter(db: Db): RouterT {
     for (const [name, p] of Object.entries(JSON.parse(part.layout) as Record<string, { x: number; y: number; order?: number }>)) {
       layout[name] = layout[name] ? { ...layout[name], x: p.x, y: p.y, ...(Number.isFinite(p.order) ? { order: p.order } : {}) } : { ...p, description: '', prompt_id: null, system_action: '' };
     }
-    return { name: part.name, description: part.description, steps, layout };
+    return { name: part.name, description: part.description, preconditions: readPreconditions(part.preconditions, true), precondition: part.precondition, precond_mode: preconditionMode(part.precond_mode), steps, layout };
   };
 
   const load = (id: number) => {
@@ -72,10 +78,10 @@ export function scenariosRouter(db: Db): RouterT {
       | { id: number; project_id: number; name: string; description: string }
       | undefined;
     if (!head) throw notFound('Сценарий');
-    let partRows = db.prepare('SELECT id, name, description, layout FROM scenario_parts WHERE scenario_id = ? ORDER BY position, id').all(id) as { id: number; name: string; description: string; layout: string }[];
+    let partRows = db.prepare('SELECT id, name, description, layout, preconditions, precondition, precond_mode FROM scenario_parts WHERE scenario_id = ? ORDER BY position, id').all(id) as { id: number; name: string; description: string; layout: string; preconditions: string; precondition: string; precond_mode: string }[];
     if (!partRows.length) {
       db.prepare('INSERT INTO scenario_parts(scenario_id, position, name) VALUES (?, 0, ?)').run(id, head.name);
-      partRows = db.prepare('SELECT id, name, description, layout FROM scenario_parts WHERE scenario_id = ?').all(id) as typeof partRows;
+      partRows = db.prepare('SELECT id, name, description, layout, preconditions, precondition, precond_mode FROM scenario_parts WHERE scenario_id = ?').all(id) as typeof partRows;
     }
     const dependencies = (
       db
@@ -158,11 +164,16 @@ export function scenariosRouter(db: Db): RouterT {
     const findPrompt = db.prepare('SELECT 1 FROM prompts WHERE id = ? AND project_id = ?');
     const isGlobalIntent = db.prepare('SELECT 1 FROM scenario_intents WHERE scenario_id = ? AND intent_id = ? AND is_global = 1');
     const parts = (Array.isArray(b.parts) ? b.parts : cur.parts).map((p: any, n: number) => {
+      const preconditions = readPreconditions(p?.preconditions);
+      validatePreconditions(db, cur.project_id, refs, preconditions);
+      const precond_mode = preconditionMode(p?.precond_mode);
+      const precondition = optString(p?.precondition);
       const steps = (Array.isArray(p?.steps) ? p.steps : []).map((s: any) => ({
         name: optString(s?.name).trim(),
         kind: s?.kind === 'error' || s?.kind === 'global' ? s.kind : 'transition',
         state: optString(s?.state).trim(),
-        intent_id: s?.intent_id == null ? null : parseId(s.intent_id),
+        match_any_intent: matchAnyIntent(s?.match_any_intent),
+        intent_id: s?.match_any_intent === true || s?.intent_id == null ? null : parseId(s.intent_id),
         request_params: optString(s?.request_params),
         condition: optString(s?.condition),
         conditions: (Array.isArray(s?.conditions) ? s.conditions : []).map((c: any) =>
@@ -208,7 +219,7 @@ export function scenariosRouter(db: Db): RouterT {
           throw badRequest('Промпт состояния не найден в проекте');
         }
       }
-      return { name: optString(p?.name).trim() || `${name} ${n + 1}`, description: optString(p?.description), steps, layout };
+      return { name: optString(p?.name).trim() || `${name} ${n + 1}`, description: optString(p?.description), preconditions, precondition, precond_mode, steps, layout };
     });
     if (parts.length === 0) throw badRequest('В сценарии должна быть хотя бы одна вкладка');
     db.transaction(() => {
@@ -227,20 +238,20 @@ export function scenariosRouter(db: Db): RouterT {
       dependencies.forEach((d: any, i: number) =>
         insDep.run(id, i, d.ref, d.entity_id, d.name, d.description, d.type, JSON.stringify(d.options), d.dictionary_id, d.editable ? 1 : 0),
       );
-      const insPart = db.prepare('INSERT INTO scenario_parts(scenario_id, position, name, description, layout) VALUES (?, ?, ?, ?, ?)');
+      const insPart = db.prepare('INSERT INTO scenario_parts(scenario_id, position, name, description, layout, preconditions, precondition, precond_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       const insState = db.prepare('INSERT INTO scenario_states(scenario_id, part_id, name, description, prompt_id, system_action) VALUES (?, ?, ?, ?, ?, ?)');
       const ins = db.prepare(
-        `INSERT INTO scenario_steps(scenario_id, part_id, position, name, kind, state, intent_id, request_params, condition, conditions, cond_mode, prompt_id, system_action, next_states)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO scenario_steps(scenario_id, part_id, position, name, kind, state, intent_id, match_any_intent, request_params, condition, conditions, cond_mode, prompt_id, system_action, next_states)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       parts.forEach((p: any, n: number) => {
         const points = Object.fromEntries(Object.entries(p.layout as Layout).map(([k, { x, y, order }]) => [k, { x, y, ...(order === undefined ? {} : { order }) }]));
-        const pid = Number(insPart.run(id, n, p.name, p.description, JSON.stringify(points)).lastInsertRowid);
+        const pid = Number(insPart.run(id, n, p.name, p.description, JSON.stringify(points), JSON.stringify(p.preconditions), p.precondition, p.precond_mode).lastInsertRowid);
         for (const [k, st] of Object.entries(p.layout as Layout)) {
           if (st.description.trim() || st.prompt_id !== null || st.system_action.trim()) insState.run(id, pid, k, st.description, st.prompt_id, st.system_action);
         }
         p.steps.forEach((s: any, i: number) =>
-          ins.run(id, pid, i, s.name, s.kind, s.state, s.intent_id, s.request_params, s.condition, JSON.stringify(s.conditions), s.cond_mode, s.prompt_id, s.system_action, s.next_states),
+          ins.run(id, pid, i, s.name, s.kind, s.state, s.intent_id, s.match_any_intent ? 1 : 0, s.request_params, s.condition, JSON.stringify(s.conditions), s.cond_mode, s.prompt_id, s.system_action, s.next_states),
         );
       });
       // Всё, на что ссылаются строки и состояния, подключено к сценарию (глобальные интенты уже подключены проверкой выше)

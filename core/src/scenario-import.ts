@@ -1,3 +1,4 @@
+import { readPreconditions } from './part-preconditions';
 import { badRequest, notFound } from './errors';
 import { importProject, type ProjectDump } from './project-dump';
 import type { Db } from './sqlite';
@@ -28,6 +29,7 @@ export function importScenario(db: Db, pid: number, dump: ProjectDump, sid: numb
     try { return JSON.parse(typeof r.conditions === 'string' ? r.conditions : JSON.stringify(r.conditions ?? [])); }
     catch { throw badRequest('Некорректные условия переходов'); }
   });
+  conditions.push(...(tables.scenario_parts ?? []).flatMap(p => readPreconditions(p.preconditions, true)));
   const entityIds = ids([...(tables.scenario_entities ?? []), ...(tables.scenario_dependencies ?? []), ...(tables.intent_entities ?? []), ...conditions], 'entity_id');
   tables.entities = (tables.entities ?? []).filter(r => entityIds.has(r.id));
   tables.entity_values = (tables.entity_values ?? []).filter(r => entityIds.has(r.entity_id));

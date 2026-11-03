@@ -101,12 +101,28 @@ export function OptionSelect({ options, value, onChange, label, hideValueHint, c
   );
 }
 
-/** Выбор интента строки; пустое значение подписывается по-разному: у ошибок это «любой интент». */
-export function IntentSelect({ intents, value, onChange, label, emptyLabel = '— не выбран —', hideValueHint, fieldClassName }: {
-  intents: IntentListItem[]; value: number | null; onChange: (v: number | null) => void; label: string; emptyLabel?: string; hideValueHint?: boolean; fieldClassName?: string;
+/** Явный wildcard сохраняется отдельно от незаполненного интента. */
+export function IntentSelect({ intents, value, anyIntent = false, onChange, label, emptyLabel = '— не выбран —', hideValueHint, fieldClassName }: {
+  intents: IntentListItem[]; value: number | null; anyIntent?: boolean; onChange: (v: number | null, anyIntent: boolean) => void; label: string; emptyLabel?: string; hideValueHint?: boolean; fieldClassName?: string;
 }) {
-  const options = [{ value: 'none', label: emptyLabel }, ...intents.map((i) => ({ value: String(i.id), label: i.name, hint: i.hint }))];
-  return <OptionSelect options={options} value={value} onChange={onChange} label={label} hideValueHint={hideValueHint} className={fieldClassName} />;
+  const options = [
+    { value: 'none', label: emptyLabel },
+    { value: 'any', label: 'Любой интент', hint: 'Any intent' },
+    ...intents.map((i) => ({ value: String(i.id), label: i.name, hint: i.hint })),
+  ];
+  return <SearchSelect
+    options={options}
+    value={anyIntent ? 'any' : value === null ? 'none' : String(value)}
+    onChange={(v) => onChange(v === 'any' ? null : idOf(v), v === 'any')}
+    label={label}
+    className={cn(fieldClassName ?? GHOST, 'w-full')}
+    renderValue={(o) => (
+      <span className="flex min-w-0 items-baseline gap-2">
+        <span className="shrink-0">{o?.label}</span>
+        {!hideValueHint && o?.value !== 'any' && oneLine(o?.hint) && <span className="min-w-0 truncate text-xs text-muted-foreground">{oneLine(o?.hint)}</span>}
+      </span>
+    )}
+  />;
 }
 
 /** Сетка правила: справа действия и перенос; на мобильном правило — карточка. */
@@ -125,7 +141,7 @@ const MobileLabel = ({ children }: { children: string }) => <span className="mb-
 function StepRow({ step, index, intents, promptOptions, open, onOpenChange, dependencies, entities, allStates, issues, onPatch, onRemove, onDuplicate, onInsertBelow, sorting }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.key!, disabled: sorting });
   const statePrefix = usePrefixes(useProjectId()).state;
-  const intent = intents.find((i) => i.id === step.intent_id)?.name;
+  const intent = step.match_any_intent ? 'Любой интент' : intents.find((i) => i.id === step.intent_id)?.name;
   const isGlobal = step.kind === 'global';
   const prompt = step.prompt_id === null ? undefined : promptOptions.find((o) => o.value === String(step.prompt_id))?.label;
   const chips = [...step.conditions.map((c) => chipText(c, dependencies, entities)), ...step.condition.split('\n').map((l) => l.trim()).filter(Boolean)];
@@ -227,7 +243,7 @@ function StepRow({ step, index, intents, promptOptions, open, onOpenChange, depe
             </div>
             <div>
               <DialogLabel>Интент</DialogLabel>
-              <IntentSelect intents={intents} value={step.intent_id} emptyLabel={step.kind === 'error' ? 'Любой интент' : '— не выбран —'} onChange={(intent_id) => onPatch({ intent_id })} label={`Интент, строка ${index + 1}`} fieldClassName={FIELD} />
+              <IntentSelect intents={intents} value={step.intent_id} anyIntent={step.match_any_intent} emptyLabel={step.kind === 'error' ? 'Любой интент сценария' : '— не выбран —'} onChange={(intent_id, match_any_intent) => onPatch({ intent_id, match_any_intent })} label={`Интент, строка ${index + 1}`} fieldClassName={FIELD} />
             </div>
             <div>
               <DialogLabel>Условия</DialogLabel>
@@ -268,7 +284,7 @@ export function StepsTable({ kind, title, steps, intents, prompts, dependencies,
   const sort = useColumnSort();
   const sorted = sort.rows(steps, (step, column) => {
     if (column === 'state') return kind === 'global' ? '' : step.state;
-    if (column === 'intent') return intents.find((intent) => intent.id === step.intent_id)?.name ?? '';
+    if (column === 'intent') return step.match_any_intent ? 'Любой интент' : intents.find((intent) => intent.id === step.intent_id)?.name ?? '';
     if (column === 'if') return [...step.conditions.map((condition) => chipText(condition, dependencies, entities)), step.condition].join(' ');
     if (column === 'then') return [step.next_states, prompts.find((prompt) => prompt.id === step.prompt_id)?.name, step.system_action].filter(Boolean).join(' ');
     return step.name ?? '';

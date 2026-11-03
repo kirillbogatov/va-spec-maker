@@ -25,7 +25,7 @@ describe('analyzeSteps', () => {
     expect(r.edges.some((e) => e.from === 'ST_A' && e.to === 'END')).toBe(true);
     expect(r.dangling).toEqual(['ST_MISSING']);
     expect(r.unreachable).toEqual(['ST_LONELY']);
-    expect(r.issues.get(b.key!)?.[0].level).toBe('warn');
+    expect(r.issues.get(b.key!) ?? []).toEqual([]);
   });
   it('не считает глобальные строки переходами, но их цели достижимы', () => {
     const a = step({ state: 'ST_A', next_states: 'ST_B' });

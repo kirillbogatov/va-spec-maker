@@ -87,6 +87,7 @@ export function EntitiesPage() {
       body={(d, patch) => <EntityBody d={d} patch={patch} />}
       emptyText="Сущностей пока нет"
       createTitle="Новая сущность"
+      createDialogTitle="Добавить сущность"
       createPrefix={prefixes.entity}
       createWithType
       deleteTitle={(d) => `Удалить сущность ${d.name}?`}

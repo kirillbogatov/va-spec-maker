@@ -124,7 +124,7 @@ function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; 
       <CreateDialog
         open={creating}
         onOpenChange={setCreating}
-        title="Новая сущность"
+        title="Добавить сущность"
         prefix={prefixes.entity}
         existingNames={entities.map((e) => e.name)}
         withType

@@ -41,8 +41,13 @@ test('копирование и вставка состояния, Delete и к�
   await expect(page.getByRole('button', { name: 'Отменить изменение схемы' })).toHaveCount(0);
 
   const tablist = page.getByRole('tablist', { name: 'Вкладки сценария' });
+  await expect(page.getByRole('button', { name: 'Создать копию вкладки', exact: true })).toHaveCount(0);
+  if (await tablist.getByRole('tab').count() === 0) {
+    await page.getByRole('button', { name: 'Добавить вкладку', exact: true }).click();
+  }
+  await tablist.getByRole('tab').first().click();
   const originalTabs = await tablist.getByRole('tab').count();
-  await page.getByRole('button', { name: 'Создать копию вкладки', exact: true }).click();
+  await page.getByRole('button', { name: 'Дублировать вкладку', exact: true }).click();
   await expect(page.getByLabel('Название вкладки')).toHaveValue(/— копия$/);
   const copyName = await page.getByLabel('Название вкладки').inputValue();
   await page.getByLabel('Описание вкладки').fill('Описание копии вкладки');

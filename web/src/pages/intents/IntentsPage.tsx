@@ -87,6 +87,7 @@ export function IntentsPage() {
       }}
       emptyText="Интентов пока нет"
       createTitle="Новый интент"
+      createDialogTitle="Добавить интент"
       createPrefix={prefixes.intent}
       deleteTitle={(d) => `Удалить интент «${d.name}»?`}
       deleteDescription={(d) =>

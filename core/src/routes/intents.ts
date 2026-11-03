@@ -44,7 +44,7 @@ export function intentsRouter(db: Db): RouterT {
       .prepare('SELECT s.id, s.name FROM scenario_intents si JOIN scenarios s ON s.id = si.scenario_id WHERE si.intent_id = ? ORDER BY s.id')
       .all(id) as { id: number; name: string }[];
 
-  type ListRow = { id: number; name: string; enabled: number; phrase_count: number; hint: string; is_global?: number };
+  type ListRow = { id: number; name: string; enabled: number; phrase_count: number; pattern_count: number; hint: string; is_global?: number };
   const decorate = (rows: ListRow[]) =>
     rows.map(({ is_global, ...x }) => ({
       ...x,
@@ -54,6 +54,7 @@ export function intentsRouter(db: Db): RouterT {
     }));
 
   const PHRASES = '(SELECT COUNT(*) FROM intent_phrases p WHERE p.intent_id = i.id)';
+  const PATTERNS = "(SELECT COUNT(*) FROM intent_patterns p WHERE p.intent_id = i.id AND TRIM(p.text) <> '')";
   /** Подпись в списках: комментарий, фраза, затем сам паттерн. */
   const HINT = `COALESCE(NULLIF(TRIM(i.comment), ''),
       (SELECT p.text FROM intent_phrases p WHERE p.intent_id = i.id AND TRIM(p.text) <> '' ORDER BY p.position, p.id LIMIT 1),
@@ -61,7 +62,7 @@ export function intentsRouter(db: Db): RouterT {
 
   r.get('/projects/:pid/intents', (req, res) => {
     const rows = db
-      .prepare(`SELECT i.id, i.name, i.enabled, ${PHRASES} AS phrase_count, ${HINT} AS hint FROM intents i WHERE i.project_id = ? ORDER BY i.name`)
+      .prepare(`SELECT i.id, i.name, i.enabled, ${PHRASES} AS phrase_count, ${PATTERNS} AS pattern_count, ${HINT} AS hint FROM intents i WHERE i.project_id = ? ORDER BY i.name`)
       .all(parseId(req.params.pid)) as ListRow[];
     res.json(decorate(rows));
   });
@@ -70,7 +71,7 @@ export function intentsRouter(db: Db): RouterT {
   r.get('/scenarios/:sid/intents', (req, res) => {
     const rows = db
       .prepare(
-        `SELECT i.id, i.name, i.enabled, si.is_global, ${PHRASES} AS phrase_count, ${HINT} AS hint
+        `SELECT i.id, i.name, i.enabled, si.is_global, ${PHRASES} AS phrase_count, ${PATTERNS} AS pattern_count, ${HINT} AS hint
          FROM scenario_intents si JOIN intents i ON i.id = si.intent_id
          WHERE si.scenario_id = ? ORDER BY si.position, si.id`,
       )

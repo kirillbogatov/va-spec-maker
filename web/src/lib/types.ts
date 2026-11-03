@@ -20,7 +20,7 @@ export interface Entity {
 /** Сценарий, к которому подключён интент или промпт. */
 export interface ScenarioLink { id: number; name: string }
 export interface IntentListItem {
-  id: number; name: string; enabled: boolean; phrase_count: number;
+  id: number; name: string; enabled: boolean; phrase_count: number; pattern_count?: number;
   /** Комментарий или первая фраза: краткое описание в списках выбора. */
   hint: string;
   /** Сценарии, к которым подключён интент. */
@@ -77,6 +77,8 @@ export interface Step {
   kind: 'transition' | 'error' | 'global';
   state: string;
   intent_id: number | null;
+  /** Переход по любому интенту; отличается от незаполненного intent_id. */
+  match_any_intent?: boolean;
   request_params: string;
   condition: string;
   conditions: StepCondition[];
@@ -96,7 +98,13 @@ export interface StateInfo { x: number; y: number; order?: number; description?:
 /** Состояния сценария по имени (в том числе без переходов). */
 export type Layout = Record<string, StateInfo>;
 /** Вкладка сценария — отдельный подсценарий: свои состояния и переходы, в экспорте — отдельный раздел со своим заголовком. */
-export interface ScenarioPart { key?: string; name: string; description: string; steps: Step[]; layout: Layout }
+export interface ScenarioPart {
+  key?: string; name: string; description: string; steps: Step[]; layout: Layout;
+  /** Условия запуска, общие для всех переходов вкладки. */
+  preconditions?: StepCondition[];
+  precondition?: string;
+  precond_mode?: 'all' | 'any';
+}
 export interface Scenario {
   id: number; project_id: number; name: string; description: string;
   entities: ScenarioEntity[]; dependencies: Dependency[]; parts: ScenarioPart[];

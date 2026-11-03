@@ -55,3 +55,7 @@ export function useIntentMode(projectId: number): IntentMode {
   }, [projectId]);
   return v;
 }
+
+/** Число заполненных примеров в выбранном режиме описания интента. */
+export const intentValueCount = (item: { phrase_count: number; pattern_count?: number }, mode: IntentMode): number =>
+  (modeShows(mode, 'phrase') ? item.phrase_count : 0) + (modeShows(mode, 'pattern') ? item.pattern_count ?? 0 : 0);

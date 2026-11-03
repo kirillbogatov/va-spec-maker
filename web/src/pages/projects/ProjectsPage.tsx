@@ -28,37 +28,56 @@ const forms = (n: number, one: string, few: string, many: string) => {
 const formatDate = (s: string) => new Date(s.replace(' ', 'T') + 'Z').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 
 function ProjectDialog({ project, open, onOpenChange, onSubmit }: {
-  project: ProjectListItem | null; open: boolean; onOpenChange: (o: boolean) => void; onSubmit: (name: string, description: string) => void;
+  project: ProjectListItem | null; open: boolean; onOpenChange: (o: boolean) => void; onSubmit: (name: string, description: string) => Promise<unknown>;
 }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [pending, setPending] = useState(false);
+  const [failure, setFailure] = useState('');
   const [seen, setSeen] = useState<string>('');
   const key = `${open}:${project?.id ?? 'new'}`;
-  if (open && seen !== key) {
+  if (seen !== key) {
     setSeen(key);
+    setFailure('');
     setName(project?.name ?? '');
     setDescription(project?.description ?? '');
   }
   const valid = name.trim().length > 0;
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
+      <DialogContent showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>{project ? 'Переименовать проект' : 'Новый проект'}</DialogTitle>
         </DialogHeader>
         <form
           className="space-y-3"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            if (!valid) return;
-            onSubmit(name.trim(), description);
-            onOpenChange(false);
+            if (!valid || pending) return;
+            setPending(true);
+            setFailure('');
+            try {
+              await onSubmit(name.trim(), description);
+              onOpenChange(false);
+            } catch {
+              setFailure('Не удалось сохранить проект. Введённые данные сохранены в форме. Попробуйте ещё раз.');
+            } finally {
+              setPending(false);
+            }
           }}
+          aria-busy={pending}
         >
-          <Input autoFocus aria-label="Название проекта" value={name} onChange={(e) => setName(e.target.value)} />
-          <Textarea rows={3} aria-label="Описание проекта" value={description} onChange={(e) => setDescription(e.target.value)} />
+          <label className="grid gap-1.5 text-sm font-medium">
+            Название проекта
+            <Input autoFocus required disabled={pending} value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="grid gap-1.5 text-sm font-medium">
+            Описание проекта
+            <Textarea rows={3} disabled={pending} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </label>
+          {failure && <p role="alert" className="text-sm text-destructive">{failure}</p>}
           <DialogFooter>
-            <Button type="submit" disabled={!valid}>{project ? 'Сохранить' : 'Создать'}</Button>
+            <Button type="submit" disabled={!valid || pending}>{pending ? 'Сохранение…' : project ? 'Сохранить' : 'Создать'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -70,8 +89,7 @@ export function ProjectsPage() {
   const qc = useQueryClient();
   const [dialog, setDialog] = useState<{ project: ProjectListItem | null } | null>(null);
   const [deleting, setDeleting] = useState<ProjectListItem | null>(null);
-  const [, bump] = useState(0);
-  const { data: projects = [], isLoading } = useQuery({ queryKey: ['projects'], queryFn: api.projects.list });
+  const { data: projects = [], isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ['projects'], queryFn: api.projects.list });
   const refresh = () => qc.invalidateQueries({ queryKey: ['projects'] });
 
   const save = useMutation({
@@ -84,7 +102,6 @@ export function ProjectsPage() {
 
   const exportJson = async (p: ProjectListItem) => {
     await backupProject(p);
-    bump((n) => n + 1);
   };
   const exportDocx = (p: ProjectListItem) =>
     api.exportFile(`/api/projects/${p.id}/export?format=docx&lang=${readSpecLang(p.id)}`, `${p.name}.docx`).catch((e: Error) => toast.error(e.message));
@@ -111,7 +128,14 @@ export function ProjectsPage() {
           <Button variant="outline" className="h-10 sm:h-9" onClick={() => setImporting(true)}><Upload className="size-4" /> Импорт проекта</Button>
         </div>
 
-        {!isLoading && projects.length === 0 && (
+        {isLoading && <p role="status" className="py-6 text-sm text-muted-foreground">Загрузка проектов…</p>}
+        {isError && (
+          <div role="alert" className="mb-6 space-y-3 text-sm">
+            <p>Не удалось загрузить проекты. Попробуйте ещё раз.</p>
+            <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>{isFetching ? 'Загрузка…' : 'Повторить загрузку'}</Button>
+          </div>
+        )}
+        {!isLoading && !isError && projects.length === 0 && (
           <div className="grid place-items-center rounded-xl border border-dashed bg-background px-6 py-16 text-center">
             <FolderOpen className="mb-3 size-10 text-muted-foreground" aria-hidden />
             <h2 className="text-balance text-lg font-semibold">Проектов пока нет</h2>
@@ -169,7 +193,7 @@ export function ProjectsPage() {
         project={dialog?.project ?? null}
         open={dialog !== null}
         onOpenChange={(o) => !o && setDialog(null)}
-        onSubmit={(name, description) => dialog && save.mutate({ project: dialog.project, name, description })}
+        onSubmit={(name, description) => save.mutateAsync({ project: dialog!.project, name, description })}
       />
       <ConfirmDialog
         open={deleting !== null}

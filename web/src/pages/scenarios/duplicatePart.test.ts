@@ -7,6 +7,7 @@ describe('duplicatePart', () => {
   it('копирует все виды шагов и состояния, сохраняя ссылки на справочники', () => {
     const source: ScenarioPart = {
       key: 'source', name: 'Основная', description: 'Описание',
+      preconditions: [{ dep: 'zone', value: 'front' }], precondition: 'Пользователь авторизован', precond_mode: 'any',
       steps: [
         { ...newTransition('VA_ACTIVATION', 'ST_DONE'), intent_id: 7, conditions: [{ dep: 'zone', value: 'rear' }] },
         { ...newTransition('', 'ST_DONE'), kind: 'error', prompt_id: 9 },
@@ -17,6 +18,11 @@ describe('duplicatePart', () => {
     const copy = duplicatePart(source, [source]);
     expect(copy.name).toBe('Основная — копия');
     expect(copy.description).toBe(source.description);
+    expect(copy.preconditions).toEqual(source.preconditions);
+    expect(copy.precondition).toBe(source.precondition);
+    expect(copy.precond_mode).toBe('any');
+    copy.preconditions![0].value = 'rear';
+    expect(source.preconditions![0].value).toBe('front');
     expect(copy.layout).toEqual(source.layout);
     expect(copy.key).not.toBe(source.key);
     expect(new Set([source.key, copy.key, ...source.steps.map((s) => s.key), ...copy.steps.map((s) => s.key)]).size).toBe(8);

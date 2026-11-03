@@ -121,6 +121,7 @@ export function KeywordsPage() {
       )}
       emptyText="Ключевых слов пока нет"
       createTitle="Новое ключевое слово"
+      createDialogTitle="Добавить ключевое слово"
       deleteTitle={(d) => `Удалить ключевое слово ${d.name}?`}
       onCreate={(n) => create.mutateAsync(n)}
       onSave={async (d) => {

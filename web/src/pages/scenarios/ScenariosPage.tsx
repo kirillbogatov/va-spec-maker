@@ -15,8 +15,13 @@ import { ScenarioForm, type ScenarioTab } from './ScenarioForm';
 
 function ScenarioEditor({ id, tab }: { id: number; tab: ScenarioTab }) {
   // gcTime: 0 — форма инициализируется из ответа один раз, кэш не должен подсовывать устаревшие данные
-  const { data, error } = useQuery({ queryKey: ['scenario', id], queryFn: () => api.scenarios.get(id), gcTime: 0 });
-  if (!data) return error ? <p role="alert" className="p-4">{error.message}</p> : null;
+  const { data, error, refetch, isFetching } = useQuery({ queryKey: ['scenario', id], queryFn: () => api.scenarios.get(id), gcTime: 0 });
+  if (!data) return error ? (
+    <div className="space-y-3 p-4">
+      <p role="alert">{error instanceof ApiError && error.status === 404 ? 'Сценарий не найден. Выберите другой сценарий из списка.' : 'Не удалось загрузить сценарий. Попробуйте ещё раз.'}</p>
+      <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>{isFetching ? 'Загрузка…' : 'Повторить загрузку'}</Button>
+    </div>
+  ) : <p role="status" className="p-4 text-sm text-muted-foreground">Загрузка сценария…</p>;
   return <ScenarioForm key={id} scenario={data} tab={tab} deleted={error instanceof ApiError && error.status === 404} />;
 }
 
@@ -39,7 +44,7 @@ export function ScenariosPage() {
     setCreatingState(o);
     if (!o && params.has('new')) setParams({}, { replace: true });
   };
-  const { data: items = [], isSuccess } = useQuery({ queryKey: ['scenarios', projectId], queryFn: () => api.scenarios.list(projectId) });
+  const { data: items = [], isSuccess, isError, isPending, isFetching, refetch } = useQuery({ queryKey: ['scenarios', projectId], queryFn: () => api.scenarios.list(projectId) });
   const { filtered, search, filtering } = useListFilter(items, 'сценариях');
   // Сохраняем редактор с черновиком при удалении в другой вкладке.
   const selected = items.find((s) => String(s.id) === id) ?? qc.getQueryData<Scenario>(['scenario', Number(id)]);
@@ -54,14 +59,14 @@ export function ScenariosPage() {
   // На десктопе без выбора открываем первый сценарий, на мобильном остаёмся в списке
   const first = items[0];
   useEffect(() => {
-    if (isSuccess && !selected && first && isDesktop()) navigate(path(`/scenarios/${first.id}`), { replace: true });
-  }, [isSuccess, selected, first?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isSuccess && !id && !selected && first && isDesktop()) navigate(path(`/scenarios/${first.id}`), { replace: true });
+  }, [isSuccess, selected, first?.id, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
       <MasterDetail
         flush
-        selected={!!selected}
+        selected={!!selected || !!id}
         onBack={() => navigate(path('/scenarios'))}
         list={
           <>
@@ -73,6 +78,11 @@ export function ScenariosPage() {
             } />
             {search}
             <ul className="flex-1 overflow-y-auto pb-2">
+              {isPending && <li role="status" className={listEmpty}>Загрузка сценариев…</li>}
+              {isError && <li className={listEmpty}>
+                <p role="alert">Не удалось загрузить список сценариев.</p>
+                <Button variant="outline" className="mt-2" disabled={isFetching} onClick={() => void refetch()}>{isFetching ? 'Загрузка…' : 'Повторить загрузку'}</Button>
+              </li>}
               {filtered.map((s) => (
                 <li key={s.id}>
                   <ListItem to={path(`/scenarios/${s.id}`)}>
@@ -87,9 +97,11 @@ export function ScenariosPage() {
           </>
         }
       >
-        {selected ? (
-          <ScenarioEditor id={selected.id} tab={activeTab} />
-        ) : !isSuccess ? null : items.length === 0 ? (
+        {selected || id ? (
+          <ScenarioEditor id={selected?.id ?? Number(id)} tab={activeTab} />
+        ) : !isSuccess ? (
+          <p role="status" className="p-4 text-sm text-muted-foreground">{isError ? 'Список сценариев недоступен. Повторите загрузку в панели списка.' : 'Загрузка сценариев…'}</p>
+        ) : items.length === 0 ? (
           <div className="mx-auto mt-10 max-w-sm text-center">
             <p className="text-balance text-base font-medium">Сценариев пока нет</p>
             <Button className="mt-4 h-10 md:h-9" onClick={() => setCreating(true)}>

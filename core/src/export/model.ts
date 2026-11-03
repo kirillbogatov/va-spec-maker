@@ -20,6 +20,8 @@ export type IntentMode = 'phrases' | 'patterns' | 'both' | 'keywords';
 export const parseIntentMode = (v: unknown): IntentMode => (v === 'phrases' || v === 'patterns' || v === 'keywords' ? v : 'both');
 
 export interface ProjectSpec {
+  /** Вкладки всех сценариев с метаданными, для выгрузки проекта. */
+  parts?: SpecPart[];
   changelog?: { date?: string; scenario?: string; task: string; author: string; description: string }[];
   project: { id: number; name: string; description: string };
   /** Не задан — как «both»: колонки по наличию данных. */
@@ -50,6 +52,10 @@ export interface ProjectSpec {
 
 /** Часть (вкладка) сценария: в документе — подраздел только в State transitions. */
 export interface SpecPart {
+  scenario?: string;
+  preconditions?: string[];
+  precondition?: string;
+  precond_mode?: 'all' | 'any';
   title: string;
   description: string;
   transitions: TransitionRow[];
@@ -66,7 +72,7 @@ export interface ScenarioDoc {
 
 /**
  * Спецификация сценария: интенты, сущности, промпты и ошибки — общие для всех вкладок,
- * разбиение по вкладкам видно только в переходах. Единственная вкладка выводится без подзаголовка.
+ * разбиение по вкладкам и их предусловия выводятся перед таблицами переходов.
  */
 export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru'): ScenarioDoc {
   const scenario = db.prepare('SELECT id, project_id, name, description FROM scenarios WHERE id = ?').get(scenarioId) as
@@ -75,8 +81,8 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
   if (!scenario) throw notFound('Сценарий');
   const projectId = scenario.project_id;
   const project = db.prepare('SELECT id, name, description FROM projects WHERE id = ?').get(projectId) as ProjectSpec['project'];
-  const parts = db.prepare('SELECT id, name, description FROM scenario_parts WHERE scenario_id = ? ORDER BY position, id').all(scenarioId) as {
-    id: number; name: string; description: string;
+  const parts = db.prepare('SELECT id, name, description, preconditions, precondition, precond_mode FROM scenario_parts WHERE scenario_id = ? ORDER BY position, id').all(scenarioId) as {
+    id: number; name: string; description: string; preconditions?: string; precondition?: string; precond_mode?: 'all' | 'any';
   }[];
   if (!parts.length) parts.push({ id: -1, name: scenario.name, description: '' });
 
@@ -85,6 +91,12 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
   for (const row of db.prepare('SELECT entity_id FROM scenario_entities WHERE scenario_id = ? UNION SELECT entity_id FROM scenario_dependencies WHERE scenario_id = ? AND entity_id IS NOT NULL').all(scenarioId, scenarioId) as { entity_id: number }[]) entityIds.add(row.entity_id);
   for (const row of db.prepare('SELECT conditions FROM scenario_steps WHERE scenario_id = ?').all(scenarioId) as { conditions: string }[]) {
     for (const condition of JSON.parse(row.conditions) as { entity_id?: number }[]) if (condition.entity_id !== undefined) entityIds.add(condition.entity_id);
+  }
+  // Сущности, используемые только в предусловиях вкладок, тоже входят в документ.
+  for (const part of parts) {
+    for (const c of JSON.parse(part.preconditions ?? '[]') as { entity_id?: number }[]) {
+      if (c.entity_id !== undefined) entityIds.add(c.entity_id);
+    }
   }
   const intentIds = new Set(
     (db.prepare('SELECT intent_id FROM scenario_intents WHERE scenario_id = ?').all(scenarioId) as { intent_id: number }[]).map((r) => r.intent_id),
@@ -100,14 +112,16 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
     }
   }
   const spec = buildSpec(db, projectId, { ...project, name: scenario.name, description: scenario.description }, lang, { scenarioId, partId: null, intentIds, promptIds, entityIds });
-  const single = parts.length === 1;
   const changelog = db.prepare('SELECT date, task, author, description FROM scenario_changelog WHERE scenario_id = ? ORDER BY position, id').all(scenarioId) as ScenarioDoc['changelog'];
   return {
     spec: { ...spec, transitions: [] },
     changelog,
     parts: parts.map((part) => {
       const ps = buildSpec(db, projectId, project, lang, { scenarioId, partId: part.id, intentIds, promptIds, entityIds });
-      return { title: single ? scenario.name : part.name, description: part.description, transitions: ps.transitions, globals: ps.globals ?? [] };
+      return { title: part.name, description: part.description,
+        preconditions: formatPartPreconditions(db, projectId, scenarioId, part.preconditions ?? '[]', lang),
+        precondition: part.precondition ?? '', precond_mode: part.precond_mode ?? 'all',
+        transitions: ps.transitions, globals: ps.globals ?? [] };
     }),
   };
 }
@@ -126,7 +140,9 @@ export function loadProjectSpec(db: Db, projectId: number, lang: SpecLang = 'ru'
     | ProjectSpec['project']
     | undefined;
   if (!project) throw notFound('Проект');
-  return { ...buildSpec(db, projectId, project, lang), changelog: db.prepare('SELECT c.date, s.name AS scenario, c.task, c.author, c.description FROM scenario_changelog c JOIN scenarios s ON s.id = c.scenario_id WHERE s.project_id = ? ORDER BY s.id, c.position, c.id').all(projectId) as NonNullable<ProjectSpec['changelog']> };
+  const projectParts = (db.prepare('SELECT id, name FROM scenarios WHERE project_id = ? ORDER BY id').all(projectId) as { id: number; name: string }[])
+    .flatMap((scenario) => loadScenarioDoc(db, scenario.id, lang).parts.map((part) => ({ ...part, scenario: scenario.name })));
+  return { ...buildSpec(db, projectId, project, lang), parts: projectParts, changelog: db.prepare('SELECT c.date, s.name AS scenario, c.task, c.author, c.description FROM scenario_changelog c JOIN scenarios s ON s.id = c.scenario_id WHERE s.project_id = ? ORDER BY s.id, c.position, c.id').all(projectId) as NonNullable<ProjectSpec['changelog']> };
 }
 
 function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], lang: SpecLang, scope?: Scope): ProjectSpec {
@@ -222,14 +238,14 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
   type Raw = TransitionRow & { kind: string; conditions: string; cond_mode: string; part_id: number | null };
   const rows = db
     .prepare(
-      `SELECT t.part_id, t.kind, t.state, CASE WHEN t.kind = 'error' AND t.intent_id IS NULL THEN ? ELSE i.name END AS intent, t.request_params, t.condition, t.conditions, t.cond_mode, p.name AS prompt, t.system_action, t.next_states
+      `SELECT t.part_id, t.kind, t.state, CASE WHEN t.match_any_intent = 1 THEN ? WHEN t.kind = 'error' AND t.intent_id IS NULL THEN ? ELSE i.name END AS intent, t.request_params, t.condition, t.conditions, t.cond_mode, p.name AS prompt, t.system_action, t.next_states
        FROM scenario_steps t
        JOIN scenarios s ON s.id = t.scenario_id
        LEFT JOIN intents i ON i.id = t.intent_id
        LEFT JOIN prompts p ON p.id = t.prompt_id
        WHERE s.project_id = ? AND (? IS NULL OR t.scenario_id = ?) AND (? IS NULL OR t.part_id = ?) ORDER BY s.id, t.part_id, t.position, t.id`,
     )
-    .all(STRINGS[lang].anyScenarioIntent, projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
+    .all(STRINGS[lang].anyIntent, STRINGS[lang].anyScenarioIntent, projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
   const entityName = new Map((db.prepare('SELECT id, name FROM entities WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((e) => [e.id, e.name]));
   const keywordName = new Map((db.prepare('SELECT id, name FROM keywords WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((k) => [k.id, k.name]));
   const strip = ({ kind, conditions, cond_mode, part_id, ...row }: Raw): TransitionRow => {
@@ -255,4 +271,16 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
     errors: rows.filter((r) => r.kind === 'error').map(strip),
     globals: rows.filter((r) => r.kind === 'global' && r.intent !== null).map(strip),
   };
+}
+
+/** Те же подписи структурных условий, что в строках переходов, но область — вкладка. */
+function formatPartPreconditions(db: Db, projectId: number, scenarioId: number, raw: string, lang: SpecLang): string[] {
+  const entities = new Map((db.prepare('SELECT id, name FROM entities WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((row) => [row.id, row.name]));
+  const concepts = new Map((db.prepare('SELECT id, name FROM keywords WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((row) => [row.id, row.name]));
+  const dependencies = new Map((db.prepare('SELECT d.ref, COALESCE(e.name, d.name) AS name FROM scenario_dependencies d LEFT JOIN entities e ON e.id = d.entity_id WHERE d.scenario_id = ?').all(scenarioId) as { ref: string; name: string }[]).map((row) => [row.ref, row.name]));
+  return (JSON.parse(raw) as { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: string }[]).map((c) => {
+    const label = c.keyword_id !== undefined ? concepts.get(c.keyword_id) : c.entity_id !== undefined ? entities.get(c.entity_id) : dependencies.get(c.dep);
+    if (label === undefined) return '';
+    return c.keyword_id !== undefined ? `${STRINGS[lang][c.op === '!=' ? 'conceptAbsent' : 'conceptPresent']}: ${label}` : `[${label}] ${c.op || '='} ${c.value}`;
+  }).filter(Boolean);
 }

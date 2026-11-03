@@ -1,4 +1,4 @@
-import type { Dependency, EntityListItem, Step, StepCondition } from '@/lib/types';
+import type { Dependency, EntityListItem, StepCondition } from '@/lib/types';
 
 export const TYPE_LABEL: Record<Dependency['type'], string> = {
   string: 'Строка',
@@ -17,7 +17,7 @@ export const depLabel = (d: Dependency, entities: EntityListItem[]) =>
   (d.entity_id !== null ? entities.find((e) => e.id === d.entity_id)?.name : d.name) || '(без названия)';
 
 /** Убирает условия удалённых зависимостей и значения, которые перестали быть допустимыми. */
-export function reconcile(deps: Dependency[], steps: Step[]): Step[] {
+export function reconcile<T extends { conditions: StepCondition[] }>(deps: Dependency[], steps: T[]): T[] {
   const byRef = new Map(deps.map((d) => [d.ref, d]));
   return steps.map((s) => {
     const conditions = s.conditions

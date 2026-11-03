@@ -47,7 +47,7 @@ export function planConditionStates(step: Step, dependencies: Dependency[], enti
     combinations = combinations.flatMap((conditions) => values.map((value) => conditions.map((c) => ({ ...c, ...(subject(c) === key ? { value } : {}) }))));
   }
   const preserveSource = combinations.some((conditions) => signature({ ...step, conditions }, dependencies) === signature(step, dependencies));
-  const existing = new Set(steps.filter((s) => s.kind === 'transition' && s.state.trim() === step.state.trim() && s.intent_id === step.intent_id).map((s) => signature(s, dependencies)));
+  const existing = new Set(steps.filter((s) => s.kind === 'transition' && s.state.trim() === step.state.trim() && s.intent_id === step.intent_id && !!s.match_any_intent === !!step.match_any_intent).map((s) => signature(s, dependencies)));
   combinations = combinations.filter((conditions) => {
     const sig = signature({ ...step, conditions }, dependencies);
     if (existing.has(sig)) return false;
