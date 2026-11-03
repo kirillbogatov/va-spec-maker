@@ -10,7 +10,7 @@ const esc = (s: string) => s.replace(/\|/g, '\\|');
 function cell(c: Cell | null): string {
   if (!c) return '';
   if ('text' in c) return c.text.map(esc).join('<br>');
-  if ('list' in c) return c.list.map((t, i) => `${i + 1}. ${esc(t)}`).join('<br>');
+  if ('list' in c) return [...(c.lead ? [esc(c.lead)] : []), ...c.list.map((t, i) => `${i + 1}. ${esc(t)}`)].join('<br>');
   return c.bullets.map((b) => `• **${esc(b.bold)}**${b.text ? ` ${esc(b.text)}` : ''}`).join('<br>');
 }
 
@@ -27,10 +27,9 @@ function table({ head, rows }: TableDef): string {
   ].join('\n');
 }
 
-function section(spec: ProjectSpec, date: string | null, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = spec.changelog ?? []): string[] {
+function section(spec: ProjectSpec, _date: string | null, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = spec.changelog ?? []): string[] {
   const t = STRINGS[lang];
   const out: string[] = [`# ${spec.project.name}`];
-  if (date) out.push(`_${t.specFrom(date)}_`);
   if (spec.project.description) out.push(spec.project.description);
   if (changelog.length) out.push(`## ${t.changelog}`, table(changelogTable(changelog, lang, !parts)));
 

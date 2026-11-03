@@ -4,8 +4,8 @@ import { STRINGS, type SpecLang } from './i18n';
 
 /** Содержимое ячейки таблицы: абзацы, нумерованный список или маркированный список «жирное: обычное». */
 export type Cell =
-  | { text: string[] }
-  | { list: string[] }
+  | { text: string[]; links?: boolean }
+  | { list: string[]; lead?: string; numbered?: boolean }
   | { bullets: { bold: string; text: string }[] };
 
 export interface Row {
@@ -24,6 +24,14 @@ export interface TableDef {
 const text = (s: string): Cell => ({ text: s ? s.split(/\r?\n/) : [] });
 const dash = (s: string): Cell => text(s.trim() ? s : '-');
 const list = (items: string[]): Cell => ({ list: items });
+
+/** Вводная «Любое из» сохраняет смысл альтернатив и не является пунктом условия. */
+const conditions = (value: string): Cell => {
+  const items = value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  if (!items.length || (items.length === 1 && items[0] === '-')) return dash('');
+  const lead = Object.values(STRINGS).some((t) => t.anyOf === items[0]) ? items.shift() : undefined;
+  return { list: items, numbered: true, ...(lead ? { lead } : {}) };
+};
 
 const ref = (name: string) => `[${name}]`;
 
@@ -114,7 +122,7 @@ const transitionRow = (t: TransitionRow): Row => ({
     dash(t.state),
     dash(t.next_states),
     dash([t.intent, t.request_params].filter((x) => x && x.trim()).join('\n')),
-    dash(t.condition),
+    conditions(t.condition),
     dash(t.system_action),
     dash(t.prompt ?? ''),
   ],
@@ -132,7 +140,7 @@ export const globalsTable = (rows: TransitionRow[], lang: SpecLang = 'ru'): Tabl
     cells: [
       dash(t.next_states),
       dash([t.intent, t.request_params].filter((x) => x && x.trim()).join('\n')),
-      dash(t.condition),
+      conditions(t.condition),
       dash(t.system_action),
       dash(t.prompt ?? ''),
     ],
@@ -145,6 +153,6 @@ export const changelogTable = (rows: ChangelogRow[], lang: SpecLang = 'ru', with
   head: withScenario ? STRINGS[lang].changelogProjectHead : STRINGS[lang].changelogHead,
   widths: withScenario ? [12, 18, 14, 14, 42] : [14, 18, 18, 50],
   rows: rows.map((r): Row => ({
-    cells: [dash(r.date ?? ''), ...(withScenario ? [dash(r.scenario ?? '')] : []), dash(r.task), dash(r.author), dash(r.description)],
+    cells: [dash(r.date ?? ''), ...(withScenario ? [dash(r.scenario ?? '')] : []), { text: r.task.trim() ? r.task.split(/\r?\n/) : ['-'], links: true }, dash(r.author), dash(r.description)],
   })),
 });

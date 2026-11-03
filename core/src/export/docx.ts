@@ -1,6 +1,6 @@
 import {
   AlignmentType, BorderStyle, Document, TableLayoutType, Packer, PageOrientation, Paragraph, Table, TableCell, TableRow,
-  TextRun, VerticalMergeType, WidthType,
+  VerticalMergeType, WidthType, LevelFormat, ExternalHyperlink, type ParagraphChild,
 } from 'docx';
 import type { ProjectSpec, ScenarioDoc } from './model';
 import {
@@ -8,22 +8,26 @@ import {
   type Cell, type TableDef,
 } from './tables';
 import { STRINGS, type SpecLang } from './i18n';
+import { proofedRuns } from './proofing';
+import { parseTextLinks } from '../text-links';
 
 // Оформление повторяет эталонный документ L3: альбомная A4, Arial, таблицы с чёрными рамками, жирная шапка.
 const FONT = 'Arial';
 const BODY = 22; // 11 pt
 const CELL = 22; // 11 pt
+const HEADER_FILL = 'EEF0F5'; // Светлая тема предпросмотра: --muted.
 const PAGE_W = 16838;
 const MARGIN = 720;
 const TEXT_W = PAGE_W - MARGIN * 2;
 
 type Block = Paragraph | Table;
+let conditionListInstance = 0;
 
 const run = (text: string, opts: { bold?: boolean; size?: number } = {}) =>
-  new TextRun({ text, font: FONT, size: opts.size ?? BODY, bold: opts.bold });
+  proofedRuns(text, FONT, opts.size ?? BODY, opts.bold);
 
 const heading = (text: string) =>
-  new Paragraph({ children: [run(text, { size: 32 })], spacing: { before: 240, after: 160 }, keepNext: true });
+  new Paragraph({ children: run(text, { size: 32 }), spacing: { before: 240, after: 160 }, keepNext: true });
 
 const line = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
 const borders = { top: line, bottom: line, left: line, right: line };
@@ -31,23 +35,38 @@ const borders = { top: line, bottom: line, left: line, right: line };
 function cellParagraphs(c: Cell | null, bold = false): Paragraph[] {
   const t = (s: string) => run(s, { bold, size: CELL });
   if (!c) return [new Paragraph({ children: [] })];
-  if ('text' in c) return c.text.length ? c.text.map((s) => new Paragraph({ children: [t(s)] })) : [new Paragraph({ children: [] })];
+  if ('text' in c && c.links) return c.text.length ? c.text.map((s) => new Paragraph({
+    children: parseTextLinks(s).flatMap<ParagraphChild>((part) => part.url
+      ? [new ExternalHyperlink({ link: part.url, children: proofedRuns(part.text, FONT, CELL, bold, 'Hyperlink') })]
+      : t(part.text)),
+  })) : [new Paragraph({ children: [] })];
+  if ('text' in c) return c.text.length ? c.text.map((s) => new Paragraph({ children: t(s) })) : [new Paragraph({ children: [] })];
   if ('list' in c) {
     if (!c.list.length) return [new Paragraph({ children: [] })];
-    return c.list.map(
+    if (c.numbered) {
+      const instance = ++conditionListInstance;
+      return [
+        ...(c.lead ? cellParagraphs({ text: [c.lead] }) : []),
+        ...c.list.map((s) => new Paragraph({
+          children: t(s),
+          numbering: { reference: 'conditions', level: 0, instance },
+        })),
+      ];
+    }
+    return [...(c.lead ? cellParagraphs({ text: [c.lead] }) : []), ...c.list.map(
       (s, i) =>
         new Paragraph({
-          children: [t(`${i + 1}.\t${s}`)],
+          children: t(`${i + 1}.\t${s}`),
           indent: { left: 360, hanging: 360 },
           tabStops: [{ type: 'left', position: 360 }],
         }),
-    );
+    )];
   }
   if (!c.bullets.length) return [new Paragraph({ children: [] })];
   return c.bullets.map(
     (b) =>
       new Paragraph({
-        children: [run(b.bold, { bold: true, size: CELL }), ...(b.text ? [run(` ${b.text}`, { size: CELL })] : [])],
+        children: [...run(b.bold, { bold: true, size: CELL }), ...(b.text ? run(` ${b.text}`, { size: CELL }) : [])],
         bullet: { level: 0 },
       }),
   );
@@ -67,7 +86,7 @@ function tableBlock({ head, widths, rows }: TableDef): Table {
   const headRow = new TableRow({
     tableHeader: true,
     cantSplit: true,
-    children: head.map((h, i) => mkCell([new Paragraph({ children: [run(h, { bold: true, size: CELL })] })], i)),
+    children: head.map((h, i) => mkCell([new Paragraph({ children: run(h, { bold: true, size: CELL }) })], i, { shading: { fill: HEADER_FILL } })),
   });
   const body = rows.map(
     (r) =>
@@ -93,7 +112,7 @@ function tableBlock({ head, widths, rows }: TableDef): Table {
 const gap = () => new Paragraph({ children: [], spacing: { after: 120 } });
 
 const subheading = (text: string) =>
-  new Paragraph({ children: [run(text, { size: 28, bold: true })], spacing: { before: 160, after: 100 }, keepNext: true });
+  new Paragraph({ children: run(text, { size: 28, bold: true }), spacing: { before: 160, after: 100 }, keepNext: true });
 
 function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = spec.changelog ?? []): Block[] {
   const t = STRINGS[lang];
@@ -102,7 +121,7 @@ function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['p
       ? [tableBlock(transitionsTable(parts ? parts[0].transitions : spec.transitions, lang))]
       : parts.flatMap((p): Block[] => [
           subheading(p.title),
-          ...(p.description.trim() ? [new Paragraph({ children: [run(p.description)], spacing: { after: 120 } })] : []),
+          ...(p.description.trim() ? [new Paragraph({ children: run(p.description), spacing: { after: 120 } })] : []),
           tableBlock(transitionsTable(p.transitions, lang)),
           gap(),
         ]);
@@ -122,7 +141,7 @@ export const renderDocx = (spec: ProjectSpec, _date: string, lang: SpecLang = 'r
 /** Общие таблицы сценария один раз; вкладки — только подразделы State transitions. */
 export function renderDocxScenario(doc: ScenarioDoc, name: string, lang: SpecLang = 'ru'): Promise<Blob> {
   const description = doc.spec.project.description.trim();
-  return pack([...(description ? [new Paragraph({ children: [run(description)], spacing: { after: 120 } })] : []), ...sectionBlocks(doc.spec, lang, doc.parts, doc.changelog)], name);
+  return pack([...(description ? [new Paragraph({ children: run(description), spacing: { after: 120 } })] : []), ...sectionBlocks(doc.spec, lang, doc.parts, doc.changelog)], name);
 }
 
 /** Одна таблица с заголовком: выгрузка справочника. */
@@ -131,6 +150,14 @@ export const renderTableDocx = (title: string, table: TableDef): Promise<Blob> =
 async function pack(c: Block[], name: string): Promise<Blob> {
   const doc = new Document({
     title: name,
+    numbering: { config: [{
+      reference: 'conditions',
+      levels: [{
+        level: 0, format: LevelFormat.DECIMAL, text: '%1.', start: 1,
+        alignment: AlignmentType.LEFT,
+        style: { paragraph: { indent: { left: 240, hanging: 240 } }, run: { font: FONT, size: CELL } },
+      }],
+    }] },
     styles: { default: { document: { run: { font: FONT, size: BODY }, paragraph: { alignment: AlignmentType.LEFT } } } },
     sections: [
       {

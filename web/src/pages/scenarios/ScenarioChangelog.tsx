@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TaskInput } from '@/components/TaskInput';
 import { Textarea } from '@/components/ui/textarea';
 import { SaveIndicator } from '@/components/SaveIndicator';
 import { useAutosave } from '@/hooks/useAutosave';
@@ -102,7 +103,7 @@ function Editor({ scenarioId, initial }: { scenarioId: number; initial: Changelo
       {sort.rows(rows, (row, column) => row[column as 'date' | 'task' | 'author' | 'description'] ?? '').map((r, i) => (
         <div key={r.key} className={cn(ROW, COLS, 'md:items-start')}>
           <Input type="date" className={cn(FIELD, 'min-w-0')} aria-label={`Дата, строка ${i + 1}`} value={r.date ?? ''} onChange={(e) => patch(r.key, { date: e.target.value })} />
-          <Input className={FIELD} value={r.task} aria-label={`Задача, строка ${i + 1}`} onChange={(e) => patch(r.key, { task: e.target.value })} />
+          <TaskInput className={FIELD} value={r.task} aria-label={`Задача, строка ${i + 1}`} onChange={(e) => patch(r.key, { task: e.target.value })} />
           <Input className={FIELD} value={r.author} aria-label={`Автор, строка ${i + 1}`} onChange={(e) => patch(r.key, { author: e.target.value })} />
           <Textarea
             rows={1}

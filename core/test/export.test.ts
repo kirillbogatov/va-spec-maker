@@ -48,7 +48,7 @@ describe('dependencies in export', () => {
       parts: [{ steps: [{ state: 'A', conditions: [{ dep: 'a', value: 'true' }], condition: 'ещё' }] }],
     });
     const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
-    expect(md).toContain('[Двигатель] = true<br>ещё');
+    expect(md).toContain('1. [Двигатель] = true<br>2. ещё');
   });
 });
 
@@ -83,7 +83,7 @@ describe('renderMarkdown', () => {
     expect(md).not.toContain('Уточняющий вопрос');
     expect(md).not.toContain('## Scenario entities');
     expect(md).toContain('| PRM_TEMPERATURE_SET | 1. Устанавливаю |');
-    expect(md).toContain('| ST_SEAT_HEATING | - | INT_SEAT_HEATING | Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
+    expect(md).toContain('| ST_SEAT_HEATING | - | INT_SEAT_HEATING | 1. Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
     expect(md).toContain("| DRIVER_ONLY | - | [seat position] = 'driver' | - | Включить обогрев | - |");
   });
 
@@ -110,11 +110,12 @@ describe('renderDocx', () => {
 
   it('numbers lists and renders example requests', async () => {
     const xml = await docXml(spec);
+    const visibleText = xml.replace(/<[^>]*>/g, '');
     for (const text of [
       'INT_SEAT_HEATING_SET', '1.\t[seat_position]', '2.\t[heating_level] (обязательно)',
       'Driver:', 'водитель&quot;, &quot;левый', 'DRIVER_ONLY',
     ]) {
-      expect(xml).toContain(text);
+      expect(visibleText).toContain(text);
     }
   });
 });
@@ -254,10 +255,11 @@ describe('export route', () => {
 describe('spec language', () => {
   it('translates fixed texts to English and keeps user input', () => {
     const md = renderMarkdown(spec, '2026-10-17', 'en');
-    for (const h of ['## Intents', '## Entities', '## Prompts', '## State transitions', '## Errors', 'Specification dated 2026-10-17', 'Training phrases', '(required)', 'Number', 'from 1 to 3', 'Multiple values']) {
+    for (const h of ['## Intents', '## Entities', '## Prompts', '## State transitions', '## Errors', 'Training phrases', '(required)', 'Number', 'from 1 to 3', 'Multiple values']) {
       expect(md).toContain(h);
     }
     expect(md).not.toContain('## Интенты');
+    expect(md).not.toContain('Specification dated');
     expect(md).toContain('Обогрев сиденья на 3');
     expect(md).toContain('INT_SEAT_HEATING_SET');
   });

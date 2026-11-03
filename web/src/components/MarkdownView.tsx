@@ -1,7 +1,8 @@
 import { Fragment, type ReactNode } from 'react';
+import { parseTextLinks } from '@va/core';
 
 /** Минимальный рендер того Markdown, который выдаёт экспорт: заголовки, списки, таблицы, **жирный**, _курсив_, <br>. */
-function inline(text: string): ReactNode[] {
+function formattedText(text: string): ReactNode[] {
   const out: ReactNode[] = [];
   const re = /(\*\*[^*]+\*\*|(?<!\w)_[^_]+_(?!\w)|<br>)/g;
   let last = 0;
@@ -17,6 +18,16 @@ function inline(text: string): ReactNode[] {
   }
   if (last < text.length) out.push(text.slice(last).replace(/\\\|/g, '|'));
   return out;
+}
+
+function inline(text: string): ReactNode[] {
+  return parseTextLinks(text.replace(/\\\|/g, '|')).map((part, i) => part.url
+    ? <a key={i} href={part.url} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:decoration-2">{formattedText(part.text)}</a>
+    : <Fragment key={i}>{formattedText(part.text)}</Fragment>);
+}
+
+export function MarkdownInline({ text }: { text: string }) {
+  return <>{inline(text)}</>;
 }
 
 const splitRow = (line: string) =>
@@ -63,15 +74,20 @@ export function MarkdownView({ source }: { source: string }) {
       }
       i--;
       const [head, ...body] = rows;
+      // Короткие и пустые колонки сохраняют место независимо от длины соседнего текста.
+      const promptTable = /^(промпт|prompt)$/i.test(head[0]);
+      const widths = promptTable && head.length === 3 ? [26, 40, 34]
+        : promptTable && head.length === 2 ? [30, 70] : head.map(() => 100 / head.length);
       blocks.push(
-        <div key={i} className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+        <div key={i} className="min-w-0 overflow-x-auto">
+          <table className="w-full table-fixed border-collapse text-sm" style={{ minWidth: Math.max(420, head.length * 140) }}>
+            <colgroup>{widths.map((width, j) => <col key={j} style={{ width: `${width}%` }} />)}</colgroup>
             <thead>
-              <tr>{head.map((h, j) => <th key={j} className="border bg-muted px-2 py-1.5 text-left font-medium">{inline(h)}</th>)}</tr>
+              <tr>{head.map((h, j) => <th key={j} className="border bg-muted px-2 py-1.5 text-left font-medium [overflow-wrap:anywhere]">{inline(h)}</th>)}</tr>
             </thead>
             <tbody>
               {body.map((r, j) => (
-                <tr key={j}>{r.map((c, n) => <td key={n} className="border px-2 py-1.5 align-top">{inline(c)}</td>)}</tr>
+                <tr key={j}>{r.map((c, n) => <td key={n} className="border px-2 py-1.5 align-top [overflow-wrap:anywhere]">{inline(c)}</td>)}</tr>
               ))}
             </tbody>
           </table>

@@ -6,6 +6,7 @@ import { parseL3 } from './l3/parse';
 const clean = (s = '') => s.trim().replace(/^[-–—]$/, '');
 const nameOf = (s = '') => clean(s).replace(/^\[([^\]]+)\]$/, '$1');
 const lines = (s = '') => clean(s).split('\n').map(s => s.replace(/^\s*(?:\d+[.)]|[•*-])\s*/, '').trim()).filter(Boolean);
+const conditionText = (s = '') => clean(s).split('\n').map(s => s.replace(/^\s*\d+[.)][ \t]+/, '')).join('\n');
 
 /** Reads the public specification tables; text outside supported tables is retained in the description. */
 export async function convertScenarioDocument(text: string, filename: string, opts: OpenOpts = {}) {
@@ -132,7 +133,7 @@ export async function convertScenarioDocument(text: string, filename: string, op
             if (stateHasCode) db.prepare('UPDATE scenario_states SET result_code = ? WHERE part_id = ? AND name = ?').run(code,t.part,state);
           }
         }
-        db.prepare('INSERT INTO scenario_steps(scenario_id,part_id,position,kind,state,next_states,intent_id,prompt_id,request_params,condition,system_action) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(sid,t.part,position,error ? 'error' : global ? 'global' : 'transition',global ? '' : clean(row[from]),target,iid,error ? prid : null,request.join('\n'),clean(row[at(/услов|condition/)]),error ? clean(row[at(/действие|system action|business logic/)]) : '');
+        db.prepare('INSERT INTO scenario_steps(scenario_id,part_id,position,kind,state,next_states,intent_id,prompt_id,request_params,condition,system_action) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(sid,t.part,position,error ? 'error' : global ? 'global' : 'transition',global ? '' : clean(row[from]),target,iid,error ? prid : null,request.join('\n'),conditionText(row[at(/услов|condition/)]),error ? clean(row[at(/действие|system action|business logic/)]) : '');
       }
     }
     // Attach entity references named in intent definitions.
