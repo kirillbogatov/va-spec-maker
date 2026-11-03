@@ -18,7 +18,6 @@ const files = (() => {
   }
 })();
 
-const slug = (method: string, p: string) => `${method.toLowerCase()}_${p.replace('/api/', '').replace(/\{(\w+)\}/g, '$1').replace(/\//g, '-')}.json`;
 
 interface Call { method: string; path: string; body?: unknown; status: number; error?: string }
 
@@ -106,7 +105,6 @@ describe.skipIf(!files.length)('контракт openapi/app против реа
     for (const c of calls) {
       const res = await request(app)[c.method.toLowerCase() as 'get'](c.path).send(c.body);
       expect(res.status, `${c.method} ${c.path}`).toBe(c.status);
-      const template = c.path.split('?')[0].replace(/\/\d+/g, (m) => `/{x${m}}`);
       const hit = files.find((f) => {
         const op = JSON.parse(readFileSync(path.join(PATHS, f), 'utf-8')) as Record<string, Record<string, any>>;
         const [p, ops] = Object.entries(op)[0];

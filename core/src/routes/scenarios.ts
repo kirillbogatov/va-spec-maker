@@ -57,7 +57,7 @@ export function scenariosRouter(db: Db): RouterT {
       db
         .prepare(
           `SELECT name, kind, state, intent_id, match_any_intent, request_params, condition, conditions, cond_mode, prompt_id, system_action, next_states
-           FROM scenario_steps WHERE part_id = ? ORDER BY position, id`,
+           FROM scenario_steps WHERE part_id = ? AND kind <> 'error' ORDER BY position, id`,
         )
         .all(part.id) as { conditions: string; match_any_intent: number }[]
     ).map((t) => ({ ...t, match_any_intent: !!t.match_any_intent, conditions: JSON.parse(t.conditions) as StepCondition[] }));
@@ -100,7 +100,7 @@ export function scenariosRouter(db: Db): RouterT {
       db
         .prepare(
           `SELECT s.id, s.name, s.description,
-                  (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id) AS step_count
+                  (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id AND t.kind <> 'error') AS step_count
            FROM scenarios s WHERE s.project_id = ? ORDER BY s.id`,
         )
         .all(pid),
@@ -168,9 +168,9 @@ export function scenariosRouter(db: Db): RouterT {
       validatePreconditions(db, cur.project_id, refs, preconditions);
       const precond_mode = preconditionMode(p?.precond_mode);
       const precondition = optString(p?.precondition);
-      const steps = (Array.isArray(p?.steps) ? p.steps : []).map((s: any) => ({
+      const steps = (Array.isArray(p?.steps) ? p.steps : []).filter((s: any) => s?.kind !== 'error').map((s: any) => ({
         name: optString(s?.name).trim(),
-        kind: s?.kind === 'error' || s?.kind === 'global' ? s.kind : 'transition',
+        kind: s?.kind === 'global' ? s.kind : 'transition',
         state: optString(s?.state).trim(),
         match_any_intent: matchAnyIntent(s?.match_any_intent),
         intent_id: s?.match_any_intent === true || s?.intent_id == null ? null : parseId(s.intent_id),
@@ -190,7 +190,7 @@ export function scenariosRouter(db: Db): RouterT {
       }));
       // Ответ и действие перехода живут в состоянии-назначении; в строках переходов (в том числе глобальных) их нет.
       for (const s of steps) {
-        if (s.kind !== 'error') { s.prompt_id = null; s.system_action = ''; }
+        s.prompt_id = null; s.system_action = '';
         if (s.kind === 'global') s.state = '';
       }
       const layout = cleanLayout(p?.layout);

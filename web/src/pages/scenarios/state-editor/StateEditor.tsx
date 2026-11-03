@@ -444,7 +444,6 @@ function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis
             </Button>
           )}
           <Button variant="outline" size="sm" aria-pressed={expanded} onClick={() => { setExpanded((value) => !value); setTick((value) => value + 1); }}><PanelsTopLeft className="size-4" /> {expanded ? 'Свернуть блоки' : 'Развернуть блоки'}</Button>
-          {tabs}
           <div className="ml-auto flex items-center gap-2">
             <ZoomControls />
             <Button variant="outline" size="sm" onClick={() => setWide(!wide)} aria-pressed={wide} title={wide ? 'Свернуть схему (Esc)' : 'Развернуть схему на весь экран'}>
@@ -452,6 +451,7 @@ function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis
             </Button>
           </div>
         </div>
+        {tabs && <div className="shrink-0 border-b px-2 py-1.5">{tabs}</div>}
         <div className="relative min-h-0 flex-1 bg-background">
           {placed ? <ReactFlow
             style={{ opacity: viewportReady ? 1 : 0, pointerEvents: viewportReady ? 'auto' : 'none' }}

@@ -4,7 +4,7 @@ import { openDemo } from './helpers';
 test.describe('UJ-3 Проверить и выгрузить спецификацию', () => {
   test('ED-08-02 предпросмотр содержит разделы спецификации', async ({ page }) => {
     await openDemo(page, 'scenarios/1/preview');
-    for (const h of ['Интенты', 'Сущности', 'Промпты', 'Переходы между состояниями', 'Ошибки']) {
+    for (const h of ['Интенты', 'Сущности', 'Промпты', 'Переходы между состояниями']) {
       await expect(page.getByText(h, { exact: true }).first()).toBeVisible();
     }
   });

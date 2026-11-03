@@ -60,7 +60,7 @@ describe('project duplicate / import', () => {
     expect(b).toHaveLength(a.length);
     const full = (await request(app).get(`/api/scenarios/${b[0].id}`)).body;
     expect(full.project_id).toBe(dup.id);
-    expect(full.parts[0].steps).toHaveLength(7);
+    expect(full.parts[0].steps).toHaveLength(5);
     const connected = (await request(app).get(`/api/scenarios/${b[0].id}/intents`)).body as any[];
     expect(connected.find((i) => i.name === 'INT_STOP')).toMatchObject({ is_global: true });
     expect((await request(app).get(`/api/projects/${dup.id}/intents`)).body.length).toBeGreaterThan(0);
@@ -135,7 +135,7 @@ describe('project duplicate / import', () => {
     expect((await request(app).get(`/api/scenarios/${sid}/prompts`)).body.map((p: any) => p.name)).toEqual(['PRM_OWN']);
     const intents = (await request(app).get(`/api/projects/${pid}/intents`)).body;
     expect(intents.find((i: any) => i.name === 'INT_FREE').scenarios).toEqual([]);
-    expect((await request(app).get(`/api/scenarios/${sid}`)).body.parts[0].steps.map((s: any) => s.kind)).toEqual(['transition', 'error']);
+    expect((await request(app).get(`/api/scenarios/${sid}`)).body.parts[0].steps.map((s: any) => s.kind)).toEqual(['transition']);
   });
 
   it('rejects a malformed or hostile dump', async () => {

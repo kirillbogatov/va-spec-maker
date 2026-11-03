@@ -19,7 +19,7 @@ export interface SchemeEdge {
 export interface SchemeRule { rule: string; trigger: string[]; prompt: SchemePrompt | null; action: string; targets: string[] }
 export interface SchemeInput {
   title: string; subtitle: string; date: string;
-  states: SchemeState[]; edges: SchemeEdge[]; errors: SchemeRule[]; globals: SchemeRule[];
+  states: SchemeState[]; edges: SchemeEdge[]; globals: SchemeRule[];
   /** @font-face для встраивания в файл (необязательно). */
   fontCss?: string;
 }
@@ -256,7 +256,7 @@ export async function buildSchemeSvg(input: SchemeInput, m: Measure): Promise<st
   let y = PAD;
 
   // Шапка: название, вкладка, счётчики
-  const stats = `${input.states.length} ${plural(input.states.length, 'состояние', 'состояния', 'состояний')} · ${input.edges.length} ${plural(input.edges.length, 'переход', 'перехода', 'переходов')} · ${input.errors.length} ${plural(input.errors.length, 'ошибка', 'ошибки', 'ошибок')}`;
+  const stats = `${input.states.length} ${plural(input.states.length, 'состояние', 'состояния', 'состояний')} · ${input.edges.length} ${plural(input.edges.length, 'переход', 'перехода', 'переходов')}`;
   const statsW = width(m, stats, { size: 11, fill: C.muted });
   y = block(m, lines, PAD, y, cw - statsW - 24, input.title, { size: 17, weight: 600, fill: C.fg }, 22);
   if (input.subtitle) y = block(m, lines, PAD, y + 2, cw - statsW - 24, input.subtitle, { size: 11, fill: C.muted }, 15);
@@ -308,7 +308,7 @@ export async function buildSchemeSvg(input: SchemeInput, m: Measure): Promise<st
   y += 16 + 14;
 
   const numbers = new Map(input.states.map((s) => [s.name, s.number]));
-  for (const [title, rows] of [['Ошибки сценария', input.errors], ['Глобальные переходы', input.globals]] as const) {
+  for (const [title, rows] of [['Глобальные переходы', input.globals]] as const) {
     if (!rows.length) continue;
     const t = ruleTable(m, title, rows, PAD, y, cw, numbers);
     parts.push(t.svg);

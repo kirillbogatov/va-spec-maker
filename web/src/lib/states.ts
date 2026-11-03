@@ -33,7 +33,6 @@ const hasNoConditions = (s: Step) => s.conditions.length === 0 && !s.condition.t
 /** Явный wildcard отличается от незаполненного интента и старого правила ошибок. */
 export function stepIntentLabel(step: Step, intentName: (id: number | null) => string | null, empty = 'без интента'): string {
   if (step.match_any_intent) return 'Любой интент';
-  if (step.kind === 'error' && step.intent_id === null) return 'Любой интент сценария';
   return intentName(step.intent_id) ?? empty;
 }
 
@@ -110,56 +109,4 @@ export function analyzeSteps(all: Step[], intentName: (id: number | null) => str
     stateIssues.set(name, [{ level: 'warn', text: 'Не выбран ответ ассистента' }]);
   }
   return { states, edges, unreachable, dangling: [...dangling], issues, stateIssues };
-}
-
-/** Замечания по строкам глобальных переходов; known — состояния схемы. Ключ — step.key. */
-export function globalIssues(steps: Step[], known: string[]): Map<string, StepIssue[]> {
-  const out = new Map<string, StepIssue[]>();
-  for (const s of steps) {
-    if (s.kind !== 'global' || !s.key) continue;
-    const list: StepIssue[] = [];
-    if (s.intent_id === null && !s.match_any_intent) list.push({ level: 'error', text: 'Не выбран интент' });
-    const targets = splitNext(s.next_states);
-    if (targets.length === 0) list.push({ level: 'warn', text: 'Не указано следующее состояние' });
-    for (const t of targets) if (!TERMINAL.test(t) && !known.includes(t)) list.push({ level: 'warn', text: `Состояния «${t}» нет в схеме` });
-    if (list.length) out.set(s.key, list);
-  }
-  return out;
-}
-
-export interface Placed { name: string; x: number; y: number; layer: number }
-
-/** Слоистая раскладка: слой = расстояние от входа (BFS); недостижимые идут отдельными корнями. */
-export function layoutGraph(states: string[], edges: GraphEdge[], colW = 240, rowH = 76): { nodes: Placed[]; width: number; height: number } {
-  const all = [...states];
-  for (const e of edges) if (!all.includes(e.to)) all.push(e.to);
-  const out = new Map<string, string[]>();
-  for (const e of edges) out.set(e.from, [...(out.get(e.from) ?? []), e.to]);
-  const layer = new Map<string, number>();
-  const roots = all.filter((s, i) => i === 0 || !edges.some((e) => e.to === s));
-  for (const r of roots) {
-    if (layer.has(r)) continue;
-    layer.set(r, 0);
-    const queue = [r];
-    while (queue.length) {
-      const cur = queue.shift()!;
-      for (const n of out.get(cur) ?? []) {
-        if (!layer.has(n)) {
-          layer.set(n, layer.get(cur)! + 1);
-          queue.push(n);
-        }
-      }
-    }
-  }
-  for (const s of all) if (!layer.has(s)) layer.set(s, 0); // цикл без входа
-  const perLayer = new Map<number, number>();
-  const nodes = all.map((name) => {
-    const l = layer.get(name)!;
-    const row = perLayer.get(l) ?? 0;
-    perLayer.set(l, row + 1);
-    return { name, layer: l, x: 20 + l * colW, y: 20 + row * rowH };
-  });
-  const maxLayer = Math.max(0, ...layer.values());
-  const maxRows = Math.max(1, ...perLayer.values());
-  return { nodes, width: 40 + maxLayer * colW + 200, height: 40 + (maxRows - 1) * rowH + 44 };
 }

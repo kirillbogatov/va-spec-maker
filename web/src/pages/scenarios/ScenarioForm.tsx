@@ -1,3 +1,5 @@
+import { applyDependencyRecord, type ValueRename } from '@/lib/dependencyEdits';
+import type { DictionaryDependency } from '@/lib/types';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,7 +25,6 @@ import { ScenarioHistory } from './ScenarioHistory';
 import { ScenarioIntents } from './ScenarioIntents';
 import { ScenarioPrompts } from './ScenarioPrompts';
 import { analyzeSteps } from '@/lib/states';
-import { StepsTable } from './StepsTable';
 import { Card } from './Card';
 import { ScenarioPreview } from './ScenarioPreview';
 import { canonicalOrder, normalizeEntry, splitLegacySteps } from '@/lib/fsm';
@@ -31,14 +32,13 @@ import { StateEditor } from './state-editor/StateEditor';
 import { PartPanel, PartTabs } from './PartTabs';
 import { duplicatePart } from './duplicatePart';
 
-export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'errors' | 'history' | 'preview';
+export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'history' | 'preview';
 
 const TABS: { id: ScenarioTab; label: string }[] = [
   { id: 'general', label: 'Общая информация' },
   { id: 'intents', label: 'Интенты' },
   { id: 'prompts', label: 'Промпты' },
   { id: 'logic', label: 'Логика' },
-  { id: 'errors', label: 'Ошибки' },
   { id: 'history', label: 'История изменений' },
   { id: 'preview', label: 'Предпросмотр' },
 ];
@@ -124,7 +124,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     () => draft.parts.map((p) => analyzeSteps(p.steps, intentName, p.layout)),
     [draft.parts, intents],
   );
-  const analysis = analyses[draft.parts.indexOf(part)];
   const transitions = useMemo(() => part.steps.filter((s) => s.kind === 'transition'), [part.steps]);
   const fsm = useMemo(
     () => analyzeSteps(transitions, intentName, part.layout),
@@ -134,12 +133,10 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     intents: ownIntents.length,
     prompts: ownPrompts.length,
     logic: allSteps.filter((s) => s.kind === 'transition').length,
-    errors: allSteps.filter((s) => s.kind === 'error').length,
   };
   const hasIssueErrors = (kind: Step['kind']) =>
     draft.parts.some((p, i) => p.steps.some((s) => s.kind === kind && analyses[i].issues.get(s.key!)?.some((x) => x.level === 'error')));
   const logicHasErrors = hasIssueErrors('transition');
-  const errorsHaveErrors = hasIssueErrors('error');
 
   const saveDraft = async (d: Draft) => {
     if (!d.name.trim()) return;
@@ -195,6 +192,16 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     }
   };
 
+  const onDictionarySaved = (record: DictionaryDependency, previousName: string, renames: ValueRename[]) => {
+    const clean = draftRef.current === savedDraft.current;
+    baseline.current = applyDependencyRecord(baseline.current, record, previousName, renames);
+    const next = applyDependencyRecord(draftRef.current, record, previousName, renames);
+    savedDraft.current = clean ? next : applyDependencyRecord(savedDraft.current, record, previousName, renames);
+    draftRef.current = next;
+    setDraft(next);
+    if (clean) setResetKey((key) => key + 1);
+  };
+
   const setDependencies = (update: (deps: Dependency[]) => Dependency[]) =>
     setDraft((d) => {
       const dependencies = update(d.dependencies);
@@ -204,11 +211,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
   const updatePart = (key: string, update: (p: ScenarioPart) => ScenarioPart) =>
     setDraft((d) => ({ ...d, parts: d.parts.map((p) => (p.key === key ? update(p) : p)) }));
 
-  const stepsOf = (kind: Step['kind']) => part.steps.filter((s) => s.kind === kind);
-  // Каждый вид строк правится отдельно и не должен терять остальные
-  const setKind = (kind: Step['kind'], rows: Step[]) =>
-    updatePart(part.key!, (p) => ({ ...p, steps: [...p.steps.filter((s) => s.kind !== kind), ...rows] }));
-  const setErrors = (rows: Step[]) => setKind('error', rows);
   const setTransitions = (rows: Step[], layout?: Layout) =>
     updatePart(part.key!, (p) => ({ ...p, layout: layout ?? p.layout, steps: [...rows, ...p.steps.filter((s) => s.kind !== 'transition')] }));
 
@@ -326,7 +328,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
                   <span className="rounded-full bg-muted px-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{counts[t.id]}</span>
                 )}
                 {t.id === 'logic' && logicHasErrors && <span className="size-2 rounded-full bg-destructive" title="Есть ошибки в таблицах" />}
-                {t.id === 'errors' && errorsHaveErrors && <span className="size-2 rounded-full bg-destructive" title="Есть ошибки в таблице" />}
               </Link>
             ))}
           </div>
@@ -338,7 +339,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
             <Card title="Описание">
               <Textarea id={`scenario-description-${scenario.id}`} rows={1} className="resize-y rounded-md bg-background" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             </Card>
-            <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} />
+            <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} onDictionarySaved={onDictionarySaved} />
           </div>
         </div>
       )}
@@ -393,25 +394,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
                 onRemove={() => setConfirmPart({ key: part.key!, name: part.name })}
               />
             }
-          />
-        </div>
-      )}
-      {tab === 'errors' && (
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-8">
-          <PartTabs parts={draft.parts} activeKey={part.key!} onSelect={setActiveKey} />
-          <StepsTable
-            key={`errors-${part.key}`}
-            kind="error"
-            title="Ошибки"
-            steps={stepsOf('error')}
-            intents={intents}
-            prompts={prompts}
-            dependencies={draft.dependencies}
-            entities={entities}
-            allStates={analysis.states}
-            issues={analysis.issues}
-            layout={part.layout}
-            onChange={setErrors}
           />
         </div>
       )}

@@ -83,7 +83,7 @@ describe('scenario history', () => {
 
 describe('concept conditions', () => {
   it('are stored and checked against the project', async () => {
-    const { app, db, pid, sid, save } = await setup();
+    const { app, db, pid, save } = await setup();
     const k = (await request(app).post(`/api/projects/${pid}/keywords`).send({ name: 'SET' })).body.id as number;
     const cond = { dep: '', keyword_id: k, op: '!=', value: 'junk' };
     const ok = await save({ parts: [{ name: 'S', steps: [row('A', 'B', { conditions: [cond] })] }] });

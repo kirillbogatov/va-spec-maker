@@ -1,3 +1,4 @@
+import { groupConditions } from './conditions';
 import type { Db } from '../sqlite';
 import { orderTransitionRows } from './state-order';
 import { notFound } from '../errors';
@@ -45,9 +46,6 @@ export interface ProjectSpec {
   prompts: { name: string; full_answers: string[] }[];
   dependencies: { scenario: string; name: string; type: string; values: string[]; description?: string }[];
   transitions: TransitionRow[];
-  errors: TransitionRow[];
-  /** Переходы глобальных интентов (из любого состояния). */
-  globals?: TransitionRow[];
 }
 
 /** Часть (вкладка) сценария: в документе — подраздел только в State transitions. */
@@ -59,7 +57,6 @@ export interface SpecPart {
   title: string;
   description: string;
   transitions: TransitionRow[];
-  globals: TransitionRow[];
 }
 
 /** Документ сценария: общие таблицы целиком, переходы — по вкладкам. */
@@ -71,7 +68,7 @@ export interface ScenarioDoc {
 }
 
 /**
- * Спецификация сценария: интенты, сущности, промпты и ошибки — общие для всех вкладок,
+ * Спецификация сценария: интенты, сущности и промпты — общие для всех вкладок,
  * разбиение по вкладкам и их предусловия выводятся перед таблицами переходов.
  */
 export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru'): ScenarioDoc {
@@ -89,7 +86,7 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
   // Сущности сценария — те, что указаны у его интентов (вкладка «Интенты»)
   const entityIds = new Set<number>();
   for (const row of db.prepare('SELECT entity_id FROM scenario_entities WHERE scenario_id = ? UNION SELECT entity_id FROM scenario_dependencies WHERE scenario_id = ? AND entity_id IS NOT NULL').all(scenarioId, scenarioId) as { entity_id: number }[]) entityIds.add(row.entity_id);
-  for (const row of db.prepare('SELECT conditions FROM scenario_steps WHERE scenario_id = ?').all(scenarioId) as { conditions: string }[]) {
+  for (const row of db.prepare("SELECT conditions FROM scenario_steps WHERE scenario_id = ? AND kind <> 'error'").all(scenarioId) as { conditions: string }[]) {
     for (const condition of JSON.parse(row.conditions) as { entity_id?: number }[]) if (condition.entity_id !== undefined) entityIds.add(condition.entity_id);
   }
   // Сущности, используемые только в предусловиях вкладок, тоже входят в документ.
@@ -119,9 +116,9 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
     parts: parts.map((part) => {
       const ps = buildSpec(db, projectId, project, lang, { scenarioId, partId: part.id, intentIds, promptIds, entityIds });
       return { title: part.name, description: part.description,
-        preconditions: formatPartPreconditions(db, projectId, scenarioId, part.preconditions ?? '[]', lang),
+        preconditions: formatPartPreconditions(db, projectId, scenarioId, part.preconditions ?? '[]', lang, part.precond_mode),
         precondition: part.precondition ?? '', precond_mode: part.precond_mode ?? 'all',
-        transitions: ps.transitions, globals: ps.globals ?? [] };
+        transitions: ps.transitions };
     }),
   };
 }
@@ -238,14 +235,14 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
   type Raw = TransitionRow & { kind: string; conditions: string; cond_mode: string; part_id: number | null };
   const rows = db
     .prepare(
-      `SELECT t.part_id, t.kind, t.state, CASE WHEN t.match_any_intent = 1 THEN ? WHEN t.kind = 'error' AND t.intent_id IS NULL THEN ? ELSE i.name END AS intent, t.request_params, t.condition, t.conditions, t.cond_mode, p.name AS prompt, t.system_action, t.next_states
+      `SELECT t.part_id, t.kind, t.state, CASE WHEN t.match_any_intent = 1 THEN ? ELSE i.name END AS intent, t.request_params, t.condition, t.conditions, t.cond_mode, p.name AS prompt, t.system_action, t.next_states
        FROM scenario_steps t
        JOIN scenarios s ON s.id = t.scenario_id
        LEFT JOIN intents i ON i.id = t.intent_id
        LEFT JOIN prompts p ON p.id = t.prompt_id
-       WHERE s.project_id = ? AND (? IS NULL OR t.scenario_id = ?) AND (? IS NULL OR t.part_id = ?) ORDER BY s.id, t.part_id, t.position, t.id`,
+       WHERE s.project_id = ? AND t.kind <> 'error' AND (? IS NULL OR t.scenario_id = ?) AND (? IS NULL OR t.part_id = ?) ORDER BY s.id, t.part_id, t.position, t.id`,
     )
-    .all(STRINGS[lang].anyIntent, STRINGS[lang].anyScenarioIntent, projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
+    .all(STRINGS[lang].anyIntent, projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
   const entityName = new Map((db.prepare('SELECT id, name FROM entities WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((e) => [e.id, e.name]));
   const keywordName = new Map((db.prepare('SELECT id, name FROM keywords WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((k) => [k.id, k.name]));
   const strip = ({ kind, conditions, cond_mode, part_id, ...row }: Raw): TransitionRow => {
@@ -253,9 +250,8 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
       .map((c) => ({ ...c, label: c.keyword_id !== undefined ? keywordName.get(c.keyword_id) : c.entity_id !== undefined ? entityName.get(c.entity_id) : depLabel.get(c.dep) }))
       .filter((c) => c.label !== undefined)
       .map((c) => (c.keyword_id !== undefined ? `${STRINGS[lang][c.op === '!=' ? 'conceptAbsent' : 'conceptPresent']}: ${c.label}` : `[${c.label}] ${c.op || '='} ${c.value}`));
-    const all = [...pairs, ...row.condition.split('\n').map((l) => l.trim())].filter(Boolean);
+    const all = groupConditions([...pairs, ...row.condition.split('\n').map((l) => l.trim())].filter(Boolean), cond_mode);
     const out = { ...row, condition: [...(cond_mode === 'any' && all.length > 1 ? [STRINGS[lang].anyOf] : []), ...all].join('\n') };
-    if (kind === 'error') return out;
     const targets = row.next_states.split(/[\s,;|]+|->|→/).map((x) => x.trim()).filter(Boolean).map((t) => stateInfo.get(`${part_id}|${t}`));
     const uniq = (xs: (string | null | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x && !!x.trim()))].join('\n');
     return { ...out, prompt: uniq(targets.map((t) => t?.prompt)) || null, system_action: uniq(targets.map((t) => t?.system_action)) };
@@ -268,19 +264,17 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
     prompts,
     dependencies,
     transitions: orderTransitionRows(db, projectId, rows.filter((r) => r.kind === 'transition')).map(strip),
-    errors: rows.filter((r) => r.kind === 'error').map(strip),
-    globals: rows.filter((r) => r.kind === 'global' && r.intent !== null).map(strip),
   };
 }
 
 /** Те же подписи структурных условий, что в строках переходов, но область — вкладка. */
-function formatPartPreconditions(db: Db, projectId: number, scenarioId: number, raw: string, lang: SpecLang): string[] {
+function formatPartPreconditions(db: Db, projectId: number, scenarioId: number, raw: string, lang: SpecLang, mode?: string): string[] {
   const entities = new Map((db.prepare('SELECT id, name FROM entities WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((row) => [row.id, row.name]));
   const concepts = new Map((db.prepare('SELECT id, name FROM keywords WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((row) => [row.id, row.name]));
   const dependencies = new Map((db.prepare('SELECT d.ref, COALESCE(e.name, d.name) AS name FROM scenario_dependencies d LEFT JOIN entities e ON e.id = d.entity_id WHERE d.scenario_id = ?').all(scenarioId) as { ref: string; name: string }[]).map((row) => [row.ref, row.name]));
-  return (JSON.parse(raw) as { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: string }[]).map((c) => {
+  return groupConditions((JSON.parse(raw) as { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: string }[]).map((c) => {
     const label = c.keyword_id !== undefined ? concepts.get(c.keyword_id) : c.entity_id !== undefined ? entities.get(c.entity_id) : dependencies.get(c.dep);
     if (label === undefined) return '';
     return c.keyword_id !== undefined ? `${STRINGS[lang][c.op === '!=' ? 'conceptAbsent' : 'conceptPresent']}: ${label}` : `[${label}] ${c.op || '='} ${c.value}`;
-  }).filter(Boolean);
+  }).filter(Boolean), mode);
 }

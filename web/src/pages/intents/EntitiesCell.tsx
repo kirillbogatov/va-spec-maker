@@ -1,3 +1,4 @@
+import { entityHint } from '@/lib/optionHints';
 import { Plus, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TypeToken } from '@/components/TypeToken';
@@ -12,7 +13,7 @@ interface Props {
 /** Сущности интента: жетон сущности, переключатель «обязательна / необязательна» и выбор следующей из справочника. */
 export function EntitiesCell({ value, entities, onChange }: Props) {
   const name = (id: number) => entities.find((e) => e.id === id)?.name ?? `#${id}`;
-  const options = entities.filter((e) => !value.some((v) => v.entity_id === e.id)).map((e) => ({ value: String(e.id), label: e.name }));
+  const options = entities.filter((e) => !value.some((v) => v.entity_id === e.id)).map((e) => ({ value: String(e.id), label: e.name, hint: entityHint(e) }));
 
   return (
     <div className="space-y-2">
@@ -52,7 +53,7 @@ export function EntitiesCell({ value, entities, onChange }: Props) {
           </SelectTrigger>
           <SelectContent>
             {options.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
+              <SelectItem key={o.value} value={o.value} hint={o.hint}>
                 <span className="font-mono text-[13px]">{o.label}</span>
               </SelectItem>
             ))}

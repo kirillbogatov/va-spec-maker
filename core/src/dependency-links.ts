@@ -54,46 +54,28 @@ export function backfillDependencyLinks(db: Db, projectId?: number) {
     const dictionaryId = existing?.id ?? db.prepare('INSERT INTO dependency_dictionary(project_id,name,description,"values") VALUES (?,?,?,?)').run(d.project_id, d.name, d.description, JSON.stringify(values)).lastInsertRowid;
     const type = d.type === 'bool' && JSON.stringify(values) === '["true","false"]' ? 'bool' : values.length ? 'enum' : 'string';
     db.prepare('UPDATE scenario_dependencies SET dictionary_id = ?, editable = ?, description = ?, type = ?, options = ? WHERE id = ?')
-      .run(dictionaryId, existing ? 0 : 1, existing?.description ?? d.description, type, JSON.stringify(type === 'bool' ? [] : values), d.id);
+      .run(dictionaryId, 0, existing?.description ?? d.description, type, JSON.stringify(type === 'bool' ? [] : values), d.id);
   }
 }
 
-/** Вызывается внутри транзакции сохранения сценария. Право редактирования берётся из сохранённой связи. */
+/** Сохранение сценария меняет связи, а не общие записи: их редактирует отдельный редактор. */
 export function syncScenarioDependencies(db: Db, projectId: number, dependencies: Dependency[], previous: Dependency[]) {
   for (const d of dependencies) {
-    if (d.entity_id !== null || !d.name.trim()) { d.dictionary_id = null; d.editable = true; continue; }
+    d.editable = false; // Поле оставлено для чтения старых дампов; прежнего права записи больше нет.
+    if (d.entity_id !== null || !d.name.trim()) { d.dictionary_id = null; continue; }
     const old = previous.find((p) => p.ref === d.ref);
-    const requestedId = d.dictionary_id ?? (old?.editable || old?.name === d.name ? old?.dictionary_id : null);
+    const requestedId = d.dictionary_id ?? old?.dictionary_id ?? null;
     let record = requestedId == null
       ? db.prepare('SELECT id, name, description, "values" FROM dependency_dictionary WHERE project_id = ? AND name = ?').get(projectId, d.name) as DictionaryRow | undefined
       : db.prepare('SELECT id, name, description, "values" FROM dependency_dictionary WHERE project_id = ? AND id = ?').get(projectId, requestedId) as DictionaryRow | undefined;
     if (requestedId != null && !record) throw badRequest('Зависимость не найдена в справочнике проекта');
-    if (record) {
-      d.editable = old?.dictionary_id === record.id && !!old.editable;
-      if (d.editable) {
-        const values = [...new Set(d.type === 'bool' ? ['true', 'false'] : d.options)];
-        db.prepare('UPDATE dependency_dictionary SET name = ?, description = ?, "values" = ? WHERE id = ?').run(d.name, d.description, JSON.stringify(values), record.id);
-        updateDependencyCopies(db, record.id, d.name, values, d.description);
-        d.options = d.type === 'bool' ? [] : values;
-      } else {
-        d.name = record.name;
-        d.description = record.description;
-        d.options = JSON.parse(record.values) as string[];
-        d.type = d.options.length ? 'enum' : 'string';
-      }
-      d.dictionary_id = record.id;
-    } else {
+    if (!record) {
       const values = [...new Set(d.type === 'bool' ? ['true', 'false'] : d.options)];
       const result = db.prepare('INSERT INTO dependency_dictionary(project_id,name,description,"values") VALUES (?,?,?,?)').run(projectId, d.name, d.description, JSON.stringify(values));
-      d.dictionary_id = result.lastInsertRowid;
-      d.editable = true;
+      record = { id: Number(result.lastInsertRowid), name: d.name, description: d.description, values: JSON.stringify(values) };
     }
-  }
-  // Несколько строк одного сценария тоже должны получить окончательную версию справочника.
-  for (const d of dependencies) {
-    if (d.dictionary_id === null) continue;
-    const record = db.prepare('SELECT name, description, "values" FROM dependency_dictionary WHERE id = ?').get(d.dictionary_id) as DictionaryRow;
     const values = JSON.parse(record.values) as string[];
+    d.dictionary_id = record.id;
     d.name = record.name;
     d.description = record.description;
     d.type = d.type === 'bool' && JSON.stringify(values) === '["true","false"]' ? 'bool' : values.length ? 'enum' : 'string';

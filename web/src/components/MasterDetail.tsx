@@ -232,7 +232,6 @@ export function ListItem({ to, children, count, dim, meta, warn }: ListItemProps
 }
 
 export const listEmpty = 'px-4 py-3 text-sm text-muted-foreground';
-export const listSearch = 'bg-muted placeholder:text-muted-foreground';
 
 /** Поиск по названию и дополнительным значениям в одном поле. */
 export function useListFilter<T extends { name: string }>(items: T[], where: string, searchValues?: (item: T) => string[]) {

@@ -51,21 +51,25 @@ describe('связь внешних зависимостей со справоч
     expect((await call('GET', `/api/dependency-dictionary/${dictionary.id}`)).body.values).toEqual(['Renamed', 'B']);
   });
 
-  it('создаёт запись из сценария, сохраняет право редактирования и передаёт правки подключённым сценариям', async () => {
-    const { call, pid, scenario, save } = await setup();
+  it('создаёт запись из сценария и изменяет общие данные только через редактор справочника', async () => {
+    const { db, call, pid, scenario, save } = await setup();
     const owner = await scenario('Owner');
     const first = await save(owner, [{ ref: 'local', name: 'DEP_LOCAL', type: 'enum', options: ['A', 'B'], description: 'Описание' }]);
     const dependency = first.dependencies[0];
-    expect(dependency).toMatchObject({ editable: true, dictionary_id: expect.any(Number) });
+    expect(dependency).toMatchObject({ editable: false, dictionary_id: expect.any(Number) });
     expect((await call('GET', `/api/projects/${pid}/dependency-dictionary`)).body).toHaveLength(1);
     const other = await scenario('Other');
     const connected = await save(other, [{ ...dependency, ref: 'linked', editable: true, options: ['forged'], description: 'forged' }]);
     expect(connected.dependencies[0]).toMatchObject({ editable: false, options: ['A', 'B'], description: 'Описание' });
     const updated = await save(owner, [{ ...dependency, name: 'DEP_RENAMED', options: ['C'], description: 'Новое' }]);
-    expect(updated.dependencies[0]).toMatchObject({ editable: true, dictionary_id: dependency.dictionary_id });
+    expect(updated.dependencies[0]).toMatchObject({ editable: false, dictionary_id: dependency.dictionary_id, name: 'DEP_LOCAL', options: ['A', 'B'], description: 'Описание' });
+    await call('PUT', `/api/dependency-dictionary/${dependency.dictionary_id}`, { name: 'DEP_RENAMED', values: ['C'], description: 'Новое' });
     const dictionary = (await call('GET', `/api/dependency-dictionary/${dependency.dictionary_id}`)).body;
     expect(dictionary).toMatchObject({ name: 'DEP_RENAMED', values: ['C'], description: 'Новое' });
     expect(dictionary.used_by).toHaveLength(2);
+    db.prepare('UPDATE scenario_dependencies SET editable = 1 WHERE scenario_id = ?').run(owner);
+    await save(owner, [{ ...dependency, options: ['stale'], description: 'stale' }]);
+    expect((await call('GET', `/api/dependency-dictionary/${dependency.dictionary_id}`)).body).toMatchObject({ name: 'DEP_RENAMED', values: ['C'], description: 'Новое' });
     const inherited = (await call('GET', `/api/scenarios/${other}`)).body.dependencies[0];
     expect(inherited).toMatchObject({ editable: false, name: 'DEP_RENAMED', options: ['C'], description: 'Новое' });
     await save(other, [{ ...inherited, editable: true, options: ['forged'], description: 'forged' }]);
@@ -94,7 +98,7 @@ describe('связь внешних зависимостей со справоч
     await save(sid, [{ ...d, name: 'DEP_B', options: ['B'] }]);
     const records = (await call('GET', `/api/projects/${pid}/dependency-dictionary`)).body;
     expect(records).toHaveLength(1);
-    expect(records[0]).toMatchObject({ name: 'DEP_B', values: ['B'] });
+    expect(records[0]).toMatchObject({ name: 'DEP_A', values: ['A'] });
   });
 
   it('проверяет принадлежность справочника проекту и откатывает изменения при ошибке', async () => {
@@ -119,11 +123,24 @@ describe('связь внешних зависимостей со справоч
     const copySid = (await call('GET', `/api/projects/${copy}/scenarios`)).body[0].id;
     const copyDependency = (await call('GET', `/api/scenarios/${copySid}`)).body.dependencies[0];
     expect(copyDependency.dictionary_id).not.toBe(d.dictionary_id);
-    expect(copyDependency.editable).toBe(true);
+    expect(copyDependency.editable).toBe(false);
     db.exec('ALTER TABLE scenario_dependencies DROP COLUMN dictionary_id');
     db.exec('ALTER TABLE scenario_dependencies DROP COLUMN editable');
     const reopened = await openDb({ data: db.serialize() });
     const legacy = reopened.prepare('SELECT dictionary_id, editable FROM scenario_dependencies WHERE scenario_id = ?').get(sid);
     expect(legacy).toEqual({ dictionary_id: d.dictionary_id, editable: 0 });
   });
+});
+
+
+it('creates a dependency with its description and values in one request', async () => {
+  const { call, pid, scenario, save } = await setup();
+  const response = await call('POST', `/api/projects/${pid}/dependency-dictionary`, {
+    name: 'DEP_COMPLETE', description: 'Полное описание', values: [' A ', 'B', 'A', ''],
+  });
+  expect(response.status).toBe(201);
+  expect(response.body).toMatchObject({ name: 'DEP_COMPLETE', description: 'Полное описание', values: ['A', 'B'], used_by: [] });
+  const sid = await scenario('Connected');
+  const connected = await save(sid, [{ ref: 'complete', dictionary_id: response.body.id, name: 'DEP_COMPLETE' }]);
+  expect(connected.dependencies[0]).toMatchObject({ description: 'Полное описание', options: ['A', 'B'] });
 });

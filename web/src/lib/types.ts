@@ -67,14 +67,14 @@ export type ConditionOp = '=' | '!=' | '<' | '>';
 /** Условие по ключевому слову (keyword_id): «=» — ключевое слово есть в запросе, «!=» — его нет; значение пустое. */
 export interface StepCondition { dep: string; value: string; entity_id?: number; keyword_id?: number; op?: ConditionOp }
 /**
- * Строка Transition table (kind = transition), Errors (kind = error) или переход глобального интента
- * из любого состояния (kind = global, state пуст). У ошибки без интента — «по любому интенту».
+ * Переход состояния (kind = transition) или глобального интента
+ * из любого состояния (kind = global, state пуст).
  */
 export interface Step {
   key?: string;
-  /** Название правила (у ошибок и глобальных переходов). */
+  /** Название правила глобального перехода. */
   name?: string;
-  kind: 'transition' | 'error' | 'global';
+  kind: 'transition' | 'global';
   state: string;
   intent_id: number | null;
   /** Переход по любому интенту; отличается от незаполненного intent_id. */

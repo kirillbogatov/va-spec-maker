@@ -40,8 +40,10 @@ export function dependencyDictionaryRouter(db: Db): RouterT {
     const pid = parseId(req.params.pid);
     const name = requireString(req.body?.name, 'Название');
     if (!db.prepare('SELECT 1 FROM projects WHERE id = ?').get(pid)) throw notFound('Проект');
-    const info = db.prepare('INSERT INTO dependency_dictionary(project_id, name) VALUES (?, ?)').run(pid, name);
-    res.status(201).json({ id: Number(info.lastInsertRowid), name, description: '', values: [] });
+    const description = optString(req.body?.description);
+    const values = cleanValues(req.body?.values);
+    const info = db.prepare('INSERT INTO dependency_dictionary(project_id, name, description, \"values\") VALUES (?, ?, ?, ?)').run(pid, name, description, JSON.stringify(values));
+    res.status(201).json(load(Number(info.lastInsertRowid)));
   });
 
   r.get('/dependency-dictionary/:id', (req, res) => {

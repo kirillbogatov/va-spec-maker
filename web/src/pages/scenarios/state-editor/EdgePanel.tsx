@@ -7,7 +7,7 @@ import { cn, FIELD } from '@/lib/utils';
 import { splitNext, type StepIssue } from '@/lib/states';
 import type { Dependency, EntityListItem, IntentListItem, Step } from '@/lib/types';
 import { ConditionsCell } from '../ConditionsCell';
-import { DialogLabel, IntentSelect } from '../StepsTable';
+import { DialogLabel, IntentSelect } from '../ScenarioSelects';
 import { PanelHeader, PanelRoot, PanelSection } from './PanelParts';
 import { planConditionStates } from './conditionStates';
 
@@ -36,9 +36,8 @@ function StateSelect({ value, states, descriptions, label, onChange }: { value: 
       <SelectTrigger className={cn(FIELD, 'w-full font-mono text-[13px]')} aria-label={label}><SelectValue /></SelectTrigger>
       <SelectContent>
         {items.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
+          <SelectItem key={o.value} value={o.value} hint={descriptions[o.value]}>
             {o.label}
-            {descriptions[o.value] && <span className="max-w-64 truncate font-sans text-xs text-muted-foreground">{descriptions[o.value]}</span>}
           </SelectItem>
         ))}
       </SelectContent>

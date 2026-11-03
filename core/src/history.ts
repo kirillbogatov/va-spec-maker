@@ -204,7 +204,7 @@ export function logScenarioChanges(db: Db, scenarioId: number, before: ScenarioS
       const old = rowsBefore.get(r.sig);
       if (old && old.content === r.content) continue;
       const verb = old ? changed : added;
-      const kindName = s.kind === 'transition' ? { add: 'Добавлен переход', mod: 'Изменён переход' } : s.kind === 'error' ? { add: 'Добавлена ошибка', mod: 'Изменена ошибка' } : { add: 'Добавлен глобальный переход', mod: 'Изменён глобальный переход' };
+      const kindName = s.kind === 'transition' ? { add: 'Добавлен переход', mod: 'Изменён переход' } : { add: 'Добавлен глобальный переход', mod: 'Изменён глобальный переход' };
       const title = kindName[old ? 'mod' : 'add'] + (s.match_any_intent ? ' (Любой интент)' : old?.step.match_any_intent ? ' (отключён «Любой интент»)' : '');
       const intents = intentRef(s.intent_id);
       if (s.kind === 'transition') {
@@ -213,9 +213,6 @@ export function logScenarioChanges(db: Db, scenarioId: number, before: ScenarioS
         const next = s.next_states.trim();
         const text = `${title} ${from ? '{0}' : '—'} → ${next ? q(next) : '—'}${intents.length ? ` по интенту {${from ? 1 : 0}}` : ''}`;
         log(verb(id, text, refs));
-      } else if (s.kind === 'error') {
-        const label = s.name.trim() || (s.state.trim() ? `в состоянии ${s.state.trim()}` : 'без названия');
-        log(verb(id, `${title} {0}`, [{ type: 'error', name: label, part: where }]));
       } else {
         const label = s.name.trim() || intents[0]?.name || 'без названия';
         log(verb(id, `${title} {0}`, [{ type: 'part', name: label, part: where }]));
@@ -225,7 +222,7 @@ export function logScenarioChanges(db: Db, scenarioId: number, before: ScenarioS
       if (seen.has(sig)) continue;
       const s = r.step;
       const label = s.kind === 'transition' ? `${s.state.trim() || '—'} → ${s.next_states.trim() || '—'}` : s.name.trim() || s.state.trim() || intentName(s.intent_id) || 'без названия';
-      const title = s.kind === 'transition' ? 'Удалён переход' : s.kind === 'error' ? 'Удалена ошибка' : 'Удалён глобальный переход';
+      const title = s.kind === 'transition' ? 'Удалён переход' : 'Удалён глобальный переход';
       log(removed(`step:${inPart}${sig}`, `${title} ${q(label)}`));
     }
   }

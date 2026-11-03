@@ -34,7 +34,6 @@ const spec: ProjectSpec = {
   ],
   dependencies: [{ scenario: 'Обогрев', name: 'seat_position', type: 'enum', values: ['Driver', 'All'] }],
   transitions: [row],
-  errors: [{ ...row, state: 'DRIVER_ONLY', intent: null, request_params: "[seat position] = 'driver'", condition: '', prompt: null }],
 };
 
 describe('dependencies in export', () => {
@@ -56,7 +55,7 @@ describe('renderMarkdown', () => {
   const md = renderMarkdown(spec, '2026-10-17');
 
   it('renders the sections in the L3 order', () => {
-    const order = ['## Интенты', '## Сущности', '## Промпты', '## Переходы между состояниями', '## Ошибки'].map((h) => md.indexOf(h));
+    const order = ['## Интенты', '## Сущности', '## Промпты', '## Переходы между состояниями'].map((h) => md.indexOf(h));
     expect(order.every((n) => n >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
@@ -78,13 +77,13 @@ describe('renderMarkdown', () => {
   });
 
   it('renders entities, prompts, transitions and errors', () => {
-    expect(md).toContain('| [seat_position] | Строка | • **Driver:** "водитель", "левый"<br>• **All** | да |');
-    expect(md).toContain('| [heating_level] | Число<br>от 1 до 3 | - | нет |');
+    expect(md).toContain('| seat_position | Строка | 1. **Driver:** "водитель", "левый"<br>2. **All** | да |');
+    expect(md).toContain('| heating_level | Число<br>от 1 до 3 | - | нет |');
     expect(md).not.toContain('Уточняющий вопрос');
     expect(md).not.toContain('## Scenario entities');
     expect(md).toContain('| PRM_TEMPERATURE_SET | 1. Устанавливаю |');
     expect(md).toContain('| ST_SEAT_HEATING | - | INT_SEAT_HEATING | 1. Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
-    expect(md).toContain("| DRIVER_ONLY | - | [seat position] = 'driver' | - | Включить обогрев | - |");
+    expect(md).not.toContain('DRIVER_ONLY');
   });
 
   it('escapes pipes in table cells', () => {
@@ -101,11 +100,11 @@ describe('renderDocx', () => {
 
   it('produces the L3 tables (plus dependencies) in order on a landscape page', async () => {
     const xml = await docXml(spec);
-    const pos = ['>Интенты<', '>Сущности<', '>Промпты<', '>Переходы между состояниями<', '>Ошибки<'].map((h) => xml.indexOf(h));
+    const pos = ['>Интенты<', '>Сущности<', '>Промпты<', '>Переходы между состояниями<'].map((h) => xml.indexOf(h));
     expect(pos.every((n) => n >= 0)).toBe(true);
     expect([...pos].sort((a, b) => a - b)).toEqual(pos);
     expect(xml).toContain('w:orient="landscape"');
-    expect(xml.match(/<w:tbl>/g)).toHaveLength(6);
+    expect(xml.match(/<w:tbl>/g)).toHaveLength(5);
   });
 
   it('numbers lists and renders example requests', async () => {
@@ -113,7 +112,7 @@ describe('renderDocx', () => {
     const visibleText = xml.replace(/<[^>]*>/g, '');
     for (const text of [
       'INT_SEAT_HEATING_SET', '1.\t[seat_position]', '2.\t[heating_level] (обязательно)',
-      'Driver:', 'водитель&quot;, &quot;левый', 'DRIVER_ONLY',
+      'Driver:', 'водитель&quot;, &quot;левый',
     ]) {
       expect(visibleText).toContain(text);
     }
@@ -197,7 +196,7 @@ describe('export route', () => {
     });
     const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
     expect(md.match(/^# .*$/gm)).toEqual(['# Обогрев']);
-    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Промпты', '## Переходы между состояниями', '## Ошибки']);
+    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Промпты', '## Переходы между состояниями']);
     expect(md.match(/^### .*$/gm)).toEqual(['### Включение', '### Выключение']);
     expect(md).toContain('Как включить');
     const [on, off] = md.split('### Выключение');
@@ -230,13 +229,13 @@ describe('export route', () => {
       }],
     });
     const md = (await request(app).get(`/api/scenarios/${sid}/export?format=md`)).text;
-    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Промпты', '## Переходы между состояниями', '## Ошибки']);
+    expect(md.match(/^## .*$/gm)).toEqual(['## Интенты', '## Промпты', '## Переходы между состояниями']);
     expect(md).toContain('| В состояние | Запрос пользователя | Условия | Действие системы | Ответ ассистента |');
     expect(md).not.toContain('Глобальные переходы');
     expect(md).toContain('| INT_SPARE |');
     const [, afterTransitions] = md.split('## Переходы между состояниями');
     expect(afterTransitions).not.toContain('ST_END');
-    expect(afterTransitions).toContain('Любой интент сценария');
+    expect(afterTransitions).not.toContain('Любой интент сценария');
     const docx = await request(app).get(`/api/scenarios/${sid}/export?format=docx`);
     const xml = await (await JSZip.loadAsync(docx.body)).file('word/document.xml')!.async('string');
     expect(xml).not.toContain('Глобальные переходы');
@@ -255,7 +254,7 @@ describe('export route', () => {
 describe('spec language', () => {
   it('translates fixed texts to English and keeps user input', () => {
     const md = renderMarkdown(spec, '2026-10-17', 'en');
-    for (const h of ['## Intents', '## Entities', '## Prompts', '## State transitions', '## Errors', 'Training phrases', '(required)', 'Number', 'from 1 to 3', 'Multiple values']) {
+    for (const h of ['## Intents', '## Entities', '## Prompts', '## State transitions', 'Training phrases', '(required)', 'Number', 'from 1 to 3', 'Multiple values']) {
       expect(md).toContain(h);
     }
     expect(md).not.toContain('## Интенты');

@@ -1,3 +1,4 @@
+import { OptionHint } from './OptionHint';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, LayoutGrid } from 'lucide-react';
@@ -18,10 +19,10 @@ export function ProjectSwitcher() {
         <span className="truncate">{project?.name}</span>
         <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-56">
+      <DropdownMenuContent align="start" className="min-w-56 max-w-[min(36rem,95vw)]">
         {projects.map((p) => (
           <DropdownMenuItem key={p.id} onClick={() => navigate(`/p/${p.id}/scenarios`)}>
-            <span className="min-w-0 flex-1 truncate">{p.name}</span>
+            <span className="min-w-0 flex-1"><span className="block whitespace-normal break-words">{p.name}</span><OptionHint text={p.description} /></span>
             {p.id === project?.id && <Check className="size-4 text-brand" />}
           </DropdownMenuItem>
         ))}

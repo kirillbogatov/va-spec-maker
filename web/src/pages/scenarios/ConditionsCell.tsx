@@ -1,3 +1,4 @@
+import { conditionValueHint, dependencyHint, entityHint, synonymsHint } from '@/lib/optionHints';
 import { useId, useState, type ReactNode } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,9 +47,9 @@ export function ConditionsCell({ conditions, freeText, mode = 'all', dependencie
   // Свои условия хранятся одной строкой: каждое условие — отдельная строка текста.
   const texts = freeText === '' ? (showText ? [''] : []) : freeText.split('\n');
   const setTexts = (next: string[]) => onChange({ condition: next.join('\n') });
-  const depItems = dependencies.map((d) => ({ value: `dep:${d.ref}`, label: depLabel(d, entities) }));
-  const entityItems = entities.map((e) => ({ value: `ent:${e.id}`, label: e.name }));
-  const keywordItems = keywords.map((k) => ({ value: `kw:${k.id}`, label: k.name }));
+  const depItems = dependencies.map((d) => ({ value: `dep:${d.ref}`, label: depLabel(d, entities), hint: dependencyHint(d, entities) }));
+  const entityItems = entities.map((e) => ({ value: `ent:${e.id}`, label: e.name, hint: entityHint(e) }));
+  const keywordItems = keywords.map((k) => ({ value: `kw:${k.id}`, label: k.name, hint: synonymsHint(k.synonyms) }));
   const patch = (i: number, p: Partial<StepCondition>) =>
     onChange({ conditions: conditions.map((c, j) => (j === i ? { ...c, ...p } : c)) });
 
@@ -60,7 +61,7 @@ export function ConditionsCell({ conditions, freeText, mode = 'all', dependencie
         const { choices, input, ordered } = valueSpec(c, dependencies, entities);
         // Сравнения «<» и «>» осмысленны только для чисел, времени и дат.
         const opItems = concept ? CONCEPT_OPS : (ordered ? ALL_OPS : LIST_OPS).map((o) => ({ value: o, label: o }));
-        const valueItems = (choices ?? []).map((v) => ({ value: v, label: v }));
+        const valueItems = (choices ?? []).map((v) => ({ value: v, label: v, hint: conditionValueHint(c, v, dependencies, entities) }));
         const subjectItems = concept ? keywordItems : c.entity_id !== undefined ? entityItems : depItems;
         const remove = (
           <Button variant="ghost" size="icon" className="size-7 shrink-0" aria-label={`Удалить условие ${i + 1}`} onClick={() => onChange({ conditions: conditions.filter((_, j) => j !== i) })}>
@@ -71,7 +72,7 @@ export function ConditionsCell({ conditions, freeText, mode = 'all', dependencie
           <Select items={subjectItems} value={subjectKey(c)} onValueChange={(v) => v && onChange({ conditions: conditions.map((x, j) => (j === i ? { ...fromKey(v), op: '=', value: '' } : x)) })}>
             <SelectTrigger className={cn(ctl, 'w-full min-w-0 [&_[data-slot=select-value]]:block! [&_[data-slot=select-value]]:truncate')} aria-label={subjectLabel(c)}><SelectValue /></SelectTrigger>
             <SelectContent>
-              {subjectItems.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              {subjectItems.map((o) => <SelectItem key={o.value} value={o.value} hint={o.hint}>{o.label}</SelectItem>)}
             </SelectContent>
           </Select>
         );
@@ -87,7 +88,7 @@ export function ConditionsCell({ conditions, freeText, mode = 'all', dependencie
           <Select items={valueItems} value={c.value} onValueChange={(v) => patch(i, { value: v ?? '' })}>
             <SelectTrigger className={cn(ctl, 'w-full min-w-0')} aria-label="Значение"><SelectValue placeholder="Значение" /></SelectTrigger>
             <SelectContent>
-              {valueItems.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              {valueItems.map((o) => <SelectItem key={o.value} value={o.value} hint={o.hint}>{o.label}</SelectItem>)}
             </SelectContent>
           </Select>
         ) : (

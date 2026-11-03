@@ -11,14 +11,6 @@ const TONE: Record<ObjectKind, string> = {
   dependency: 'bg-dep-bg text-dep',
   keyword: 'bg-kw-bg text-kw',
 };
-const DOT: Record<ObjectKind, string> = {
-  intent: 'bg-int',
-  entity: 'bg-ent',
-  prompt: 'bg-prm',
-  state: 'bg-st',
-  dependency: 'bg-dep',
-  keyword: 'bg-kw',
-};
 
 export const KIND_LABEL: Record<ObjectKind, string> = {
   intent: 'Интент',
@@ -40,9 +32,4 @@ export function TypeToken({ kind, children, className, title, required }: { kind
       {required && <span aria-hidden className="ml-0.5 self-start text-[1.1em] leading-none">*</span>}
     </span>
   );
-}
-
-/** Маленький цветной квадрат типа объекта для меню и списков. */
-export function KindDot({ kind, className }: { kind: ObjectKind; className?: string }) {
-  return <span aria-hidden className={cn('inline-block size-2 shrink-0 rounded-[2px]', DOT[kind], className)} />;
 }

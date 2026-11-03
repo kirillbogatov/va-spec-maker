@@ -73,8 +73,8 @@ export const api = {
   dependencyDictionary: {
     list: (pid: number) => req<DictionaryDependency[]>('GET', `/api/projects/${pid}/dependency-dictionary`),
     get: (id: number) => req<DictionaryDependency>('GET', `/api/dependency-dictionary/${id}`),
-    create: (pid: number, name: string) =>
-      req<DictionaryDependency>('POST', `/api/projects/${pid}/dependency-dictionary`, { name }),
+    create: (pid: number, name: string, details?: { description: string; values: string[] }) =>
+      req<DictionaryDependency>('POST', `/api/projects/${pid}/dependency-dictionary`, { name, ...details }),
     save: (id: number, body: { name: string; description: string; values: string[]; value_renames?: { from: string; to: string }[] }) =>
       req<DictionaryDependency>('PUT', `/api/dependency-dictionary/${id}`, body),
     remove: (id: number) => req<void>('DELETE', `/api/dependency-dictionary/${id}`),

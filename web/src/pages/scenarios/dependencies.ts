@@ -1,11 +1,5 @@
 import type { Dependency, EntityListItem, StepCondition } from '@/lib/types';
 
-export const TYPE_LABEL: Record<Dependency['type'], string> = {
-  string: 'Строка',
-  enum: 'Вариант из списка',
-  bool: 'Булево значение',
-};
-
 /** Допустимые значения для условия: список вариантов или true/false; null — свободный ввод строки. */
 export function valueChoices(d: Dependency): string[] | null {
   if (d.type === 'bool') return ['true', 'false'];

@@ -22,14 +22,14 @@ describe('splitLegacySteps', () => {
     expect(out[0].conditions[0].value).toBe('1');
   });
   it('не трогает строки с одним значением, пустые и Errors', () => {
-    const rows = [step('a', 'A_1', 'B_2'), step('b', 'A_1', ''), step('c', 'E_1', 'X_1 Y_1', { kind: 'error' })];
+    const rows = [step('a', 'A_1', 'B_2'), step('b', 'A_1', ''), step('c', 'E_1', 'X_1 Y_1', { kind: 'global' })];
     expect(splitLegacySteps(rows)).toEqual(rows);
   });
 });
 
 describe('canonicalOrder', () => {
   it('обходит в ширину от входа, держит порядок внутри состояния, недостижимые в конце, Errors после', () => {
-    const err = step('e', 'DRIVER_ONLY', 'ST_A', { kind: 'error' });
+    const err = step('e', 'DRIVER_ONLY', 'ST_A', { kind: 'global' });
     const rows = [step('1', 'ST_A', 'ST_B'), step('2', 'ST_D', 'ST_A'), step('3', 'ST_B', 'ST_C'), step('4', 'ST_A', 'ST_C'), err];
     expect(keys(canonicalOrder(rows))).toEqual(['1', '4', '3', '2', 'e']);
   });
@@ -106,7 +106,7 @@ describe('duplicateState', () => {
     const a = newTransition('ST_A', 'ST_CHILD ST_OTHER');
     const b = newTransition('ST_B', 'ST_CHILD');
     const global: Step = { ...newTransition('', 'ST_CHILD'), kind: 'global' };
-    const error: Step = { ...newTransition('ST_CHILD', 'END'), kind: 'error' };
+    const error: Step = { ...newTransition('ST_CHILD', 'END'), kind: 'global' };
     const { steps, name } = duplicateState([a, b, global, error], {}, 'ST_CHILD');
     expect(steps.filter((s) => s.next_states === name).map((s) => s.state)).toEqual(['ST_A', 'ST_B']);
     expect(steps).toContain(a);

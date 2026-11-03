@@ -1,3 +1,4 @@
+import { ResizableColumns } from '@/components/ResizableColumns';
 import { useState } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, X } from 'lucide-react';
@@ -42,7 +43,7 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
   const filled = draft.full_answers.filter((a) => a.trim());
 
   return (
-    <div role="button" tabIndex={0} onClick={(e) => { if (!(e.target as HTMLElement).closest('button')) setOpen(true); }} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(true); } }} className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-4 py-2 outline-none first:border-t-0 hover:bg-muted/60 focus-visible:bg-muted/60 md:grid-cols-[230px_minmax(0,1fr)]">
+    <div role="button" tabIndex={0} onClick={(e) => { if (!(e.target as HTMLElement).closest('button')) setOpen(true); }} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(true); } }} className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-4 py-2 outline-none first:border-t-0 hover:bg-muted/60 focus-visible:bg-muted/60 md:[grid-template-columns:var(--resizable-columns)]">
       <span className="col-start-1 row-start-1 min-w-0">
         <TypeToken kind="prompt" className="text-[12.5px]">{draft.name}</TypeToken>
         {link.scenarios.length > 1 && <span className="mt-0.5 block text-xs text-faint">также в: {link.scenarios.map((s) => s.name).join(', ')}</span>}
@@ -182,8 +183,8 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
         onConnect={(id) => connect.mutate(id)}
         connectLabel="Подключить существующий промпт"
       />
-      <section className="overflow-hidden rounded-xl border bg-card" aria-label="Промпты сценария">
-        <div className="flex flex-wrap items-center gap-x-3 border-b px-4 py-1 text-xs font-medium text-muted-foreground md:grid md:grid-cols-[230px_minmax(0,1fr)]">
+      <ResizableColumns storageKey="scenario-prompts" columns={['name', 'full']} initial="230px minmax(0,1fr)" className="overflow-hidden rounded-xl border bg-card" aria-label="Промпты сценария">
+        <div className="flex flex-wrap items-center gap-x-3 border-b px-4 py-1 text-xs font-medium text-muted-foreground md:grid md:[grid-template-columns:var(--resizable-columns)]">
           <SortHeader column="name" sort={sort}>Промпт</SortHeader>
           <SortHeader column="full" sort={sort}>Ответ ассистента</SortHeader>
                   </div>
@@ -193,7 +194,7 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
         {isSuccess && items.length === 0 && (
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">Промптов пока нет. Промпт — ответ ассистента: нажмите «Промпт» выше или подключите существующий и привяжите к состоянию сценария.</p>
         )}
-      </section>
+      </ResizableColumns>
     </div>
   );
 }

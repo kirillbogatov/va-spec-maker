@@ -1,3 +1,4 @@
+import { ResizableColumns } from '@/components/ResizableColumns';
 import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,7 +16,7 @@ import type { ChangelogRow } from '@/lib/types';
 import { cn, GHOST } from '@/lib/utils';
 import { AddButton, Card, ROW } from './Card';
 
-const COLS = 'md:grid-cols-[minmax(0,145px)_minmax(0,180px)_minmax(0,180px)_minmax(0,1fr)_32px]';
+const COLS = 'md:[grid-template-columns:var(--resizable-columns)]';
 const FIELD = cn(GHOST, 'h-8 w-full rounded-md border px-2.5 text-sm max-md:h-10 md:-ml-2.5 md:w-[calc(100%+0.625rem)]');
 
 type Row = ChangelogRow & { key: string };
@@ -81,6 +82,7 @@ function Editor({ scenarioId, initial }: { scenarioId: number; initial: Changelo
   const add = () => setRows((rs) => [...rs, { key: crypto.randomUUID(), date: '', task: '', author: '', description: '' }]);
 
   return (
+    <ResizableColumns storageKey="scenario-changelog" columns={['date', 'task', 'author', 'description']} initial="minmax(0,145px) minmax(0,180px) minmax(0,180px) minmax(0,1fr) 32px" trailing="32px">
     <Card flush title="История изменений" action={<><SaveIndicator state={status} compact /><AddButton onClick={add}>Добавить</AddButton></>}>
       {conflict && <div role="alert" className="border-b bg-muted px-4 py-3">
         <p className="font-medium">История изменений обновлена в другой вкладке</p>
@@ -120,5 +122,6 @@ function Editor({ scenarioId, initial }: { scenarioId: number; initial: Changelo
       ))}
       {rows.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Записей пока нет</p>}
     </Card>
+    </ResizableColumns>
   );
 }

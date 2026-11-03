@@ -3,14 +3,6 @@ import { badRequest } from './errors';
 export const ENTITY_TYPES = ['string', 'number', 'time', 'date', 'boolean'] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
-export const ENTITY_TYPE_LABEL: Record<EntityType, string> = {
-  string: 'Строка',
-  number: 'Число',
-  time: 'Время',
-  date: 'Дата',
-  boolean: 'Логический',
-};
-
 export interface EntityKind {
   type: EntityType;
   range_min: string;

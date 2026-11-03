@@ -12,9 +12,6 @@ type Cond = { dep: string; op: string; value: string } | { entity_id: number; op
 const step = (state: string, next: string, intent_id: number | null, conditions: Cond[] = []): Step => ({
   kind: 'transition', state, intent_id, next_states: next, ...base, conditions,
 });
-const error = (name: string, state: string, next: string, condition: string, prompt_id: number, system_action = '', conditions: Cond[] = []): Step => ({
-  kind: 'error', name, state, intent_id: null, next_states: next, ...base, condition, conditions, prompt_id, system_action,
-});
 const dep = (ref: string, name: string, type: 'string' | 'enum' | 'bool', options: string[] = []) => ({ ref, entity_id: null, name, type, options });
 const entityDep = (ref: string, entity_id: number) => ({ ref, entity_id, name: '', type: 'string', options: [] });
 const node = (x: number, y: number, description: string, prompt_id: number | null = null, system_action = '') =>
@@ -118,7 +115,7 @@ export async function seedDemo(app: App): Promise<number> {
   const askRoom = await prompt(light, 'PRM_ASK_ROOM', ['В какой комнате включить свет?']);
   const lightOn = await prompt(light, 'PRM_LIGHT_ON', ['Свет включён.']);
   const lightOff = await prompt(light, 'PRM_LIGHT_OFF', ['Свет выключен.']);
-  const noRoom = await prompt(light, 'PRM_ERR_UNKNOWN_ROOM', ['Не знаю такой комнаты. Назовите кухню, спальню или коридор.']);
+  await prompt(light, 'PRM_ERR_UNKNOWN_ROOM', ['Не знаю такой комнаты. Назовите кухню, спальню или коридор.']);
   await useShared(light);
   await fill(light, {
     description: 'Пользователь просит включить или выключить свет; если комната не названа, ассистент уточняет.',
@@ -133,9 +130,7 @@ export async function seedDemo(app: App): Promise<number> {
         step('START', 'ST_ASK_ROOM', on, [{ dep: 'home_mode', op: '=', value: 'night' }, { entity_id: room, op: '=', value: 'bedroom' }]),
         step('START', 'ST_LIGHT_OFF', off),
         step('ST_ASK_ROOM', 'ST_LIGHT_ON', roomAnswer),
-        error('Комната не распознана', 'ST_ASK_ROOM', 'ST_ASK_ROOM', 'Комната не распознана', noRoom),
         cancelStep(),
-        error('Лампа недоступна', 'ST_LIGHT_ON', 'START', 'Устройство не отвечает', offline, 'Записать сбой устройства в журнал', [{ dep: 'lamp_online', op: '=', value: 'false' }]),
       ],
       layout: {
         START: node(0, 0, 'Вход в сценарий'),
@@ -154,8 +149,8 @@ export async function seedDemo(app: App): Promise<number> {
   const askTemp = await prompt(climate, 'PRM_ASK_TEMP', ['Какую температуру установить?']);
   const tempSet = await prompt(climate, 'PRM_TEMP_SET', ['Температура установлена.']);
   const tempShift = await prompt(climate, 'PRM_TEMP_SHIFT', ['Изменила температуру на два градуса.']);
-  const badTemp = await prompt(climate, 'PRM_ERR_TEMP_RANGE', ['Могу выставить от пятнадцати до тридцати градусов.']);
-  const awayMsg = await prompt(climate, 'PRM_ERR_AWAY', ['Дома никого нет, температуру не меняю.']);
+  await prompt(climate, 'PRM_ERR_TEMP_RANGE', ['Могу выставить от пятнадцати до тридцати градусов.']);
+  await prompt(climate, 'PRM_ERR_AWAY', ['Дома никого нет, температуру не меняю.']);
   await useShared(climate);
   await fill(climate, {
     description: 'Пользователь задаёт температуру в комнате или просит сделать теплее/холоднее.',
@@ -170,12 +165,7 @@ export async function seedDemo(app: App): Promise<number> {
         step('START', 'ST_ASK_TEMP', setTemp),
         step('START', 'ST_TEMP_SHIFT', shift),
         step('ST_ASK_TEMP', 'ST_TEMP_SET', tempAnswer),
-        error('Температура ниже 15', 'ST_ASK_TEMP', 'ST_ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '<', value: '15' }]),
-        error('Температура выше 30', 'ST_ASK_TEMP', 'ST_ASK_TEMP', 'Значение вне диапазона 15–30 градусов', badTemp, '', [{ entity_id: temp, op: '>', value: '30' }]),
         // Если дома никого нет, температуру не меняем.
-        error('Никого нет дома', 'START', 'START', 'Никого нет дома', awayMsg, '', [{ dep: 'home_mode', op: '=', value: 'away' }]),
-        error('Термостат не отвечает при установке', 'ST_TEMP_SET', 'START', 'Термостат не отвечает', offline, 'Повторить запрос к термостату через 10 секунд'),
-        error('Термостат не отвечает при изменении', 'ST_TEMP_SHIFT', 'START', 'Термостат не отвечает', offline),
         cancelStep(),
       ],
       layout: {
@@ -195,9 +185,9 @@ export async function seedDemo(app: App): Promise<number> {
   const askTime = await prompt(alarm, 'PRM_ASK_TIME', ['На какое время поставить будильник?']);
   const alarmSet = await prompt(alarm, 'PRM_ALARM_SET', ['Будильник поставлен.']);
   const alarmOff = await prompt(alarm, 'PRM_ALARM_CANCEL', ['Будильник отменён.']);
-  const badTime = await prompt(alarm, 'PRM_ERR_TIME', ['Не поняла время. Скажите, например, «в семь тридцать».']);
+  await prompt(alarm, 'PRM_ERR_TIME', ['Не поняла время. Скажите, например, «в семь тридцать».']);
   await useShared(alarm);
-  const noAlarm = await prompt(alarm, 'PRM_ERR_NO_ALARM', ['У вас нет активных будильников.']);
+  await prompt(alarm, 'PRM_ERR_NO_ALARM', ['У вас нет активных будильников.']);
   await fill(alarm, {
     description: 'Пользователь ставит или отменяет будильник; время уточняется, если не названо.',
     entities: [
@@ -212,8 +202,6 @@ export async function seedDemo(app: App): Promise<number> {
         step('START', 'ST_ASK_TIME', setAlarm),
         step('START', 'ST_ALARM_CANCELLED', cancelAlarm, [{ dep: 'has_alarm', op: '=', value: 'true' }]),
         step('ST_ASK_TIME', 'ST_ALARM_SET', timeAnswer),
-        error('Время не распознано', 'ST_ASK_TIME', 'ST_ASK_TIME', 'Время не распознано', badTime),
-        error('Нет будильников', 'START', 'START', 'Нет активных будильников', noAlarm, '', [{ dep: 'has_alarm', op: '=', value: 'false' }]),
         cancelStep(),
       ],
       layout: {

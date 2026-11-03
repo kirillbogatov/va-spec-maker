@@ -33,4 +33,3 @@ export function AddButton({ children, onClick }: { children: ReactNode; onClick:
 
 /** Строка таблицы-сетки; колонки задаёт cols (применяются с md). */
 export const ROW = 'grid gap-x-3 gap-y-2 border-t px-4 py-2.5 md:items-center';
-export const HEAD = 'hidden border-t-0 py-2 text-xs font-medium text-muted-foreground md:grid';

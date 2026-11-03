@@ -1,3 +1,4 @@
+import { OptionHint } from './OptionHint';
 import type { ReactNode } from 'react';
 import { Combobox } from '@base-ui/react/combobox';
 import { CheckIcon, ChevronDownIcon, SearchIcon } from 'lucide-react';
@@ -5,8 +6,6 @@ import { SELECT_TRIGGER } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 export interface SearchOption { value: string; label: string; hint?: string }
-
-const oneLine = (s?: string) => (s ?? '').trim().replace(/\s+/g, ' ');
 
 interface Props {
   options: SearchOption[];
@@ -66,8 +65,8 @@ export function SearchSelect({ options, value, onChange, label, className, rende
                   )}
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block">{o.label}</span>
-                    {oneLine(o.hint) && <span className="block max-w-96 truncate text-xs font-normal text-muted-foreground">{oneLine(o.hint)}</span>}
+                    <span className="block whitespace-normal break-words">{o.label}</span>
+                    <OptionHint text={o.hint} />
                   </span>
                   <Combobox.ItemIndicator render={<span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />}>
                     <CheckIcon className="size-4" />

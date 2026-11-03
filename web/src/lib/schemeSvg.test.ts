@@ -29,8 +29,7 @@ describe('buildSchemeSvg', () => {
       { name: 'ST_DONE', number: 2, tag: 'end', description: '', prompt: null, action: 'Выполнить перевод' },
     ],
     edges: [{ id: 'e1', from: 'VA_ACTIVATION', to: 'ST_DONE', number: 1, intent: 'confirm', conds: ['amount>0'], mode: 'all', example: 'да' }],
-    errors: [{ rule: 'Нет ответа', trigger: ['no_input', 'любое состояние'], prompt: null, action: '', targets: ['ST_DONE'] }],
-    globals: [],
+    globals: [{ rule: 'Нет ответа', trigger: ['no_input', 'любое состояние'], prompt: null, action: '', targets: ['ST_DONE'] }],
   };
 
   it('длинное описание состояния выводится целиком', async () => {
@@ -41,7 +40,7 @@ describe('buildSchemeSvg', () => {
     expect(svg).not.toContain('…');
   });
 
-  it('рисует блоки, карточку перехода и таблицу ошибок', async () => {
+  it('рисует блоки, карточку перехода и глобальные переходы', async () => {
     const svg = await buildSchemeSvg(input, measure);
     expect(svg).toMatch(/^<\?xml/);
     expect(svg).toContain('Перевод &lt;по&gt; номеру');
@@ -51,9 +50,9 @@ describe('buildSchemeSvg', () => {
     expect(svg).toContain('УСЛОВИЯ');
     expect(svg).toContain('>S1<');
     expect(svg).toContain('«да»');
-    expect(svg).toContain('ОШИБКИ СЦЕНАРИЯ');
+    expect(svg).not.toContain('ОШИБКИ СЦЕНАРИЯ');
     expect(svg).toContain('S2 ST_DONE');
     expect(svg).toContain('marker-end="url(#ar)"');
-    expect(svg).not.toContain('ГЛОБАЛЬНЫЕ ПЕРЕХОДЫ');
+    expect(svg).toContain('ГЛОБАЛЬНЫЕ ПЕРЕХОДЫ');
   });
 });

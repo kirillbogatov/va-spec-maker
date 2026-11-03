@@ -6,7 +6,7 @@ test.describe('UJ-2 Собрать сценарий диалога', () => {
     await openDemo(page);
     await createViaDialog(page, 'Новый сценарий', 'SC_E2E');
     await expect(page.getByRole('link', { name: /SC_E2E/ })).toBeVisible();
-    for (const tab of ['Общая информация', 'Интенты', 'Промпты', 'Логика', 'Ошибки', 'История изменений', 'Предпросмотр']) {
+    for (const tab of ['Общая информация', 'Интенты', 'Промпты', 'Логика', 'История изменений', 'Предпросмотр']) {
       await expect(page.getByRole('tab', { name: new RegExp(`^${tab}`) })).toBeVisible();
     }
   });

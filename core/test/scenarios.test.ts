@@ -48,9 +48,9 @@ describe('scenarios API', () => {
       .put(`/api/scenarios/${c.body.id}`)
       .send({ name: 'S', description: 'описание', parts: [{ name: 'P', steps: [{ key: 'k', ...row }, err] }] });
     expect(put.status).toBe(200);
-    // ответ и действие перехода живут в состоянии: в строке перехода они сбрасываются, в строке ошибки сохраняются
-    expect(put.body.parts[0].steps).toEqual([{ ...row, match_any_intent: false, prompt_id: null, system_action: '' }, { ...err, match_any_intent: false }]);
-    expect((await request(app).get(`/api/projects/${pid}/scenarios`)).body[0].step_count).toBe(2);
+    // Ответ и действие живут в состоянии; устаревшие строки ошибок игнорируются.
+    expect(put.body.parts[0].steps).toEqual([{ ...row, match_any_intent: false, prompt_id: null, system_action: '' }]);
+    expect((await request(app).get(`/api/projects/${pid}/scenarios`)).body[0].step_count).toBe(1);
   });
 
   it('rejects an intent or a prompt from another project', async () => {
@@ -62,7 +62,7 @@ describe('scenarios API', () => {
     const put = (step: object) =>
       request(app).put(`/api/scenarios/${c.body.id}`).send({ name: 'S', description: '', parts: [{ steps: [step] }] });
     expect((await put({ intent_id: foreign.body.id })).status).toBe(400);
-    expect((await put({ kind: 'error', prompt_id: foreignPrompt.body.id })).status).toBe(400);
+    expect((await put({ kind: 'error', prompt_id: foreignPrompt.body.id })).body.parts[0].steps).toEqual([]);
     const state = await request(app).put(`/api/scenarios/${c.body.id}`)
       .send({ name: 'S', parts: [{ layout: { ST_A: { x: 0, y: 0, prompt_id: foreignPrompt.body.id } } }] });
     expect(state.status).toBe(400);
@@ -91,7 +91,7 @@ describe('scenarios API', () => {
     const pr = await request(app).post(`/api/projects/${pid}/prompts`).send({ name: 'PRM' });
     const c = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'S' });
     await request(app).put(`/api/scenarios/${c.body.id}`).send({
-      name: 'S', parts: [{ steps: [{ kind: 'error', state: 'A', prompt_id: pr.body.id }], layout: { A: { x: 0, y: 0, prompt_id: pr.body.id } } }],
+      name: 'S', parts: [{ steps: [{ kind: 'transition', state: 'A', prompt_id: pr.body.id }], layout: { A: { x: 0, y: 0, prompt_id: pr.body.id } } }],
     });
     await request(app).delete(`/api/prompts/${pr.body.id}`);
     const after = (await request(app).get(`/api/scenarios/${c.body.id}`)).body;

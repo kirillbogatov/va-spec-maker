@@ -77,7 +77,7 @@ describe('разделы сущностей и внешних зависимос
     const md = await call('GET', `/api/scenarios/${sid}/export?format=md`);
     expect(md).toContain('## Сущности');
     expect(md).toContain('[ENT_SECOND_PART]');
-    expect(md).toContain('[ENT_SCENARIO]');
+    expect(md).toContain('| ENT_SCENARIO |');
   });
 
   it('сохраняет описание в API, копии проекта и повторном импорте спецификации', async () => {

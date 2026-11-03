@@ -6,7 +6,7 @@ import { STRINGS, type SpecLang } from './i18n';
 export type Cell =
   | { text: string[]; links?: boolean }
   | { list: string[]; lead?: string; numbered?: boolean }
-  | { bullets: { bold: string; text: string }[] };
+  | { bullets: { bold: string; text: string }[]; numbered?: boolean };
 
 export interface Row {
   cells: (Cell | null)[];
@@ -80,11 +80,12 @@ export function entitiesTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDe
     rows: spec.entities.map((e) => {
       return {
         cells: [
-          text(ref(e.name)),
+          text(e.name),
           text([STRINGS[lang].entityTypes[e.type] ?? e.type, rangeText(e.type, e.range_min, e.range_max, STRINGS[lang])].filter(Boolean).join('\n')),
           e.type !== 'string'
             ? text('-')
             : {
+                numbered: true,
                 bullets: e.values.map((v) => ({
                   bold: v.synonyms.length ? `${v.value}:` : v.value,
                   text: v.synonyms.map((s) => `"${s}"`).join(', '),
@@ -131,20 +132,6 @@ export const transitionsTable = (rows: TransitionRow[], lang: SpecLang = 'ru'): 
   head: STRINGS[lang].transitionHead,
   widths: [14, 20, 17, 17, 17, 15],
   rows: rows.map(transitionRow),
-});
-
-export const globalsTable = (rows: TransitionRow[], lang: SpecLang = 'ru'): TableDef => ({
-  head: STRINGS[lang].globalHead,
-  widths: [20, 22, 20, 20, 18],
-  rows: rows.map((t): Row => ({
-    cells: [
-      dash(t.next_states),
-      dash([t.intent, t.request_params].filter((x) => x && x.trim()).join('\n')),
-      conditions(t.condition),
-      dash(t.system_action),
-      dash(t.prompt ?? ''),
-    ],
-  })),
 });
 
 export interface ChangelogRow { scenario?: string; date?: string; task: string; author: string; description: string }

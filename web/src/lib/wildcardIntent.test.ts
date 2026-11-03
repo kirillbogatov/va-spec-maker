@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeSteps, globalIssues, stepIntentLabel } from './states';
+import { analyzeSteps, stepIntentLabel } from './states';
 import { duplicateState, newTransition } from './fsm';
 import type { Dependency, Step } from './types';
-import { buildChecks } from '@/pages/scenarios/ScenarioChecks';
 import { duplicatePart } from '@/pages/scenarios/duplicatePart';
 import { createConditionStates } from '@/pages/scenarios/state-editor/conditionStates';
 
@@ -17,7 +16,6 @@ describe('explicit any-intent transitions', () => {
     const empty = { ...any, match_any_intent: false };
     expect(stepIntentLabel(any, name)).toBe('Любой интент');
     expect(stepIntentLabel(empty, name)).toBe('без интента');
-    expect(stepIntentLabel({ ...empty, kind: 'error' }, name)).toBe('Любой интент сценария');
     expect(stepIntentLabel({ ...empty, intent_id: 7 }, name)).toBe('INT_SEVEN');
     expect(analyzeSteps([any, { ...empty, key: 'empty' }], name).edges.map((e) => e.label)).toEqual(['Любой интент', '']);
   });
@@ -33,16 +31,6 @@ describe('explicit any-intent transitions', () => {
     expect(issues.get('first')).toContainEqual(expect.objectContaining({ level: 'warn', text: expect.stringContaining('не последним') }));
     expect(issues.get('concrete')).toBeUndefined();
     expect(issues.get('empty')).toBeUndefined();
-  });
-
-  it('accepts wildcard globals while still rejecting an unselected global intent', () => {
-    const any: Step = { ...wildcard('any'), kind: 'global', state: '' };
-    const empty = { ...any, key: 'empty', match_any_intent: false };
-    const issues = globalIssues([any, empty], ['ST_DONE']);
-    expect(issues.has('any')).toBe(false);
-    expect(issues.get('empty')).toContainEqual({ level: 'error', text: 'Не выбран интент' });
-    const checks = buildChecks({ description: 'Ready', parts: [{ name: 'Main', steps: [wildcard('transition'), any], analysis: analyzeSteps([wildcard('transition'), any], name) }], intents: [], prompts: [] });
-    expect(checks.some((c) => c.text === 'Есть глобальный переход без интента')).toBe(false);
   });
 
   it('preserves wildcard when copying a state, part, and generated condition branches', () => {

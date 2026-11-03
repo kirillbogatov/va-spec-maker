@@ -163,14 +163,13 @@ export async function convertScenarioDocument(text: string, filename: string, op
         continue;
       }
       recognized++;
+      if (/ошиб|error/i.test(t.heading)) continue;
       for (const [position,row] of t.rows.entries()) {
-        const error = /ошиб|error/i.test(t.heading);
         const global = /глобаль|global/i.test(t.heading);
         const request = lines(row[at(/запрос|user request|intent/)]);
         const intent = request.shift() ?? '';
-        const anyIntent = /^(любой интент|any intent)$/i.test(intent.trim());
-        const anyScenarioIntent = /^(любой интент сценария|any scenario intent)$/i.test(intent.trim());
-        const iid = intent && !anyIntent && !anyScenarioIntent ? getObject('intents', nameOf(intent), intentIds) : null;
+        const anyIntent = /^(любой интент(?: сценария)?|any (?:scenario )?intent)$/i.test(intent.trim());
+        const iid = intent && !anyIntent ? getObject('intents', nameOf(intent), intentIds) : null;
         const prompt = nameOf(row[at(/ответ ассистента|assistant response|prompt/)]);
         const prid = prompt ? getObject('prompts', prompt, promptIds) : null;
         const target = clean(row[to]);
@@ -183,7 +182,7 @@ export async function convertScenarioDocument(text: string, filename: string, op
             if (stateHasCode) db.prepare('UPDATE scenario_states SET result_code = ? WHERE part_id = ? AND name = ?').run(code,t.part,state);
           }
         }
-        db.prepare('INSERT INTO scenario_steps(scenario_id,part_id,position,kind,state,next_states,intent_id,match_any_intent,prompt_id,request_params,condition,system_action) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(sid,t.part,position,error ? 'error' : global ? 'global' : 'transition',global ? '' : clean(row[from]),target,iid,anyIntent ? 1 : 0,error ? prid : null,request.join('\n'),conditionText(row[at(/услов|condition/)]),error ? clean(row[at(/действие|system action|business logic/)]) : '');
+        db.prepare('INSERT INTO scenario_steps(scenario_id,part_id,position,kind,state,next_states,intent_id,match_any_intent,prompt_id,request_params,condition,system_action) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(sid,t.part,position,global ? 'global' : 'transition',global ? '' : clean(row[from]),target,iid,anyIntent ? 1 : 0,null,request.join('\n'),conditionText(row[at(/услов|condition/)]),'');
       }
     }
     // Attach entity references named in intent definitions.

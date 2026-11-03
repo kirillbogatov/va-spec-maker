@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeSteps, globalIssues, layoutGraph, splitNext } from './states';
+import { analyzeSteps, splitNext } from './states';
 import type { Step } from './types';
 
 const step = (p: Partial<Step>): Step => ({
@@ -70,29 +70,5 @@ describe('analyzeSteps', () => {
     const r = analyzeSteps([a, b, other], name);
     expect(r.issues.get(a.key!)?.some((i) => i.level === 'warn' && i.text.startsWith('Переход без условий'))).toBe(true);
     expect(r.issues.get(other.key!)?.some((i) => i.text.startsWith('Переход без условий'))).toBeFalsy();
-  });
-});
-
-describe('layoutGraph', () => {
-  it('раскладывает по слоям от входа', () => {
-    const { nodes } = layoutGraph(['A_1', 'B_2'], [{ id: '1', stepKey: '1', from: 'A_1', to: 'B_2', label: '' }]);
-    expect(nodes.find((n) => n.name === 'A_1')!.layer).toBe(0);
-    expect(nodes.find((n) => n.name === 'B_2')!.layer).toBe(1);
-  });
-});
-
-describe('globalIssues', () => {
-  it('требует интент и известное следующее состояние', () => {
-    const ok = step({ kind: 'global', intent_id: 7, next_states: 'ST_A' });
-    const noIntent = step({ kind: 'global', intent_id: null, next_states: 'ST_A' });
-    const noNext = step({ kind: 'global', intent_id: 7, next_states: '' });
-    const unknown = step({ kind: 'global', intent_id: 7, next_states: 'ST_X END' });
-    const local = step({ kind: 'transition', state: 'A' });
-    const r = globalIssues([ok, noIntent, noNext, unknown, local], ['ST_A']);
-    expect(r.has(ok.key!)).toBe(false);
-    expect(r.get(noIntent.key!)?.[0]).toEqual({ level: 'error', text: 'Не выбран интент' });
-    expect(r.get(noNext.key!)?.[0].level).toBe('warn');
-    expect(r.get(unknown.key!)?.map((i) => i.text)).toEqual(['Состояния «ST_X» нет в схеме']);
-    expect(r.has(local.key!)).toBe(false);
   });
 });

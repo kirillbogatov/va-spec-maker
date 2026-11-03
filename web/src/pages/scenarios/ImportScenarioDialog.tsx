@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImportFilePicker } from '@/components/ImportFilePicker';
 import { IMPORT_ACCEPT, IMPORT_TYPES, readScenarioFile } from '@/lib/scenarioDocument';
 import { useState } from 'react';
@@ -12,7 +13,7 @@ export function ImportScenarioDialog({ open, onOpenChange, projectId, onDone }: 
   const [file, setFile] = useState<File | null>(null);
   const [reading, setReading] = useState(false);
   const [dump, setDump] = useState<unknown>(null);
-  const [scenarios, setScenarios] = useState<{ id: number; name: string }[]>([]);
+  const [scenarios, setScenarios] = useState<{ id: number; name: string; description?: string }[]>([]);
   const [selected, setSelected] = useState('');
   const [busy, setBusy] = useState(false);
   const reset = () => { setDump(null); setScenarios([]); setSelected(''); setFile(null); };
@@ -46,9 +47,10 @@ export function ImportScenarioDialog({ open, onOpenChange, projectId, onDone }: 
           }} />
         {scenarios.length > 1 && <label className="block space-y-2 text-sm">
           <span>Сценарий</span>
-          <select className="h-10 w-full rounded-md border bg-background px-3 text-sm md:h-9" value={selected} disabled={busy || reading} onChange={e => setSelected(e.target.value)}>
-            {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          <Select items={scenarios.map((s) => ({ value: String(s.id), label: s.name }))} value={selected} disabled={busy || reading} onValueChange={(v) => v && setSelected(v)}>
+            <SelectTrigger className="w-full" aria-label="Сценарий для импорта"><SelectValue /></SelectTrigger>
+            <SelectContent>{scenarios.map((s) => <SelectItem key={s.id} value={String(s.id)} hint={s.description}>{s.name}</SelectItem>)}</SelectContent>
+          </Select>
         </label>}
         <DialogFooter>
           <Button type="button" variant="outline" disabled={busy || reading} onClick={() => close(false)}>Отмена</Button>

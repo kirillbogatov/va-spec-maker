@@ -11,7 +11,7 @@ function cell(c: Cell | null): string {
   if (!c) return '';
   if ('text' in c) return c.text.map(esc).join('<br>');
   if ('list' in c) return [...(c.lead ? [esc(c.lead)] : []), ...c.list.map((t, i) => `${i + 1}. ${esc(t)}`)].join('<br>');
-  return c.bullets.map((b) => `• **${esc(b.bold)}**${b.text ? ` ${esc(b.text)}` : ''}`).join('<br>');
+  return c.bullets.map((b, i) => `${c.numbered ? `${i + 1}.` : '•'} **${esc(b.bold)}**${b.text ? ` ${esc(b.text)}` : ''}`).join('<br>');
 }
 
 function table({ head, rows }: TableDef): string {
@@ -46,13 +46,12 @@ function section(spec: ProjectSpec, _date: string | null, lang: SpecLang, parts?
       if (p.description.trim()) out.push(p.description);
       const conditions = [...(p.preconditions ?? []), ...(p.precondition ?? '').split(/\r?\n/)].filter((line) => line.trim());
       if (conditions.length) {
-        out.push(`#### ${t.preconditions}`, ...(p.precond_mode === 'any' ? [t.anyPreconditions] : []),
+        out.push(`#### ${t.preconditions}`, ...(p.precond_mode === 'any' && conditions.length > 1 ? [t.anyPreconditions] : []),
           conditions.map((line, index) => `${index + 1}. ${esc(line)}`).join('\n'));
       }
       out.push(table(transitionsTable(p.transitions, lang)));
     }
   }
-  out.push(`## ${t.errors}`, table(transitionsTable(spec.errors, lang)));
   return out;
 }
 

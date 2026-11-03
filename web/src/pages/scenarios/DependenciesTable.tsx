@@ -1,129 +1,91 @@
-import { Trash2, TriangleAlert } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Combobox } from '@base-ui/react/combobox';
-import { AddButton, Card, ROW } from './Card';
-import { TagInput } from '@/components/TagInput';
-import { cn, GHOST } from '@/lib/utils';
-import { usePath, useProjectId } from '@/hooks/project';
-import { api } from '@/lib/api';
-import type { Dependency, EntityListItem } from '@/lib/types';
+import { AddBar } from '@/components/AddBar';
+import { ResizableColumns } from '@/components/ResizableColumns';
 import { SortHeader, useColumnSort } from '@/components/ColumnSort';
+import { useProjectId } from '@/hooks/project';
+import { api } from '@/lib/api';
+import { dictionaryDependencyHint } from '@/lib/optionHints';
+import type { ValueRename } from '@/lib/dependencyEdits';
+import type { Dependency, DictionaryDependency, EntityListItem } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { Card, ROW } from './Card';
+import { DependencyEditor, type DependencyDraft } from './DependencyEditor';
 
 interface Props {
   dependencies: Dependency[];
   entities: EntityListItem[];
-  /** Принимает функцию-обновление, чтобы асинхронная подстановка значений сущности не затирала свежие правки. */
   onChange: (update: (deps: Dependency[]) => Dependency[]) => void;
+  onDictionarySaved: (record: DictionaryDependency, previousName: string, renames: ValueRename[]) => void;
 }
+const COLS = 'md:[grid-template-columns:var(--resizable-columns)]';
 
-const COLS = 'md:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(0,1fr)_32px]';
-
-/** Название зависимости: свободный ввод с подсказками из справочника. */
-function NameCombobox({ value, names, onType, onPick }: { value: string; names: string[]; onType: (v: string) => void; onPick: (v: string) => void }) {
-  return (
-    <Combobox.Root
-      items={names}
-      value={null}
-      inputValue={value}
-      openOnInputClick
-      onInputValueChange={(v, details) => { if (details.reason === 'input-change') onType(v); }}
-      onValueChange={(v: string | null) => { if (v) onPick(v); }}
-    >
-      <Combobox.Input
-        spellCheck={false}
-        aria-label="Название зависимости"
-        className={cn(GHOST, 'h-8 w-full rounded-md border px-2.5 text-sm outline-none placeholder:text-muted-foreground max-md:h-10 md:-ml-2.5 md:w-[calc(100%+0.625rem)]')}
-      />
-      {names.length > 0 && (
-        <Combobox.Portal>
-          <Combobox.Positioner sideOffset={4} align="start" className="isolate z-50">
-            <Combobox.Popup className="max-h-(--available-height) w-max min-w-(--anchor-width) max-w-[min(36rem,95vw)] origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 empty:hidden">
-              <Combobox.List className="max-h-72 overflow-y-auto p-1">
-                {(n: string) => (
-                  <Combobox.Item key={n} value={n} className="flex w-full cursor-default items-center rounded-md px-2 py-1 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground">
-                    {n}
-                  </Combobox.Item>
-                )}
-              </Combobox.List>
-            </Combobox.Popup>
-          </Combobox.Positioner>
-        </Combobox.Portal>
-      )}
-    </Combobox.Root>
-  );
-}
-
-export function DependenciesTable({ dependencies, entities, onChange }: Props) {
-  const sort = useColumnSort();
-  const sorted = sort.rows(dependencies, (dependency, column) => column === 'values' ? (dependency.type === 'bool' ? ['true', 'false'] : dependency.options).join(' ') : column === 'description' ? dependency.description ?? '' : dependency.name || entities.find((e) => e.id === dependency.entity_id)?.name || '');
+export function DependenciesTable({ dependencies, entities, onChange, onDictionarySaved }: Props) {
   const projectId = useProjectId();
-  const path = usePath();
+  const qc = useQueryClient();
+  const sort = useColumnSort();
+  const [loading, setLoading] = useState(false);
+  const [editor, setEditor] = useState<{ ref: string | null; record: DictionaryDependency | null; initial: { name: string; description: string; values: string[] } } | null>(null);
   const { data: dictionary = [] } = useQuery({ queryKey: ['dependency-dictionary', projectId], queryFn: () => api.dependencyDictionary.list(projectId) });
-
-  const patch = (ref: string, p: Partial<Dependency>) =>
-    onChange((deps) => deps.map((d) => (d.ref === ref ? { ...d, ...p } : d)));
-  const add = () =>
-    onChange((deps) => [...deps, { ref: crypto.randomUUID(), entity_id: null, name: '', description: '', type: 'enum', options: [] }]);
-
-  /** Выбрав запись справочника, подставляем её значения как варианты списка. */
-  const pick = (ref: string, name: string) => {
-    const d = dictionary.find((x) => x.name === name);
-    if (d) patch(ref, { dictionary_id: d.id, editable: false, entity_id: null, name: d.name, description: d.description ?? '', type: d.values.length ? 'enum' : 'string', options: d.values });
+  const recordOf = (d: Dependency) => dictionary.find((r) => r.id === d.dictionary_id || (d.entity_id === null && r.name === d.name));
+  const nameOf = (d: Dependency) => recordOf(d)?.name ?? (d.entity_id !== null ? entities.find((e) => e.id === d.entity_id)?.name : d.name) ?? '';
+  const descriptionOf = (d: Dependency) => recordOf(d)?.description ?? d.description ?? '';
+  const valuesOf = (d: Dependency) => recordOf(d)?.values ?? (d.type === 'bool' ? ['true', 'false'] : d.options);
+  const sorted = sort.rows(dependencies, (d, column) => column === 'values' ? valuesOf(d).join(' ') : column === 'description' ? descriptionOf(d) : nameOf(d));
+  const connect = (record: DictionaryDependency) => onChange((deps) => [...deps, {
+    ref: crypto.randomUUID(), entity_id: null, name: record.name, description: record.description ?? '', dictionary_id: record.id, editable: false,
+    type: record.values.length ? 'enum' : 'string', options: record.values,
+  }]);
+  const open = async (d: Dependency) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const id = d.dictionary_id ?? recordOf(d)?.id;
+      const record = id != null ? await api.dependencyDictionary.get(id) : null;
+      setEditor({ ref: d.ref, record, initial: { name: record?.name ?? nameOf(d), description: record?.description ?? descriptionOf(d), values: record?.values ?? valuesOf(d) } });
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Не удалось загрузить зависимость'); }
+    finally { setLoading(false); }
   };
-
-  return (
-    <Card flush title="Внешние зависимости" action={<AddButton onClick={add}>Добавить</AddButton>}>
-      <div className={cn(ROW, COLS, 'flex flex-wrap items-center border-t-0 py-1 text-xs font-medium text-muted-foreground md:grid')}>
-        <SortHeader column="name" sort={sort}>Зависимость</SortHeader>
-        <SortHeader column="values" sort={sort}>Значения</SortHeader>
-        <SortHeader column="description" sort={sort}>Описание</SortHeader>
-        <span />
-      </div>
-      {sorted.map((d) => {
-        const locked = d.dictionary_id != null && d.editable === false;
-        const inheritedValues = d.type === 'bool' ? ['true', 'false'] : d.options;
-        const recordId = d.dictionary_id ?? dictionary.find((record) => record.name === d.name)?.id;
-        return (
-        <div key={d.ref} className={cn(ROW, COLS, 'md:items-start')}>
-          <div>
-          <NameCombobox
-            value={d.name || (d.entity_id !== null ? entities.find((e) => e.id === d.entity_id)?.name ?? '' : '')}
-            names={dictionary.map((x) => x.name)}
-            onType={(name) => patch(d.ref, { name, entity_id: null, ...(locked ? { dictionary_id: null, editable: true } : {}) })}
-            onPick={(name) => pick(d.ref, name)}
-          />
-          {recordId != null && <Link to={path(`/dependencies/${recordId}`)} className="mt-1 inline-block text-xs text-brand hover:underline">{locked ? 'Из справочника' : 'В справочнике'} →</Link>}
-          </div>
-          <div>
-            {locked ? (
-              <div role="group" aria-label="Значения зависимости" className="flex min-h-9 flex-wrap items-center gap-1.5 py-1">
-                {inheritedValues.length ? inheritedValues.map((value) => <span key={value} className="rounded-md bg-secondary px-2 py-1 text-[13px] text-secondary-foreground">{value}</span>) : <span className="text-sm text-muted-foreground">Нет значений</span>}
-              </div>
-            ) : d.type === 'bool' ? (
-              <p className="pt-1.5 text-sm text-muted-foreground">true / false</p>
-            ) : (
-              <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
-                {d.options.length === 0 && (
-                  <span className="ml-2 inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-warning-bg px-2.5 py-0.5 text-xs font-medium text-warning">
-                    <TriangleAlert className="size-3" /> Не выбрано ни одного значения
-                  </span>
-                )}
-                <div className="min-w-32 flex-1">
-                  <TagInput value={d.options} onChange={(options) => patch(d.ref, { options, type: 'enum' })} aria-label="Вариант" />
-                </div>
-              </div>
-            )}
-          </div>
-          <Textarea rows={1} className={cn(GHOST, 'field-sizing-content min-h-9 rounded-md px-2 py-1.5 text-sm')} aria-label="Описание зависимости" readOnly={locked} title={locked ? 'Описание редактируется в справочнике зависимостей' : undefined} placeholder={locked ? 'Нет описания' : 'Описание'} value={d.description ?? ''} onChange={(e) => patch(d.ref, { description: e.target.value })} />
-          <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label="Удалить зависимость" onClick={() => onChange((deps) => deps.filter((x) => x.ref !== d.ref))}>
-            <Trash2 className="size-4" />
-          </Button>
+  const save = async (draft: DependencyDraft) => {
+    if (!editor) return;
+    // Stage renames so swapping two values cannot cascade into a different value.
+    const staged = draft.value_renames.map((r) => ({ ...r, temporary: `__rename_${crypto.randomUUID()}__` }));
+    const value_renames = [...staged.map((r) => ({ from: r.from, to: r.temporary })), ...staged.map((r) => ({ from: r.temporary, to: r.to }))];
+    const record = editor.record
+      ? await api.dependencyDictionary.save(editor.record.id, { ...draft, value_renames })
+      : await api.dependencyDictionary.create(projectId, draft.name, { description: draft.description, values: draft.values });
+    if (editor.record) onDictionarySaved(record, editor.record.name, draft.value_renames);
+    else if (editor.ref) onChange((deps) => deps.map((d) => d.ref === editor.ref ? { ...d, entity_id: null, dictionary_id: record.id, editable: false, name: record.name, description: record.description ?? '', type: record.values.length ? 'enum' : 'string', options: record.values } : d));
+    else connect(record);
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['dependency-dictionary', projectId] }),
+      qc.invalidateQueries({ queryKey: ['scenario'] }),
+      qc.invalidateQueries({ queryKey: ['scenarios', projectId] }),
+    ]);
+  };
+  const free = dictionary.filter((r) => !dependencies.some((d) => d.dictionary_id === r.id || d.name === r.name));
+  return <>
+    <ResizableColumns storageKey="scenario-dependencies" columns={['name', 'values', 'description']} initial="minmax(0,220px) minmax(0,1fr) minmax(0,1fr) 32px" trailing="32px">
+      <Card flush title="Внешние зависимости" action={<AddBar createLabel="Зависимость" creating={loading} onCreate={() => setEditor({ ref: null, record: null, initial: { name: '', description: '', values: [] } })}
+        options={free.map((r) => ({ value: String(r.id), label: r.name, hint: dictionaryDependencyHint(r) }))} connectLabel="Подключить существующую зависимость" onConnect={(id) => { const record = free.find((r) => r.id === id); if (record) connect(record); }} />}>
+        <div className={cn(ROW, COLS, 'flex flex-wrap items-center border-t-0 py-1 text-xs font-medium text-muted-foreground md:grid')}>
+          <SortHeader column="name" sort={sort}>Зависимость</SortHeader><SortHeader column="values" sort={sort}>Значения</SortHeader><SortHeader column="description" sort={sort}>Описание</SortHeader><span />
         </div>
-      ); })}
-      {dependencies.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Внешних зависимостей нет</p>}
-    </Card>
-  );
+        {sorted.map((d) => <div key={d.ref} role="button" tabIndex={0} aria-label={`Редактировать зависимость ${nameOf(d) || 'без названия'}`} aria-disabled={loading || undefined}
+          onClick={(e) => { if (!(e.target as HTMLElement).closest('button')) void open(d); }}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); void open(d); } }}
+          className={cn(ROW, COLS, 'cursor-pointer outline-none hover:bg-muted/60 focus-visible:bg-muted/60')}>
+          <span className="min-w-0 break-words text-sm">{nameOf(d) || 'Без названия'}</span>
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">{valuesOf(d).length ? valuesOf(d).map((value) => <span key={value} className="rounded-md bg-secondary px-2 py-1 text-[13px] text-secondary-foreground">{value}</span>) : <span className="text-sm text-muted-foreground">Нет значений</span>}</div>
+          <p className={cn('min-w-0 whitespace-pre-wrap break-words text-sm', !descriptionOf(d).trim() && 'text-muted-foreground')}>{descriptionOf(d) || 'Нет описания'}</p>
+          <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label="Удалить зависимость" onClick={() => onChange((deps) => deps.filter((x) => x.ref !== d.ref))}><Trash2 className="size-4" /></Button>
+        </div>)}
+        {!dependencies.length && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Внешних зависимостей нет</p>}
+      </Card>
+    </ResizableColumns>
+    {editor && <DependencyEditor initial={editor.initial} existing={editor.record} onClose={() => setEditor(null)} onSave={save} />}
+  </>;
 }

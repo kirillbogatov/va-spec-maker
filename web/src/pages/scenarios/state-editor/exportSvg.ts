@@ -10,7 +10,7 @@ export interface SchemeExportArgs {
   /** Название сценария и вкладки (вкладка — только если их несколько). */
   title: string; part: string | null;
   names: string[]; steps: Step[]; layout: Layout; analysis: Analysis;
-  errors: Step[]; globals: Step[];
+  globals: Step[];
   intents: IntentListItem[]; prompts: PromptListItem[];
   dependencies: Dependency[]; entities: EntityListItem[]; keywords: { id: number; name: string }[];
 }
@@ -72,7 +72,6 @@ async function buildExportSchemeSvg(a: SchemeExportArgs): Promise<string> {
     subtitle: a.part ? `Вкладка «${a.part}»` : '',
     date: new Date().toLocaleDateString('ru-RU'),
     states, edges,
-    errors: a.errors.map((s) => rule(s, s.state.trim() ? `в состоянии ${s.state.trim()}` : 'любое состояние')),
     globals: a.globals.map((s) => rule(s, 'любое состояние')),
     fontCss: SCHEME_FONT_CSS,
   }, (text, font) => { ctx.font = font; return ctx.measureText(text).width; });
@@ -89,7 +88,7 @@ export async function exportScenarioSvg(a: Pick<SchemeExportArgs, 'title' | 'int
     const analysis = analyzeSteps(steps, intentName, part.layout);
     const names = [...new Set([...analysis.states, ...Object.keys(part.layout), ...analysis.edges.map((e) => e.to)])];
     pages.push(await buildExportSchemeSvg({ ...a, part: part.name, steps, layout: part.layout, analysis, names,
-      errors: part.steps.filter((s) => s.kind === 'error'), globals: part.steps.filter((s) => s.kind === 'global') }));
+      globals: part.steps.filter((s) => s.kind === 'global') }));
   }
   const file = (a.title.trim() || 'Сценарий').replace(/[\\/:*?"<>|]+/g, '_');
   downloadBlob(new Blob([combineSvgPages(pages)], { type: 'image/svg+xml;charset=utf-8' }), `${file}.svg`);

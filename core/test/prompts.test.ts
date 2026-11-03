@@ -49,7 +49,7 @@ describe('prompts API', () => {
     expect((await request(app).get(`/api/projects/${pid}/prompts`)).body[0].scenarios).toEqual([{ id: s1, name: 'S1' }, { id: s2, name: 'S2' }]);
 
     await request(app).put(`/api/scenarios/${s1}`).send({
-      name: 'S1', parts: [{ steps: [{ kind: 'error', state: 'A', prompt_id: p }] }],
+      name: 'S1', parts: [{ layout: { A: { x: 0, y: 0, prompt_id: p } } }],
     });
     const refused = await request(app).delete(`/api/scenarios/${s1}/prompts/${p}`);
     expect(refused.status).toBe(409);

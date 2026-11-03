@@ -1,3 +1,5 @@
+import { OptionHint } from './OptionHint';
+import { dictionaryDependencyHint, entityHint, synonymsHint } from '@/lib/optionHints';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -161,18 +163,18 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     const answers = new Map<number, string>();
     for (const p of tables.prompts ?? []) answers.set(p.id, parseList(p.full_answers).join('\n'));
     return [
-      ...(scenarios.data ?? []).map((s): Hit => ({ key: `s${s.id}`, kind: 'scenario', name: s.name, hint: `${s.step_count} строк`, to: path(`/scenarios/${s.id}`) })),
+      ...(scenarios.data ?? []).map((s): Hit => ({ key: `s${s.id}`, kind: 'scenario', name: s.name, hint: s.description || `${s.step_count} строк`, to: path(`/scenarios/${s.id}`) })),
       ...(intents.data ?? []).map((i): Hit => ({
-        key: `i${i.id}`, kind: 'intent', name: i.name, hint: i.scenarios.map((s) => s.name).join(', ') || undefined, text: phrases.get(i.id),
+        key: `i${i.id}`, kind: 'intent', name: i.name, hint: i.hint || undefined, text: phrases.get(i.id),
         to: path(`/lists/intents/${i.id}`),
       })),
-      ...(entities.data ?? []).map((e): Hit => ({ key: `e${e.id}`, kind: 'entity', name: e.name, hint: `${e.value_count} знач.`, to: path(`/entities/${e.id}`) })),
+      ...(entities.data ?? []).map((e): Hit => ({ key: `e${e.id}`, kind: 'entity', name: e.name, hint: entityHint(e), to: path(`/entities/${e.id}`) })),
       ...(prompts.data ?? []).map((p): Hit => ({
-        key: `p${p.id}`, kind: 'prompt', name: p.name, hint: p.scenarios.map((s) => s.name).join(', ') || undefined, text: answers.get(p.id),
+        key: `p${p.id}`, kind: 'prompt', name: p.name, hint: p.hint || undefined, text: answers.get(p.id),
         to: path(`/lists/prompts/${p.id}`),
       })),
-      ...(deps.data ?? []).map((d): Hit => ({ key: `d${d.id}`, kind: 'dependency', name: d.name, hint: `${d.values.length} знач.`, to: path(`/dependencies/${d.id}`) })),
-      ...(mode === 'keywords' ? keywords.data ?? [] : []).map((k): Hit => ({ key: `k${k.id}`, kind: 'keyword', name: k.name, hint: `${k.synonyms.length} син.`, text: k.synonyms.join('\n'), to: path(`/lists/keywords/${k.id}`) })),
+      ...(deps.data ?? []).map((d): Hit => ({ key: `d${d.id}`, kind: 'dependency', name: d.name, hint: dictionaryDependencyHint(d), to: path(`/dependencies/${d.id}`) })),
+      ...(mode === 'keywords' ? keywords.data ?? [] : []).map((k): Hit => ({ key: `k${k.id}`, kind: 'keyword', name: k.name, hint: synonymsHint(k.synonyms), text: k.synonyms.join('\n'), to: path(`/lists/keywords/${k.id}`) })),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenarios.data, intents.data, prompts.data, entities.data, deps.data, keywords.data, mode, dump.data]);
@@ -255,13 +257,14 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                     onClick={() => go(h)}
                     className={cn('flex min-h-10 w-full items-center gap-3 px-3 py-1.5 text-left text-sm sm:min-h-9', active && 'bg-accent')}
                   >
-                    <span className="flex min-w-0 flex-1 items-center gap-2">
-                      <HitIcon h={h} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-center gap-2"><HitIcon h={h} />
                       {h.kind === 'scenario' || h.kind === 'command'
                         ? <span className="truncate font-medium">{h.name}</span>
                         : <TypeToken kind={h.kind}>{h.name}</TypeToken>}
+                      </span>
+                      <OptionHint text={h.hint} />
                     </span>
-                    {h.hint && <span className="max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">{h.hint}</span>}
                     {active && <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline" aria-hidden>↵</span>}
                   </button>
                 );

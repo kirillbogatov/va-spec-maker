@@ -63,11 +63,12 @@ function cellParagraphs(c: Cell | null, bold = false): Paragraph[] {
     )];
   }
   if (!c.bullets.length) return [new Paragraph({ children: [] })];
+  const instance = ++conditionListInstance;
   return c.bullets.map(
     (b) =>
       new Paragraph({
         children: [...run(b.bold, { bold: true, size: CELL }), ...(b.text ? run(` ${b.text}`, { size: CELL }) : [])],
-        bullet: { level: 0 },
+        ...(c.numbered ? { numbering: { reference: 'conditions', level: 0, instance } } : { bullet: { level: 0 } }),
       }),
   );
 }
@@ -124,7 +125,7 @@ function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['p
         return [
           subheading(`${p.scenario ? `${p.scenario} · ` : ''}${p.title}`),
           ...(p.description.trim() ? [new Paragraph({ children: run(p.description), spacing: { after: 120 } })] : []),
-          ...(conditions.length ? [subheading(t.preconditions), ...(p.precond_mode === 'any' ? [new Paragraph({ children: run(t.anyPreconditions), keepNext: true })] : []),
+          ...(conditions.length ? [subheading(t.preconditions), ...(p.precond_mode === 'any' && conditions.length > 1 ? [new Paragraph({ children: run(t.anyPreconditions), keepNext: true })] : []),
             ...cellParagraphs({ list: conditions, numbered: true })] : []),
           tableBlock(transitionsTable(p.transitions, lang)), gap(),
         ];
@@ -136,7 +137,6 @@ function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['p
     ...(spec.dependencies.length ? [heading(t.dependencies), tableBlock(dependenciesTable(spec, lang)), gap()] : []),
     heading(t.prompts), tableBlock(promptsTable(spec, lang)), gap(),
     heading(t.transitions), ...transitions, gap(),
-    heading(t.errors), tableBlock(transitionsTable(spec.errors, lang)),
   ];
 }
 

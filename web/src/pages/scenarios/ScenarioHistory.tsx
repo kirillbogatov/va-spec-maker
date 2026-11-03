@@ -39,7 +39,7 @@ export function ScenarioHistory({ scenarioId }: { scenarioId: number }) {
       }
       case 'state': return { to: where('logic', r.part, r.name), label: r.name };
       case 'part': return { to: where('logic', r.part), label: r.name };
-      case 'error': return { to: where('errors', r.part), label: r.name };
+      case 'error': return null;
       case 'dependency': return { to: where('general'), label: r.name };
     }
   };

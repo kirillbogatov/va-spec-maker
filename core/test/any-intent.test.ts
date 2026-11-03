@@ -31,10 +31,10 @@ it('roundtrips explicit wildcard, preserves legacy null semantics and rejects no
   const { app, db, call, sid } = await setup();
   const scenario = await call('GET', `/api/scenarios/${sid}`);
   expect(scenario.parts[0].steps.map((s: any) => [s.kind, s.intent_id, s.match_any_intent])).toEqual([
-    ['transition', null, true], ['transition', null, false], ['error', null, false],
+    ['transition', null, true], ['transition', null, false],
   ]);
   expect(db.prepare('SELECT match_any_intent FROM scenario_steps ORDER BY position').all()).toEqual([
-    { match_any_intent: 1 }, { match_any_intent: 0 }, { match_any_intent: 0 },
+    { match_any_intent: 1 }, { match_any_intent: 0 },
   ]);
   expect((await app.handle({ method: 'PUT', url: `/api/scenarios/${sid}`, body: { ...scenario, parts: [{ name: 'Main', steps: [{ match_any_intent: 'true' }] }] } })).status).toBe(400);
   const reopened = createApp(await openDb({ data: db.serialize() }));
@@ -49,22 +49,22 @@ it.each(['ru', 'en'] as const)('exports %s wildcard distinctly in Markdown, DOCX
   const spec = loadProjectSpec(db, pid, lang);
   expect(spec.transitions.find(s => s.state === 'ANY')?.intent).toBe(label);
   expect(spec.transitions.find(s => s.state === 'NONE')?.intent).toBeNull();
-  expect(spec.errors[0].intent).toBe(scenarioLabel);
+  expect(spec).not.toHaveProperty('errors');
   const md = await call('GET', `/api/scenarios/${sid}/export?format=md&lang=${lang}`);
   expect(md).toContain(label);
-  expect(md).toContain(scenarioLabel);
+  expect(md).not.toContain(scenarioLabel);
   expect(await call('GET', `/api/scenarios/${sid}/preview?lang=${lang}`)).toContain(label);
   const docx: Blob = await call('GET', `/api/scenarios/${sid}/export?format=docx&lang=${lang}`);
   const zip = await JSZip.loadAsync(await docx.arrayBuffer());
   const xml = await zip.file('word/document.xml')!.async('string');
   const plain = [...xml.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)].map(m => m[1]).join('');
   expect(plain).toContain(label);
-  expect(plain).toContain(scenarioLabel);
+  expect(plain).not.toContain(scenarioLabel);
   const imported = await convertScenarioDocument(md, 'wildcard.md');
   expect(imported.dump.tables.intents).toHaveLength(0);
   expect(imported.dump.tables.scenario_steps.find(s => s.state === 'ANY')).toMatchObject({ intent_id: null, match_any_intent: 1, kind: 'transition' });
   expect(imported.dump.tables.scenario_steps.find(s => s.state === 'NONE')).toMatchObject({ intent_id: null, match_any_intent: 0 });
-  expect(imported.dump.tables.scenario_steps.find(s => s.state === 'ERROR')).toMatchObject({ intent_id: null, match_any_intent: 0, kind: 'error' });
+  expect(imported.dump.tables.scenario_steps.find(s => s.state === 'ERROR')).toBeUndefined();
 });
 
 it('preserves wildcard through project import, duplicate, scenario import and accepts boolean dump flags', async () => {
@@ -73,7 +73,7 @@ it('preserves wildcard through project import, duplicate, scenario import and ac
   const check = (projectId: number) => {
     const steps = db.prepare('SELECT kind, intent_id, match_any_intent FROM scenario_steps WHERE scenario_id IN (SELECT id FROM scenarios WHERE project_id = ?) ORDER BY position').all(projectId);
     expect(steps.map(s => [s.kind, s.intent_id, s.match_any_intent])).toEqual([
-      ['transition', null, 1], ['transition', null, 0], ['error', null, 0],
+      ['transition', null, 1], ['transition', null, 0],
     ]);
   };
   check(importProject(db, dump));

@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { TypeToken } from '@/components/TypeToken';
 import { cn, FIELD } from '@/lib/utils';
 import type { StateInfo, PromptListItem } from '@/lib/types';
-import { DialogLabel, OptionSelect } from '../StepsTable';
+import { DialogLabel, OptionSelect } from '../ScenarioSelects';
 import { PanelHeader, PanelRoot, PanelSection } from './PanelParts';
 
 interface Props {

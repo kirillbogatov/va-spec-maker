@@ -1,3 +1,5 @@
+import { entityHint } from '@/lib/optionHints';
+import { ResizableColumns } from '@/components/ResizableColumns';
 import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -38,7 +40,7 @@ const toPayload = (d: Intent): Omit<Intent, 'id' | 'project_id'> => {
 };
 
 // Колонки строки на широком экране: интент, фразы, сущности, «Вкл.», стрелка
-const COLS = 'xl:grid-cols-[minmax(140px,1fr)_minmax(140px,1.4fr)_minmax(140px,1.2fr)_56px_96px]';
+const COLS = 'xl:[grid-template-columns:var(--resizable-columns)]';
 
 /** Свёрнутая строка: сущности жетонами обязательные залиты цветом. */
 function EntityTokens({ value, entities }: { value: IntentEntity[]; entities: EntityListItem[] }) {
@@ -64,7 +66,7 @@ const PHRASE_BOX = 'h-9 w-full min-w-0 rounded-none border-0 bg-transparent px-2
 /** Сущности интента таблицей без заголовков: название, описание, обязательность, удаление; ниже выбор следующей. */
 function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; entities: EntityListItem[]; onChange: (v: IntentEntity[]) => void }) {
   const find = (id: number) => entities.find((e) => e.id === id);
-  const options = entities.filter((e) => !value.some((v) => v.entity_id === e.id)).map((e) => ({ value: String(e.id), label: e.name, hint: e.description }));
+  const options = entities.filter((e) => !value.some((v) => v.entity_id === e.id)).map((e) => ({ value: String(e.id), label: e.name, hint: entityHint(e) }));
   const projectId = useProjectId();
   const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();
@@ -502,7 +504,7 @@ export function IntentsTable({ scenarioId }: { scenarioId: number }) {
         onConnect={(id) => connect.mutate({ id })}
         connectLabel="Подключить существующий интент"
       />
-      <section className="overflow-hidden rounded-xl border bg-card" aria-label="Интенты сценария">
+      <ResizableColumns storageKey="scenario-intents" columns={['name', 'values', 'entities', 'enabled', 'global']} initial="minmax(140px,1fr) minmax(140px,1.4fr) minmax(140px,1.2fr) 56px 96px" breakpoint="xl" className="overflow-hidden rounded-xl border bg-card" aria-label="Интенты сценария">
         <div className={cn('flex flex-wrap items-center gap-x-3 border-b px-4 py-1 text-xs font-medium text-muted-foreground xl:grid', COLS)}>
           <SortHeader column="name" sort={sort}>Интент</SortHeader>
           <SortHeader column="values" sort={sort}>{MODE_TITLE[mode]}</SortHeader>
@@ -523,7 +525,7 @@ export function IntentsTable({ scenarioId }: { scenarioId: number }) {
           />
         ))}
         {isSuccess && items.length === 0 && <p className="px-4 py-6 text-center text-sm text-muted-foreground">Интентов пока нет. Нажмите «Интент» выше или подключите существующий интент.</p>}
-      </section>
+      </ResizableColumns>
     </div>
   );
 }

@@ -10,7 +10,7 @@ describe('duplicatePart', () => {
       preconditions: [{ dep: 'zone', value: 'front' }], precondition: 'Пользователь авторизован', precond_mode: 'any',
       steps: [
         { ...newTransition('VA_ACTIVATION', 'ST_DONE'), intent_id: 7, conditions: [{ dep: 'zone', value: 'rear' }] },
-        { ...newTransition('', 'ST_DONE'), kind: 'error', prompt_id: 9 },
+        { ...newTransition('', 'ST_DONE'), kind: 'global', prompt_id: 9 },
         { ...newTransition('', 'ST_DONE'), kind: 'global', intent_id: 11 },
       ],
       layout: { VA_ACTIVATION: { x: 1, y: 2 }, ST_DONE: { x: 3, y: 4, description: 'Готово', prompt_id: 9 }, ST_ISOLATED: { x: 0, y: 0 } },

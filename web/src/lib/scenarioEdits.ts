@@ -1,5 +1,4 @@
 const KEY = 'scenario-edits';
-const EVENT = 'scenario-edits-changed';
 
 export function readScenarioEdits(): Record<number, number> {
   try {
@@ -17,10 +16,4 @@ export function markScenarioEdited(id: number): void {
   } catch {
     /* хранилище недоступно — порядок не запомнится */
   }
-  window.dispatchEvent(new Event(EVENT));
-}
-
-export function onScenarioEdits(cb: () => void): () => void {
-  window.addEventListener(EVENT, cb);
-  return () => window.removeEventListener(EVENT, cb);
 }
