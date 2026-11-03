@@ -21,6 +21,36 @@ async function setup() {
 }
 
 describe('связь внешних зависимостей со справочником', () => {
+  it('переименовывает значения во всех связанных условиях, сохраняя чужие условия и части', async () => {
+    const { db, call, pid, scenario, save } = await setup();
+    const dictionary = (await call('POST', `/api/projects/${pid}/dependency-dictionary`, { name: 'DEP_SHARED' })).body;
+    await call('PUT', `/api/dependency-dictionary/${dictionary.id}`, { name: 'DEP_SHARED', values: ['A', 'B'] });
+    const ids = [await scenario('One'), await scenario('Two')];
+    for (const sid of ids) {
+      await save(sid, [{ ref: 'linked', name: 'DEP_SHARED' }, { ref: 'other', name: 'DEP_OTHER', type: 'enum', options: ['A'] }]);
+      for (const position of [1, 2]) {
+        const part = db.prepare('INSERT INTO scenario_parts(scenario_id, position, name) VALUES (?, ?, ?)').run(sid, position, `Part ${position}`).lastInsertRowid;
+        const conditions = [{ dep: 'linked', value: 'A', op: '!=' }, { dep: 'linked', value: 'B' }, { dep: 'other', value: 'A' }, { dep: 'linked', entity_id: 999, value: 'A' }, { dep: 'linked', concept_id: 999, value: 'A' }];
+        db.prepare('INSERT INTO scenario_steps(scenario_id, part_id, position, conditions) VALUES (?, ?, 0, ?)').run(sid, part, JSON.stringify(conditions));
+      }
+    }
+    const result = await call('PUT', `/api/dependency-dictionary/${dictionary.id}`, {
+      name: 'DEP_SHARED', values: ['Renamed', 'B'], value_renames: [{ from: 'A', to: 'Intermediate' }, { from: 'Intermediate', to: 'Renamed' }],
+    });
+    expect(result.status).toBe(200);
+    for (const sid of ids) {
+      const current = (await call('GET', `/api/scenarios/${sid}`)).body;
+      expect(current.dependencies[0].options).toEqual(['Renamed', 'B']);
+      for (const part of current.parts.filter((p: any) => p.steps.length)) {
+        expect(part.steps[0].conditions).toEqual([{ dep: 'linked', value: 'Renamed', op: '!=' }, { dep: 'linked', value: 'B' }, { dep: 'other', value: 'A' }, { dep: 'linked', entity_id: 999, value: 'A' }, { dep: 'linked', concept_id: 999, value: 'A' }]);
+      }
+      expect((await call('GET', `/api/scenarios/${sid}/preview`)).body).toContain('Renamed');
+    }
+    // Ошибка входных данных не должна частично менять справочник или условия.
+    expect((await call('PUT', `/api/dependency-dictionary/${dictionary.id}`, { name: 'Changed', values: ['Bad'], value_renames: [{ from: 'Renamed', to: '' }] })).status).toBe(400);
+    expect((await call('GET', `/api/dependency-dictionary/${dictionary.id}`)).body.values).toEqual(['Renamed', 'B']);
+  });
+
   it('создаёт запись из сценария, сохраняет право редактирования и передаёт правки подключённым сценариям', async () => {
     const { call, pid, scenario, save } = await setup();
     const owner = await scenario('Owner');

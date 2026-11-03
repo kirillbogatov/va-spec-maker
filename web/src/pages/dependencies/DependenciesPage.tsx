@@ -1,5 +1,5 @@
 import { Textarea } from '@/components/ui/textarea';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DictionaryTransfer } from '@/components/DictionaryTransfer';
@@ -10,8 +10,49 @@ import { usePrefixes } from '@/lib/prefixes';
 import { api } from '@/lib/api';
 import { splitTags } from '@/lib/parse';
 
+type ValueRename = { id: string; from: string; to: string };
+
+/** Значение редактируется по клику; изменения применяются после подтверждения. */
+function EditableValue({ value, values, onRename }: { value: string; values: string[]; onRename: (next: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const next = draft.trim();
+  const error = !next ? 'Введите значение' : next !== value && values.includes(next) ? 'Такое значение уже есть' : '';
+  const commit = () => {
+    if (error) return;
+    setEditing(false);
+    if (next !== value) onRename(next);
+  };
+  return editing ? (
+    <div className="min-w-0 flex-1">
+      <Input
+        autoFocus
+        aria-label={`Значение ${value}`}
+        aria-invalid={!!error}
+        className="h-10 md:h-9"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); commit(); }
+          if (e.key === 'Escape') { e.preventDefault(); setEditing(false); }
+        }}
+      />
+      {error && <p role="alert" className="mt-1 text-sm text-destructive">{error}</p>}
+    </div>
+  ) : (
+    <button
+      type="button"
+      aria-label={`Редактировать значение ${value}`}
+      title="Нажмите, чтобы изменить значение"
+      className="min-h-10 min-w-0 flex-1 rounded text-left text-sm break-words hover:text-primary focus-visible:outline-2 focus-visible:outline-ring md:min-h-9"
+      onClick={() => { setDraft(value); setEditing(true); }}
+    >{value}</button>
+  );
+}
+
 /** Возможные значения зависимости: список с полем добавления. */
-function ValuesList({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+function ValuesList({ value, onChange, onRename }: { value: string[]; onChange: (v: string[]) => void; onRename: (from: string, to: string) => void }) {
   const [text, setText] = useState('');
   const add = () => {
     const items = splitTags(text);
@@ -48,7 +89,7 @@ function ValuesList({ value, onChange }: { value: string[]; onChange: (v: string
         <ul className="divide-y divide-border rounded-md border">
           {value.map((v, i) => (
             <li key={`${v}-${i}`} className="group flex min-h-10 items-center gap-2 px-3 py-1 hover:bg-muted md:min-h-9">
-              <span className="min-w-0 flex-1 break-words text-sm">{v}</span>
+              <EditableValue value={v} values={value} onRename={(next) => onRename(v, next)} />
               <button
                 type="button"
                 aria-label={`Удалить значение ${v}`}
@@ -69,6 +110,8 @@ export function DependenciesPage() {
   const projectId = useProjectId();
   const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();
+  // Автосохранение сериализует запросы; уже применённые переименования повторно не отправляем.
+  const appliedRenames = useRef(new Set<string>());
   const key = ['dependency-dictionary', projectId];
   const { data: items = [], isPending } = useQuery({ queryKey: key, queryFn: () => api.dependencyDictionary.list(projectId) });
   const refresh = () => qc.invalidateQueries({ queryKey: key });
@@ -81,7 +124,7 @@ export function DependenciesPage() {
       subtitle={(item) => item.description}
       listActions={<DictionaryTransfer kind="dependencies" />}
       base="/dependencies"
-      items={items}
+      items={items as (typeof items[number] & { valueRenames?: ValueRename[] })[]}
       loading={isPending}
       meta={(i) => (i.values.length ? null : { text: 'нет значений', warn: true })}
       usedIn={(i) => i.used_by.map((s) => ({ id: s.id, name: s.name }))}
@@ -89,7 +132,14 @@ export function DependenciesPage() {
         <>
         <DictCard title="Описание"><Textarea rows={2} aria-label="Описание зависимости" value={d.description} onChange={(event) => patch({ description: event.target.value })} /></DictCard>
         <DictCard title="Возможные значения">
-          <ValuesList value={d.values} onChange={(values) => patch({ values })} />
+          <ValuesList
+            value={d.values}
+            onChange={(values) => patch({ values })}
+            onRename={(from, to) => patch({
+              values: d.values.map((v) => v === from ? to : v),
+              valueRenames: [...(d.valueRenames ?? []), { id: crypto.randomUUID(), from, to }],
+            })}
+          />
         </DictCard>
         </>
       )}
@@ -102,8 +152,17 @@ export function DependenciesPage() {
       }
       onCreate={(n) => create.mutateAsync(n)}
       onSave={async (d) => {
-        await api.dependencyDictionary.save(d.id, { name: d.name, description: d.description, values: d.values });
-        refresh();
+        const renames = (d.valueRenames ?? []).filter((r) => !appliedRenames.current.has(r.id));
+        await api.dependencyDictionary.save(d.id, {
+          name: d.name, description: d.description ?? '', values: d.values,
+          value_renames: renames.map(({ from, to }) => ({ from, to })),
+        });
+        renames.forEach((r) => appliedRenames.current.add(r.id));
+        await Promise.all([
+          refresh(),
+          qc.invalidateQueries({ queryKey: ['scenario'] }),
+          qc.invalidateQueries({ queryKey: ['scenarios', projectId] }),
+        ]);
       }}
       onRemove={(d) => remove.mutate(d.id)}
     />

@@ -1,0 +1,55 @@
+import { expect, test } from '@playwright/test';
+
+test('редактирование значений зависимости по клику: сохранение, отмена и проверка дублей', async ({ page }, testInfo) => {
+  await page.goto('/#/p/1/dependencies');
+  const edit = page.getByRole('button', { name: /^Редактировать значение / }).first();
+  await expect(edit).toBeVisible();
+  const original = (await edit.textContent())!.trim();
+  await edit.click();
+  const input = page.getByRole('textbox', { name: `Значение ${original}`, exact: true });
+  await input.fill('Renamed value');
+  await input.press('Enter');
+  const renamed = page.getByRole('button', { name: 'Редактировать значение Renamed value', exact: true });
+  await expect(renamed).toBeVisible();
+  const saving = page.getByRole('status', { name: 'Сохранение…' }).or(page.getByRole('status').filter({ hasText: /^Сохранение…$/ }));
+  await expect(saving).toHaveCount(0);
+  await page.getByLabel('Описание зависимости', { exact: true }).fill('Check second save');
+  await expect(saving).toHaveCount(0);
+  await renamed.click();
+  await page.getByRole('textbox', { name: 'Значение Renamed value', exact: true }).fill('Cancelled');
+  await page.getByRole('textbox', { name: 'Значение Renamed value', exact: true }).press('Escape');
+  await expect(renamed).toBeVisible();
+  await renamed.click();
+  const editing = page.getByRole('textbox', { name: 'Значение Renamed value', exact: true });
+  await editing.fill('');
+  await editing.press('Enter');
+  await expect(page.getByRole('alert')).toHaveText('Введите значение');
+  await editing.press('Escape');
+  await page.getByLabel('Новое значение', { exact: true }).fill('Existing value');
+  await page.getByLabel('Новое значение', { exact: true }).press('Enter');
+  await expect(saving).toHaveCount(0);
+  await renamed.click();
+  await editing.fill('Existing value');
+  await editing.press('Enter');
+  await expect(page.getByRole('alert')).toHaveText('Такое значение уже есть');
+  await editing.press('Escape');
+  await renamed.click();
+  await editing.fill('Final value');
+  await page.getByLabel('Описание зависимости', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Редактировать значение Final value', exact: true })).toBeVisible();
+  await expect(saving).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath('dependency-edit-desktop.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: testInfo.outputPath('dependency-edit-mobile.png') });
+  // Демо-база записывается в sessionStorage с задержкой после сохранения.
+  let previous: string | null = null;
+  await expect.poll(async () => {
+    const current = await page.evaluate(() => sessionStorage.getItem('va-demo-db'));
+    const same = !!current && current === previous;
+    previous = current;
+    return same;
+  }, { intervals: [400] }).toBe(true);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Редактировать значение Final value', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Редактировать значение ${original}`, exact: true })).toHaveCount(0);
+});

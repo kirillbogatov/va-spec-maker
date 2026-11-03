@@ -14,6 +14,32 @@ export function updateDependencyCopies(db: Db, dictionaryId: number, name: strin
     WHERE dictionary_id = ?`).run(name, JSON.stringify(values), description, JSON.stringify(values), values.length ? 'enum' : 'string', dictionaryId);
 }
 
+/** Переименовывает только структурированные условия связанных зависимостей во всех частях сценариев. */
+export function renameDependencyValues(db: Db, dictionaryId: number, renames: { from: string; to: string }[]) {
+  if (!renames.length) return;
+  const links = db.prepare('SELECT scenario_id, ref FROM scenario_dependencies WHERE dictionary_id = ?').all(dictionaryId) as { scenario_id: number; ref: string }[];
+  const refs = new Map<number, Set<string>>();
+  for (const link of links) {
+    if (!refs.has(link.scenario_id)) refs.set(link.scenario_id, new Set());
+    refs.get(link.scenario_id)!.add(link.ref);
+  }
+  const update = db.prepare('UPDATE scenario_steps SET conditions = ? WHERE id = ?');
+  for (const [scenarioId, dependencies] of refs) {
+    const steps = db.prepare('SELECT id, conditions FROM scenario_steps WHERE scenario_id = ?').all(scenarioId) as { id: number; conditions: string }[];
+    for (const step of steps) {
+      const conditions = JSON.parse(step.conditions) as { dep: string; value: string; entity_id?: number; concept_id?: number }[];
+      let changed = false;
+      for (const c of conditions) {
+        if (c.entity_id !== undefined || c.concept_id !== undefined || !dependencies.has(c.dep)) continue;
+        for (const rename of renames) {
+          if (c.value === rename.from && rename.from !== rename.to) { c.value = rename.to; changed = true; }
+        }
+      }
+      if (changed) update.run(JSON.stringify(conditions), step.id);
+    }
+  }
+}
+
 /** Старые сценарии и дампы ещё не содержат ссылок на справочник. */
 export function backfillDependencyLinks(db: Db, projectId?: number) {
   if (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('scenario_dependencies', 'scenarios', 'dependency_dictionary')").all().length !== 3) return;

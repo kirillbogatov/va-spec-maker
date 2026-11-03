@@ -1,8 +1,8 @@
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
-import { notFound } from '../errors';
+import { badRequest, notFound } from '../errors';
 import { optString, parseId, requireString } from '../validate';
-import { updateDependencyCopies } from '../dependency-links';
+import { renameDependencyValues, updateDependencyCopies } from '../dependency-links';
 
 interface Row { id: number; project_id: number; name: string; description: string; values: string }
 
@@ -54,10 +54,17 @@ export function dependencyDictionaryRouter(db: Db): RouterT {
     const name = requireString(req.body?.name, 'Название');
     const description = req.body?.description === undefined ? current.description : optString(req.body.description);
     const values = cleanValues(req.body?.values);
+    const rawRenames = req.body?.value_renames ?? [];
+    if (!Array.isArray(rawRenames)) throw badRequest('Некорректные переименования значений');
+    const renames = rawRenames.map((r: { from?: unknown; to?: unknown } | null) => ({
+      from: requireString(r?.from, 'Исходное значение'),
+      to: requireString(r?.to, 'Новое значение'),
+    }));
     db.transaction(() => {
       // Подключаем старые записи, которые ещё связаны со справочником только именем.
       db.prepare(`UPDATE scenario_dependencies SET dictionary_id = ?, editable = 0 WHERE dictionary_id IS NULL AND entity_id IS NULL AND name = ?
         AND scenario_id IN (SELECT id FROM scenarios WHERE project_id = ?)`).run(id, current.name, current.project_id);
+      renameDependencyValues(db, id, renames);
       db.prepare('UPDATE dependency_dictionary SET name = ?, description = ?, "values" = ? WHERE id = ?').run(name, description, JSON.stringify(values), id);
       updateDependencyCopies(db, id, name, values, description);
     })();
