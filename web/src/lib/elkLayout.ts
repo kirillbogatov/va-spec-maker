@@ -1,10 +1,11 @@
 import ELK from 'elkjs/lib/elk.bundled.js';
 
-export interface LayoutNodeIn { id: string; width: number; height: number }
+export interface LayoutNodeIn { id: string; width: number; height: number; order?: number }
 export interface LayoutEdgeIn { id: string; source: string; target: string; label: { width: number; height: number } | null }
 export interface Pt { x: number; y: number }
 export interface LayoutResult {
   nodes: Map<string, Pt>;
+  layers: Map<string, number>;
   /**
    * Линия перехода в координатах схемы: ломаные только из горизонтальных и вертикальных отрезков.
    * С карточкой — два участка (до карточки и от неё); сама карточка лежит между ними.
@@ -37,10 +38,14 @@ export function simplify(points: Pt[]): Pt[] {
  * (mergeEdges), так что из узла выходит одна линия, а не веер.
  */
 export async function layoutStateGraph(nodes: LayoutNodeIn[], edges: LayoutEdgeIn[]): Promise<LayoutResult> {
+  const manualOrder = nodes.some((n) => n.order !== undefined);
+  const orderedNodes = [...nodes].sort((a, b) => (a.order ?? nodes.indexOf(a)) - (b.order ?? nodes.indexOf(b)));
+  const rank = new Map(orderedNodes.map((n, i) => [n.id, i]));
+  const orderedEdges = manualOrder ? [...edges].sort((a, b) => (rank.get(a.target) ?? 0) - (rank.get(b.target) ?? 0)) : edges;
   const cardId = (id: string) => `card:${id}`;
   const children = [
-    ...nodes.map((n) => ({ id: n.id, width: n.width, height: n.height })),
-    ...edges.filter((e) => e.label).map((e) => ({ id: cardId(e.id), width: e.label!.width, height: e.label!.height })),
+    ...orderedNodes.map((n) => ({ id: n.id, width: n.width, height: n.height })),
+    ...orderedEdges.filter((e) => e.label).map((e) => ({ id: cardId(e.id), width: e.label!.width, height: e.label!.height })),
   ];
   const elkEdges = edges.flatMap((e) =>
     e.label
@@ -55,6 +60,7 @@ export async function layoutStateGraph(nodes: LayoutNodeIn[], edges: LayoutEdgeI
     layoutOptions: {
       'elk.algorithm': 'layered',
       'elk.direction': 'RIGHT',
+      ...(manualOrder ? { 'elk.layered.crossingMinimization.forceNodeModelOrder': 'true' } : {}),
       'elk.edgeRouting': 'ORTHOGONAL',
       'elk.layered.mergeEdges': 'true',
       'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
@@ -71,9 +77,20 @@ export async function layoutStateGraph(nodes: LayoutNodeIn[], edges: LayoutEdgeI
     edges: elkEdges,
   });
 
-  const result: LayoutResult = { nodes: new Map(), edges: new Map() };
+  const result: LayoutResult = { nodes: new Map(), layers: new Map(), edges: new Map() };
   const boxes = new Map<string, Pt>();
-  for (const n of graph.children ?? []) boxes.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
+  for (const n of graph.children ?? []) {
+    boxes.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 });
+  }
+  // ELK выравнивает разные по ширине блоки внутри слоя; их горизонтальные интервалы пересекаются.
+  let layer = -1;
+  let right = -Infinity;
+  for (const n of [...(graph.children ?? [])].sort((a, b) => (a.x ?? 0) - (b.x ?? 0))) {
+    const x = n.x ?? 0;
+    if (x >= right - 0.01) layer++;
+    result.layers.set(n.id, layer);
+    right = Math.max(right, x + (n.width ?? 0));
+  }
   for (const n of nodes) result.nodes.set(n.id, boxes.get(n.id) ?? { x: 0, y: 0 });
 
   const route = new Map<string, Pt[]>();

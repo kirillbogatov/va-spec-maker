@@ -1,16 +1,15 @@
-import { useEffect, useState } from 'react';
-import { AlertCircle, Check, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import type { SaveState } from '@/hooks/useAutosave';
 
-const LABEL: Record<SaveState, string> = { idle: '', saving: 'Сохранение…', saved: 'Сохранено', error: 'Ошибка сохранения' };
+const LABEL = { saving: 'Сохранение…', error: 'Ошибка сохранения' };
 
 /** compact — только иконка (для строк таблиц). */
 export function SaveIndicator({ state, compact }: { state: SaveState; compact?: boolean }) {
+  if (state === 'idle' || state === 'saved') return null;
   if (compact) {
     return (
       <span role="status" aria-label={LABEL[state]} title={LABEL[state]} className="inline-flex size-4 items-center justify-center">
         {state === 'saving' && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-        {state === 'saved' && <Check className="size-3.5 text-success" />}
         {state === 'error' && <AlertCircle className="size-3.5 text-destructive" />}
       </span>
     );
@@ -22,14 +21,6 @@ export function SaveIndicator({ state, compact }: { state: SaveState; compact?: 
   );
 }
 
-/** Подпись состояния сохранения для окон: «Сохранено» показывается ненадолго и исчезает. */
-export function SaveNote({ state, hideAfter = 2000 }: { state: SaveState; hideAfter?: number }) {
-  const [visible, setVisible] = useState(true);
-  useEffect(() => {
-    setVisible(true);
-    if (state !== 'saved') return;
-    const t = setTimeout(() => setVisible(false), hideAfter);
-    return () => clearTimeout(t);
-  }, [state, hideAfter]);
-  return visible ? <SaveIndicator state={state} /> : <span role="status" />;
+export function SaveNote({ state }: { state: SaveState }) {
+  return <SaveIndicator state={state} />;
 }

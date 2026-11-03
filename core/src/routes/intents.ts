@@ -54,8 +54,10 @@ export function intentsRouter(db: Db): RouterT {
     }));
 
   const PHRASES = '(SELECT COUNT(*) FROM intent_phrases p WHERE p.intent_id = i.id)';
-  /** Краткое описание для выпадающих списков: комментарий, иначе первая фраза (как в меню). */
-  const HINT = `COALESCE(NULLIF(TRIM(i.comment), ''), (SELECT p.text FROM intent_phrases p WHERE p.intent_id = i.id AND TRIM(p.text) <> '' ORDER BY p.position, p.id LIMIT 1), '')`;
+  /** Подпись в списках: комментарий, фраза, затем сам паттерн. */
+  const HINT = `COALESCE(NULLIF(TRIM(i.comment), ''),
+      (SELECT p.text FROM intent_phrases p WHERE p.intent_id = i.id AND TRIM(p.text) <> '' ORDER BY p.position, p.id LIMIT 1),
+      (SELECT p.text FROM intent_patterns p WHERE p.intent_id = i.id AND TRIM(p.text) <> '' ORDER BY p.position, p.id LIMIT 1), '')`;
 
   r.get('/projects/:pid/intents', (req, res) => {
     const rows = db

@@ -1,3 +1,5 @@
+import { waitForSaves } from './saveStore';
+import { toast } from 'sonner';
 import type {
   ChangelogRow, DictionaryDependency, Entity, HistoryEntry, EntityListItem, EntityValue, Intent, IntentListItem, Keyword, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
 } from './types';
@@ -109,6 +111,16 @@ export const api = {
     saveChangelog: (id: number, rows: ChangelogRow[], expected?: ChangelogRow[]) =>
       req<ChangelogRow[]>('PUT', `/api/scenarios/${id}/changelog`, { rows }, expected ? { expected } : undefined),
   },
-  exportFile: async (url: string, fallback: string) => downloadResponse(await request('GET', url), fallback),
-  preview: (scenarioId: number, lang: SpecLang, intentMode: IntentMode) => req<string>('GET', `/api/scenarios/${scenarioId}/preview?lang=${lang}&intentMode=${intentMode}`),
+  exportFile: async (url: string, fallback: string) => {
+    try {
+      await waitForSaves();
+      downloadResponse(await request('GET', url), fallback);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Не удалось экспортировать спецификацию');
+    }
+  },
+  preview: async (scenarioId: number, lang: SpecLang, intentMode: IntentMode) => {
+    await waitForSaves();
+    return req<string>('GET', `/api/scenarios/${scenarioId}/preview?lang=${lang}&intentMode=${intentMode}`);
+  },
 };

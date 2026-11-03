@@ -29,6 +29,7 @@ import { ScenarioPreview } from './ScenarioPreview';
 import { canonicalOrder, normalizeEntry, splitLegacySteps } from '@/lib/fsm';
 import { StateEditor } from './state-editor/StateEditor';
 import { PartPanel, PartTabs } from './PartTabs';
+import { duplicatePart } from './duplicatePart';
 
 export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'errors' | 'history' | 'preview';
 
@@ -128,7 +129,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     () => analyzeSteps(transitions, intentName, part.layout),
     [transitions, part.layout, intents],
   );
-  const globalSteps = part.steps.filter((s) => s.kind === 'global');
   const counts: Partial<Record<ScenarioTab, number>> = {
     intents: ownIntents.length,
     prompts: ownPrompts.length,
@@ -220,6 +220,13 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     });
     setActiveKey(key);
     setShowPart(true);
+  };
+  const copyPart = () => {
+    const copy = duplicatePart(part, draft.parts);
+    setDraft((d) => ({ ...d, parts: d.parts.flatMap((p) => p.key === part.key ? [p, copy] : [p]) }));
+    setActiveKey(copy.key!);
+    setShowPart(true);
+    toast.success(`Создана вкладка «${copy.name}»`);
   };
   const removePart = (key: string) => {
     const i = draft.parts.findIndex((p) => p.key === key);
@@ -359,6 +366,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
                 activeKey={part.key!}
                 onSelect={(key) => { setActiveKey(key); setShowPart(true); }}
                 onAdd={addPart}
+                onDuplicate={copyPart}
               />
             }
             steps={transitions}
@@ -371,14 +379,14 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
             onChange={({ steps, layout }) => setTransitions(steps, layout)}
             showPart={showPart}
             onSelectElement={() => setShowPart(false)}
-            exportMeta={{ title: draft.name, part: draft.parts.length > 1 ? part.name : null, errors: stepsOf('error'), globals: globalSteps }}
+            exportMeta={{ title: draft.name, parts: draft.parts }}
             partPanel={
               <PartPanel
                 part={part}
                 canRemove={draft.parts.length > 1}
+                onDuplicate={copyPart}
                 onChange={(patch) => updatePart(part.key!, (p) => ({ ...p, ...patch }))}
                 onRemove={() => setConfirmPart({ key: part.key!, name: part.name })}
-                onClose={() => setShowPart(false)}
               />
             }
           />

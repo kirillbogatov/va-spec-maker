@@ -1,8 +1,9 @@
+import { combineSvgPages } from '@/lib/svgPages';
 import { api } from '@/lib/api';
 import { downloadBlob } from '@/lib/download';
 import type { SchemeRule, SchemeState } from '@/lib/schemeSvg';
-import { splitNext, type Analysis } from '@/lib/states';
-import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem, Step } from '@/lib/types';
+import { analyzeSteps, splitNext, type Analysis } from '@/lib/states';
+import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem, ScenarioPart, Step } from '@/lib/types';
 import { conditionLabel } from '../dependencies';
 
 export interface SchemeExportArgs {
@@ -17,8 +18,8 @@ export interface SchemeExportArgs {
 /** Шрифты, которыми размечен файл: перед измерением текста они должны быть загружены. */
 const FONTS = ["400 11px 'IBM Plex Sans'", "italic 400 11px 'IBM Plex Sans'", "500 11px 'IBM Plex Sans'", "600 11px 'IBM Plex Sans'", "400 11px 'IBM Plex Mono'", "500 11px 'IBM Plex Mono'"];
 
-/** Собирает схему вкладки в SVG и скачивает файл. */
-export async function exportSchemeSvg(a: SchemeExportArgs): Promise<void> {
+/** Собирает отдельный лист вкладки. */
+async function buildExportSchemeSvg(a: SchemeExportArgs): Promise<string> {
   const [{ buildSchemeSvg }, { SCHEME_FONT_CSS }] = await Promise.all([import('@/lib/schemeSvg'), import('@/lib/schemeFonts')]);
   await Promise.all(FONTS.map((f) => document.fonts.load(f).catch(() => [])));
 
@@ -42,7 +43,7 @@ export async function exportSchemeSvg(a: SchemeExportArgs): Promise<void> {
   const unreachable = new Set(a.analysis.unreachable);
   const entry = a.analysis.states[0];
   const states: SchemeState[] = a.names.map((name, i) => ({
-    name, number: i + 1,
+    name, number: i + 1, order: a.layout[name]?.order,
     tag: unreachable.has(name) ? 'unreachable' : name === entry ? 'start' : !hasOut.has(name) ? 'end' : null,
     description: a.layout[name]?.description ?? '',
     prompt: prompt(a.layout[name]?.prompt_id),
@@ -76,6 +77,20 @@ export async function exportSchemeSvg(a: SchemeExportArgs): Promise<void> {
     fontCss: SCHEME_FONT_CSS,
   }, (text, font) => { ctx.font = font; return ctx.measureText(text).width; });
 
-  const file = [a.title.trim() || 'Сценарий', a.part].filter(Boolean).join(' — ').replace(/[\\/:*?"<>|]+/g, '_');
-  downloadBlob(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), `${file}.svg`);
+  return svg;
+}
+
+/** Все вкладки сценария одним SVG, в порядке вкладок. */
+export async function exportScenarioSvg(a: Pick<SchemeExportArgs, 'title' | 'intents' | 'prompts' | 'dependencies' | 'entities' | 'keywords'> & { parts: ScenarioPart[] }): Promise<void> {
+  const pages: string[] = [];
+  const intentName = (id: number | null) => a.intents.find((i) => i.id === id)?.name ?? null;
+  for (const part of a.parts) {
+    const steps = part.steps.filter((s) => s.kind === 'transition');
+    const analysis = analyzeSteps(steps, intentName, part.layout);
+    const names = [...new Set([...analysis.states, ...Object.keys(part.layout), ...analysis.edges.map((e) => e.to)])];
+    pages.push(await buildExportSchemeSvg({ ...a, part: part.name, steps, layout: part.layout, analysis, names,
+      errors: part.steps.filter((s) => s.kind === 'error'), globals: part.steps.filter((s) => s.kind === 'global') }));
+  }
+  const file = (a.title.trim() || 'Сценарий').replace(/[\\/:*?"<>|]+/g, '_');
+  downloadBlob(new Blob([combineSvgPages(pages)], { type: 'image/svg+xml;charset=utf-8' }), `${file}.svg`);
 }

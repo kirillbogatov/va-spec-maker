@@ -35,3 +35,29 @@ export function useSaveSummary() {
     () => snapshot,
   );
 }
+
+/** Экспорт и предпросмотр должны читать уже сохранённый порядок схемы. */
+export function waitForSaves(): Promise<void> {
+  const check = () => {
+    if (snapshot.error) throw new Error('Исправьте ошибки сохранения перед экспортом');
+    return snapshot.saving === 0;
+  };
+  try {
+    if (check()) return Promise.resolve();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+  return new Promise((resolve, reject) => {
+    const done = () => {
+      try {
+        if (!check()) return;
+        listeners.delete(done);
+        resolve();
+      } catch (error) {
+        listeners.delete(done);
+        reject(error);
+      }
+    };
+    listeners.add(done);
+  });
+}

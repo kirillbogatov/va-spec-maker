@@ -92,7 +92,7 @@ export interface ScenarioEntity { key?: string; entity_id: number | null; follow
  * Состояние схемы. x и y — устаревшая раскладка (схема раскладывается автоматически);
  * остальное — то, что происходит при входе в состояние: ответ ассистента и действие системы.
  */
-export interface StateInfo { x: number; y: number; description?: string; prompt_id?: number | null; system_action?: string }
+export interface StateInfo { x: number; y: number; order?: number; description?: string; prompt_id?: number | null; system_action?: string }
 /** Состояния сценария по имени (в том числе без переходов). */
 export type Layout = Record<string, StateInfo>;
 /** Вкладка сценария — отдельный подсценарий: свои состояния и переходы, в экспорте — отдельный раздел со своим заголовком. */

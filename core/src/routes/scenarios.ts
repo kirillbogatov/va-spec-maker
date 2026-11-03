@@ -20,7 +20,7 @@ const parseOp = (v: unknown): ConditionOp => (v === '!=' || v === '<' || v === '
  * Состояние схемы: точка раскладки плюс то, что происходит при входе в состояние —
  * описание, ответ ассистента и действие системы.
  */
-interface StateInfo { x: number; y: number; description: string; prompt_id: number | null; system_action: string }
+interface StateInfo { x: number; y: number; order?: number; description: string; prompt_id: number | null; system_action: string }
 type Layout = Record<string, StateInfo>;
 
 /** Оставляет только корректные состояния: непустое имя и конечные числа в точке раскладки. */
@@ -31,6 +31,7 @@ function cleanLayout(raw: unknown): Layout {
     if (!name.trim() || !Number.isFinite(p?.x) || !Number.isFinite(p?.y)) continue;
     out[name] = {
       x: Math.round(p.x), y: Math.round(p.y),
+      ...(Number.isFinite(p.order) ? { order: Math.round(p.order) } : {}),
       description: optString(p.description),
       prompt_id: p.prompt_id == null ? null : parseId(p.prompt_id),
       system_action: optString(p.system_action),
@@ -60,8 +61,8 @@ export function scenariosRouter(db: Db): RouterT {
       .all(part.id) as { name: string; description: string; prompt_id: number | null; system_action: string }[]) {
       layout[name] = { x: 0, y: 0, ...info };
     }
-    for (const [name, p] of Object.entries(JSON.parse(part.layout) as Record<string, { x: number; y: number }>)) {
-      layout[name] = layout[name] ? { ...layout[name], x: p.x, y: p.y } : { ...p, description: '', prompt_id: null, system_action: '' };
+    for (const [name, p] of Object.entries(JSON.parse(part.layout) as Record<string, { x: number; y: number; order?: number }>)) {
+      layout[name] = layout[name] ? { ...layout[name], x: p.x, y: p.y, ...(Number.isFinite(p.order) ? { order: p.order } : {}) } : { ...p, description: '', prompt_id: null, system_action: '' };
     }
     return { name: part.name, description: part.description, steps, layout };
   };
@@ -233,7 +234,7 @@ export function scenariosRouter(db: Db): RouterT {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       parts.forEach((p: any, n: number) => {
-        const points = Object.fromEntries(Object.entries(p.layout as Layout).map(([k, { x, y }]) => [k, { x, y }]));
+        const points = Object.fromEntries(Object.entries(p.layout as Layout).map(([k, { x, y, order }]) => [k, { x, y, ...(order === undefined ? {} : { order }) }]));
         const pid = Number(insPart.run(id, n, p.name, p.description, JSON.stringify(points)).lastInsertRowid);
         for (const [k, st] of Object.entries(p.layout as Layout)) {
           if (st.description.trim() || st.prompt_id !== null || st.system_action.trim()) insState.run(id, pid, k, st.description, st.prompt_id, st.system_action);

@@ -55,7 +55,7 @@ test('правки чата: значения и описания зависим
   await page.getByRole('link', { name: /^DEP_HOME_MODE/ }).click();
   await expect(page.getByLabel('Название', { exact: true })).toHaveValue('DEP_HOME_MODE');
   await page.getByLabel('Описание зависимости').fill('Внешний режим дома');
-  await expect(page.getByRole('status', { name: 'Сохранено' })).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Сохранение…' }).or(page.getByRole('status').filter({ hasText: /^Сохранение…$/ }))).toHaveCount(0);
   await page.goto('/#/p/1/scenarios');
   await createViaDialog(page, 'Новый сценарий', 'SC_CHAT_DEPS');
   await expect(page.getByLabel('Название сценария')).toHaveValue('SC_CHAT_DEPS');
@@ -89,7 +89,7 @@ test('правки чата: сортировка, глобальные инте
   await page.getByRole('button', { name: 'Добавить', exact: true }).click();
   await page.getByLabel('Дата, строка 1', { exact: true }).fill('2026-11-02');
   await page.getByLabel('Задача, строка 1', { exact: true }).fill('CHAT-DATE');
-  await expect(page.getByRole('status', { name: 'Сохранено' })).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Сохранение…' }).or(page.getByRole('status').filter({ hasText: /^Сохранение…$/ }))).toHaveCount(0);
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Экспорт .docx', exact: true }).click();
   const zip = await JSZip.loadAsync(await readFile((await (await downloading).path())!));

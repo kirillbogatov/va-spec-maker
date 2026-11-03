@@ -8,7 +8,7 @@ import { layoutStateGraph, polylinePath } from './elkLayout';
 
 export interface SchemePrompt { name: string; text: string }
 export interface SchemeState {
-  name: string; number: number; tag: 'start' | 'end' | 'unreachable' | null;
+  name: string; number: number; order?: number; tag: 'start' | 'end' | 'unreachable' | null;
   description: string; prompt: SchemePrompt | null; action: string;
 }
 export interface SchemeEdge {
@@ -234,7 +234,7 @@ export async function buildSchemeSvg(input: SchemeInput, m: Measure): Promise<st
   const boxes = new Map(input.states.map((s) => [s.name, stateBox(m, s)]));
   const cards = new Map(input.edges.map((e) => [e.id, edgeBox(m, e)]));
   const placed = await layoutStateGraph(
-    input.states.map((s) => ({ id: s.name, width: boxes.get(s.name)!.width, height: boxes.get(s.name)!.height })),
+    input.states.map((s) => ({ id: s.name, width: boxes.get(s.name)!.width, height: boxes.get(s.name)!.height, order: s.order })),
     input.edges.map((e) => ({ id: e.id, source: e.from, target: e.to, label: { width: CW, height: cards.get(e.id)!.height } })),
   );
 

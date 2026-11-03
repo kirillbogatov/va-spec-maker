@@ -1,4 +1,5 @@
 import type { Db } from '../sqlite';
+import { orderTransitionRows } from './state-order';
 import { notFound } from '../errors';
 import { STRINGS, type SpecLang } from './i18n';
 import { matchKeywords } from '../keywords';
@@ -250,7 +251,7 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
     entities,
     prompts,
     dependencies,
-    transitions: rows.filter((r) => r.kind === 'transition').map(strip),
+    transitions: orderTransitionRows(db, projectId, rows.filter((r) => r.kind === 'transition')).map(strip),
     errors: rows.filter((r) => r.kind === 'error').map(strip),
     globals: rows.filter((r) => r.kind === 'global' && r.intent !== null).map(strip),
   };

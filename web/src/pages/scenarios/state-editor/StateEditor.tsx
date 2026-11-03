@@ -1,3 +1,5 @@
+import { moveStateOrder } from './stateOrder';
+import { readStateClipboard, writeStateClipboard, pasteState } from './stateClipboard';
 import { createConditionStates } from './conditionStates';
 import { BLOCK_W, CARD_W, stateBlock, transitionCard } from '@/lib/stateSvg';
 import { PropertiesLayout } from './PropertiesLayout';
@@ -13,13 +15,13 @@ import { cn } from '@/lib/utils';
 import { layoutStateGraph, type LayoutResult } from '@/lib/elkLayout';
 import { duplicateState, ENTRY_STATE, newTransition, removeState, renameState, uniqueStateName } from '@/lib/fsm';
 import { splitNext, type Analysis } from '@/lib/states';
-import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem, StateInfo, Step } from '@/lib/types';
+import type { Dependency, EntityListItem, IntentListItem, Layout, PromptListItem, ScenarioPart, StateInfo, Step } from '@/lib/types';
 import { conditionLabel } from '../dependencies';
 import { useProjectId } from '@/hooks/project';
 import { useKeywords } from '@/lib/keywords';
 import { usePrefixes } from '@/lib/prefixes';
 import { EdgePanel } from './EdgePanel';
-import { exportSchemeSvg } from './exportSvg';
+import { exportScenarioSvg } from './exportSvg';
 import { NodePanel } from './NodePanel';
 import { StateNode, TransitionEdge, type EdgeCard, type StateNodeData, type TransitionEdgeData } from './StateNode';
 
@@ -48,8 +50,8 @@ interface Props {
   focusState?: string | null;
   /** Выбран узел или переход — панель вкладки уступает место. */
   onSelectElement?: () => void;
-  /** Данные для экспорта в SVG: название, вкладка (если их несколько), ошибки и глобальные переходы вкладки. */
-  exportMeta?: { title: string; part: string | null; errors: Step[]; globals: Step[] };
+  /** Название и все вкладки сценария для экспорта в SVG. */
+  exportMeta?: { title: string; parts: ScenarioPart[] };
 }
 
 /** Параметры «вписать»: небольшие поля, текст остаётся читаемым, пока схема помещается. */
@@ -74,6 +76,7 @@ function ZoomControls() {
 }
 
 function StateEditorInner({ steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, focusState, exportMeta }: Props) {
+  const canvas = useRef<HTMLDivElement>(null);
   const projectId = useProjectId();
   const keywords = useKeywords(projectId);
   const statePrefix = usePrefixes(projectId).state;
@@ -143,7 +146,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [names, layout, prompts, analysis.states, hasOut, unreachable, expandedNodes],
   );
-  const graphKey = JSON.stringify([names.map((n) => [n, sizes.get(n)]), analysis.edges.map((e) => [e.id, e.from, e.to, labels.get(e.id), expandedEdges.get(e.id)])]);
+  const graphKey = JSON.stringify([names.map((n) => [n, sizes.get(n), layout[n]?.order]), analysis.edges.map((e) => [e.id, e.from, e.to, labels.get(e.id), expandedEdges.get(e.id)])]);
   const [placed, setPlaced] = useState<LayoutResult | null>(null);
   const [placedKey, setPlacedKey] = useState('');
   const [tick, setTick] = useState(0);
@@ -157,7 +160,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
   useEffect(() => {
     let stale = false;
     layoutStateGraph(
-      names.map((n) => ({ id: n, ...sizes.get(n)! })),
+      names.map((n) => ({ id: n, ...sizes.get(n)!, order: layout[n]?.order })),
       analysis.edges.map((e) => ({ id: e.id, source: e.from, target: e.to, label: expandedEdges.get(e.id) ?? labelSize(labels.get(e.id)) })),
     ).then((r) => { if (!stale) { setPlaced(r); setPlacedKey(`${graphKey}:${tick}`); } }, () => { if (!stale) toast.error('Не удалось разложить схему'); });
     return () => { stale = true; };
@@ -291,13 +294,15 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
     if (!exportMeta) return;
     setExporting(true);
     try {
-      await exportSchemeSvg({ ...exportMeta, names, steps, layout, analysis, intents, prompts, dependencies, entities, keywords });
+      await exportScenarioSvg({ ...exportMeta, intents, prompts, dependencies, entities, keywords });
     } catch {
       toast.error('Не удалось выгрузить схему в SVG');
     } finally {
       setExporting(false);
     }
   };
+
+  const isEditingText = (target: EventTarget | null) => target instanceof HTMLElement && !!target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"], [role="dialog"]');
 
   const selectedStep = selected?.type === 'edge' ? steps.find((s) => s.key === selected.key) : undefined;
   const orphans = steps.filter((s) => !s.state.trim());
@@ -348,7 +353,7 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
       {!selected && showPart && partPanel}
       {!selected && !showPart && (
         <div className="space-y-2 text-sm">
-          <p className="font-medium tabular-nums">{names.length ? `Состояний: ${names.length}, переходов: ${analysis.edges.length}` : 'Схема пока пуста'}</p>
+          {!names.length && <p className="font-medium">Схема пока пуста</p>}
           <p className="text-muted-foreground">
             {names.length ? 'Выберите состояние или переход на схеме, чтобы изменить его.' : 'Добавьте первое состояние кнопкой «Состояние».'}
           </p>
@@ -374,11 +379,45 @@ function StateEditorInner({ steps, layout, analysis, intents, prompts, dependenc
 
   return (
     <PropertiesLayout wide={wide} inspector={inspector}>
-      <div className={cn('flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card', wide ? 'h-full min-h-0' : 'h-[65dvh] min-h-80 lg:h-full')}>
+      <div
+        ref={canvas} tabIndex={0} role="region" aria-label="Редактор схемы"
+        onPointerDownCapture={(e) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.react-flow') && !target.closest('input, textarea, button, [contenteditable="true"]')) canvas.current?.focus({ preventScroll: true });
+        }}
+        onCopyCapture={(e) => {
+          if (isEditingText(e.target) || selected?.type !== 'node') return;
+          e.preventDefault();
+          e.clipboardData.setData('text/plain', writeStateClipboard(selected.name, layout[selected.name]));
+        }}
+        onPasteCapture={(e) => {
+          if (isEditingText(e.target)) return;
+          const copied = readStateClipboard(e.clipboardData.getData('text/plain'));
+          if (!copied) return;
+          e.preventDefault();
+          const { name, ...next } = pasteState(copied, steps, layout);
+          undoable(`Вставлено состояние «${name}»`, next);
+          setSelected({ type: 'node', name });
+        }}
+        onKeyDownCapture={(e) => {
+          if (!e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.nativeEvent.isComposing && !isEditingText(e.target) && selected?.type === 'node' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!placed || placedKey !== `${graphKey}:${tick}`) return;
+            const nextLayout = moveStateOrder(layout, placed, selected.name, e.key === 'ArrowUp' ? -1 : 1);
+            if (nextLayout) onChange({ steps, layout: nextLayout });
+            return;
+          }
+          if (e.defaultPrevented || e.key !== 'Delete' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.repeat || e.nativeEvent.isComposing || isEditingText(e.target) || selected?.type !== 'node') return;
+          e.preventDefault();
+          e.stopPropagation();
+          removeNode(selected.name);
+        }}
+        className={cn('flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card focus-visible:outline-2 focus-visible:outline-ring', wide ? 'h-full min-h-0' : 'h-[65dvh] min-h-80 lg:h-full')}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-2 py-1.5">
-          <Button size="sm" onClick={addNode}><Plus className="size-4" /> {parent ? 'Дочернее состояние' : 'Состояние'}</Button>
+          <Button size="sm" onClick={addNode}><Plus className="size-4" /> Состояние</Button>
           {exportMeta && (
-            <Button variant="outline" size="sm" onClick={exportSvg} disabled={exporting || names.length === 0} title="Скачать схему вкладки в SVG">
+            <Button variant="outline" size="sm" onClick={exportSvg} disabled={exporting} title="Скачать все вкладки сценария в SVG">
               <Download className="size-4" /> SVG
             </Button>
           )}
