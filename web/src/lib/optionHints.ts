@@ -6,10 +6,10 @@ export const synonymsHint = (values: string[]) => values.map((v) => v.trim()).fi
 export function entityHint(entity: EntityListItem | undefined): string {
   if (!entity) return '';
   if (entity.description.trim()) return entity.description.trim();
-  if (entity.values.length) return entity.values.map((v) => {
-    const synonyms = synonymsHint(v.synonyms);
-    return synonyms ? `${v.value}: ${synonyms}` : v.value;
-  }).join('; ');
+  if (entity.values.length) return [
+    ...entity.values.slice(0, 3).map((v) => v.value),
+    ...(entity.values.length > 3 ? ['…'] : []),
+  ].join(', ');
   if (entity.type === 'boolean') return 'true, false';
   return [entityTypeLabel(entity.type), rangeSummary(entity)].filter(Boolean).join(', ');
 }
