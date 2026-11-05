@@ -2,17 +2,17 @@ import type { ReactNode } from 'react';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/** Карточка сценария: заголовок 15px, действие справа, содержимое; flush — таблица от края до края. */
+/** Секция формы: заголовок и действия снаружи, единственная рамка — у поля или таблицы. */
 export function Card({ title, action, className, flush, children }: { title?: ReactNode; action?: ReactNode; className?: string; flush?: boolean; children: ReactNode }) {
   return (
-    <section className={cn('rounded-xl border bg-card', className)}>
+    <section className={cn('min-w-0 space-y-2', className)}>
       {(title || action) && (
-        <div className="flex min-h-10 items-center justify-between gap-3 px-4 pt-3 pb-1">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
           {title && <h2 className="text-[15px] font-semibold text-balance">{title}</h2>}
-          {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+          {action && <div className="flex min-w-0 flex-wrap items-center gap-2">{action}</div>}
         </div>
       )}
-      <div className={cn(!flush && 'px-4 pb-4 pt-1')}>{children}</div>
+      <div className={cn('min-w-0', flush && 'overflow-hidden rounded-xl border bg-card')}>{children}</div>
     </section>
   );
 }
