@@ -292,7 +292,7 @@ function PhrasesEditor({ value, others, words, numbers, mode, onChange }: { valu
               <KeywordChips names={matchKw(text)} text={text} />
             </div>
           )}
-          <Button variant="outline" className="h-8 max-md:h-10" onClick={() => setBulk(true)}>
+          <Button size="action" variant="outline"  onClick={() => setBulk(true)}>
             <ListPlus className="size-4" /> Добавить несколько
           </Button>
         </div>
@@ -347,7 +347,6 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
       >
         <span className={cn('col-start-1 row-start-1 min-w-0 justify-self-start xl:col-start-1', !draft.enabled && 'opacity-60')}>
           <TypeToken kind="intent" className="text-[12.5px]">{draft.name}</TypeToken>
-          {link.scenarios.length > 1 && <span className="mt-0.5 block text-xs text-faint">также в: {link.scenarios.map((s) => s.name).join(', ')}</span>}
         </span>
         <span className={cn('col-span-2 row-start-2 flex min-w-0 font-mono text-[12.5px] text-muted-foreground xl:col-span-1 xl:col-start-2 xl:row-start-1', !draft.enabled && 'opacity-60')}>
           {shownValues.length === 0 ? (

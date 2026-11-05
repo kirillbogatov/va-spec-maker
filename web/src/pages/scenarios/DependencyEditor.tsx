@@ -54,7 +54,7 @@ export function DependencyEditor({ initial, existing, onClose, onSave }: {
                 <Input aria-label={`Значение ${i + 1}`} value={v.value} onChange={(e) => setValues((current) => current.map((x) => x.key === v.key ? { ...x, value: e.target.value } : x))} />
                 <Button type="button" variant="ghost" size="icon" aria-label={`Удалить значение ${i + 1}`} onClick={() => setValues((current) => current.filter((x) => x.key !== v.key))}><X className="size-4" /></Button>
               </div>)}
-              <Button type="button" variant="outline" size="sm" onClick={() => setValues((current) => [...current, { key: crypto.randomUUID(), original: '', value: '' }])}><Plus className="size-4" /> Значение</Button>
+              <Button type="button" variant="outline" size="action" onClick={() => setValues((current) => [...current, { key: crypto.randomUUID(), original: '', value: '' }])}><Plus className="size-4" /> Значение</Button>
               {duplicate && <p role="alert" className="text-sm text-destructive">Значения не должны повторяться.</p>}
             </div>
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

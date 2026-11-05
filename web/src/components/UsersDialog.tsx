@@ -89,7 +89,7 @@ export function UsersDialog({ open, onOpenChange }: Props) {
                 </li>
               ))}
             </ul>
-            <Button onClick={() => setForm({ kind: 'add' })}>
+            <Button size="action" onClick={() => setForm({ kind: 'add' })}>
               <Plus className="size-4" /> Добавить пользователя
             </Button>
           </div>

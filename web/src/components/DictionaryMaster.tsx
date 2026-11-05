@@ -198,7 +198,7 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
         <div className="mx-auto mt-10 max-w-sm text-center">
           <p className="text-balance text-base font-medium">{p.emptyText}</p>
           {p.onCreate && (
-            <Button className="mt-4 h-10 md:h-9" onClick={() => setCreating(true)}>
+            <Button size="action" className="mt-4" onClick={() => setCreating(true)}>
               <Plus className="size-4" /> {p.createTitle ?? 'Создать'}
             </Button>
           )}

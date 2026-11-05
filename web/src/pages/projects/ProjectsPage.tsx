@@ -141,8 +141,8 @@ export function ProjectsPage() {
             <h2 className="text-balance text-lg font-semibold">Проектов пока нет</h2>
             <p className="mb-5 mt-1 max-w-md text-sm text-muted-foreground">Создайте пустой проект или посмотрите готовый пример «Умный дом».</p>
             <div className="flex flex-wrap justify-center gap-2">
-              <Button className="h-10 sm:h-9" onClick={() => setDialog({ project: null })}><Plus className="size-4" /> Новый проект</Button>
-              <Button variant="outline" className="h-10 sm:h-9" onClick={loadDemo}>Добавить демо</Button>
+              <Button size="action"  onClick={() => setDialog({ project: null })}><Plus className="size-4" /> Новый проект</Button>
+              <Button size="action" variant="outline" onClick={loadDemo}>Добавить демо</Button>
             </div>
           </div>
         )}

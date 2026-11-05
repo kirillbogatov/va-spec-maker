@@ -131,7 +131,7 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], numbers = [
               <KeywordChips names={matchKw(text)} text={text} />
             </div>
           )}
-          <Button variant="outline" className="h-10 md:h-9" onClick={() => setBulk(true)}>
+          <Button size="action" variant="outline"  onClick={() => setBulk(true)}>
             <ListPlus className="size-4" /> Добавить несколько
           </Button>
         </div>

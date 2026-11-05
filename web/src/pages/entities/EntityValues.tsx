@@ -73,10 +73,10 @@ export function EntityValues({ values, onChange }: { values: EntityValue[]; onCh
       title="Значения"
       action={
         <>
-          <Button variant="outline" className="h-10 md:h-8" onClick={() => setBulk('')}>
+          <Button size="action" variant="outline" onClick={() => setBulk('')}>
             Вставить списком
           </Button>
-          <Button className="h-10 md:h-8" onClick={() => onChange([...values, { value: '', synonyms: [] }])}>
+          <Button size="action"  onClick={() => onChange([...values, { value: '', synonyms: [] }])}>
             <Plus className="size-3.5" /> Значение
           </Button>
         </>

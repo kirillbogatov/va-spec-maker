@@ -161,7 +161,7 @@ export function ListHeader({ onCreate, label = 'Создать', extra }: { onCr
         type="button"
         onClick={onCreate}
         title={label}
-        className="ml-auto inline-flex h-10 min-w-0 items-center gap-1 rounded-sm px-1 text-sm font-medium text-muted-foreground hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:h-8"
+        className="ml-auto inline-flex h-10 min-w-0 items-center gap-1 rounded-sm px-1 text-[13px] font-medium text-muted-foreground hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:h-8"
       >
         <Plus className="size-3.5 shrink-0" /> <span className="truncate">{label}</span>
       </button>

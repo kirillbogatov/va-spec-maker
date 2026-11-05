@@ -76,7 +76,7 @@ function ChangeLogForm({ scenarioId, initial }: { scenarioId: number; initial: C
   return (
     <div className="grid min-w-0 gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" className="max-md:h-10" onClick={() => {
+        <Button size="action" variant="outline"  onClick={() => {
           sort.reset();
           setRows((rs) => [{ key: crypto.randomUUID(), date: '', task: '', author: '', description: '' }, ...rs]);
         }}>

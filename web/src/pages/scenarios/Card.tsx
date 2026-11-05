@@ -23,9 +23,9 @@ export function AddButton({ children, onClick }: { children: ReactNode; onClick:
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-10 items-center gap-1 rounded-md px-2 text-sm font-medium text-brand outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 md:h-8"
+      className="inline-flex h-10 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-brand outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 md:h-8"
     >
-      <Plus className="size-4" />
+      <Plus className="size-3.5" />
       {children}
     </button>
   );

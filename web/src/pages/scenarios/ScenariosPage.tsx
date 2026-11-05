@@ -107,7 +107,7 @@ export function ScenariosPage({ templates = false }: { templates?: boolean }) {
         ) : items.length === 0 ? (
           <div className="mx-auto mt-10 max-w-sm text-center">
             <p className="text-balance text-base font-medium">{templates ? "Шаблонов сценариев пока нет" : "Сценариев пока нет"}</p>
-            <Button className="mt-4 h-10 md:h-9" onClick={() => setCreating(true)}>
+            <Button size="action" className="mt-4" onClick={() => setCreating(true)}>
               <Plus className="size-4" /> {templates ? "Новый шаблон сценария" : "Новый сценарий"}
             </Button>
           </div>

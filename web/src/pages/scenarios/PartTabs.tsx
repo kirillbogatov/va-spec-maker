@@ -35,7 +35,7 @@ export function PartTabs({ parts, activeKey, onSelect, onAdd }: TabsProps) {
         </button>
       ))}
       {onAdd && (
-        <Button variant="ghost" size="sm" aria-label="Добавить вкладку" title="Добавить вкладку (подсценарий)" onClick={onAdd}>
+        <Button variant="ghost" size="action" aria-label="Добавить вкладку" title="Добавить вкладку (подсценарий)" onClick={onAdd}>
           <Plus className="size-4" /> {parts.length > 1 ? '' : 'Подсценарий'}
         </Button>
       )}
