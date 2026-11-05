@@ -30,7 +30,6 @@ export function AddBar({ createLabel, onCreate, creating, options, onConnect, co
           onChange={(v) => v != null && onConnect(Number(v))}
           label={connectLabel}
           className={cn('h-9 rounded-lg border-border bg-background px-3.5 font-medium hover:bg-muted max-md:h-10', compact && 'h-10 gap-1.5 px-2.5 text-[13px] md:h-8')}
-          icon={<Plus className={compact ? "size-3.5" : "size-4"} />}
           placeholder={connectPlaceholder}
         />
       )}
