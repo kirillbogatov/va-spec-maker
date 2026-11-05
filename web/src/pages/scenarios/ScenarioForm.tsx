@@ -128,11 +128,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     () => analyzeSteps(transitions, intentName, part.layout),
     [transitions, part.layout, intents],
   );
-  const counts: Partial<Record<ScenarioTab, number>> = {
-    intents: ownIntents.length,
-    prompts: ownPrompts.length,
-    logic: allSteps.filter((s) => s.kind === 'transition').length,
-  };
   const hasIssueErrors = (kind: Step['kind']) =>
     draft.parts.some((p, i) => p.steps.some((s) => s.kind === kind && analyses[i].issues.get(s.key!)?.some((x) => x.level === 'error')));
   const logicHasErrors = hasIssueErrors('transition');
@@ -322,9 +317,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
                 )}
               >
                 {t.id === 'general' ? <><span className="sm:hidden">Общее</span><span className="max-sm:hidden">{t.label}</span></> : t.label}
-                {counts[t.id] !== undefined && (
-                  <span className="rounded-full bg-muted px-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{counts[t.id]}</span>
-                )}
                 {t.id === 'logic' && logicHasErrors && <span className="size-2 rounded-full bg-destructive" title="Есть ошибки в таблицах" />}
               </Link>
             ))}
