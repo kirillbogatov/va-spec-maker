@@ -108,8 +108,8 @@
     --success-bg: #ddf2e3;
     --warning: #a15c00;
     --warning-bg: #fcefd2;
-    --border: #dfe3ea;
-    --input: #cfd5df;
+    --border: #d1d9e0;
+    --input: #b8c2cc;
     --ring: #2b55e0;
     --int: #2b55e0;
     --int-bg: #e8edfd;
@@ -130,7 +130,7 @@
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: #e8edfd;
     --sidebar-accent-foreground: #2146c4;
-    --sidebar-border: #dfe3ea;
+    --sidebar-border: var(--border);
     --sidebar-ring: #2b55e0;
 }
 

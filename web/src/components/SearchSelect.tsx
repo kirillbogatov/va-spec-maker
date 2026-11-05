@@ -48,7 +48,7 @@ export function SearchSelect({ options, value, onChange, label, className, rende
       </Combobox.Trigger>
       <Combobox.Portal>
         <Combobox.Positioner sideOffset={4} align="start" className="isolate z-50">
-          <Combobox.Popup className="flex max-h-(--available-height) w-max min-w-(--anchor-width) max-w-[min(36rem,95vw)] origin-(--transform-origin) flex-col overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+          <Combobox.Popup className="flex max-h-(--available-height) w-max min-w-(--anchor-width) max-w-[min(36rem,95vw)] origin-(--transform-origin) flex-col overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-border dark:ring-foreground/10 duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
             <div className="flex items-center gap-2 border-b px-2.5">
               <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
               <Combobox.Input placeholder="Поиск…" aria-label="Поиск" className="h-9 w-full min-w-40 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
