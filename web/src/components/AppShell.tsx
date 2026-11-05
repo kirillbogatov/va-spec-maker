@@ -112,7 +112,7 @@ export function AppShell() {
 
         <nav className="flex min-h-0 flex-1 flex-col gap-4" aria-label="Основная навигация">
           <div className="flex shrink-0 flex-col gap-0.5">
-            <NavLink to={path('/scenarios')} title="Сценарии" aria-label="Сценарии" className={() => cn(itemClass(onScenarios), collapsed && 'w-8 justify-center px-0')}>
+            <NavLink to={path('/scenarios')} onClick={() => setCollapsed(false)} title="Сценарии" aria-label="Сценарии" className={() => cn(itemClass(onScenarios), collapsed && 'w-8 justify-center px-0')}>
               <Workflow className="size-4" />
               {!collapsed && (
                 <>
@@ -126,7 +126,7 @@ export function AppShell() {
           <div className="flex shrink-0 flex-col gap-0.5 border-t border-border pt-3">
             {!collapsed && <span className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-faint">Словарь проекта</span>}
             {dictionary.map((d) => (
-              <NavLink key={d.to} to={path(d.to)} title={d.label} aria-label={d.label} className={({ isActive }) => cn(itemClass(isActive || on(path(d.to))), collapsed && 'w-8 justify-center px-0')}>
+              <NavLink key={d.to} to={path(d.to)} onClick={() => setCollapsed(false)} title={d.label} aria-label={d.label} className={({ isActive }) => cn(itemClass(isActive || on(path(d.to))), collapsed && 'w-8 justify-center px-0')}>
                 <d.icon className="size-4 shrink-0" />
                 {!collapsed && (
                   <>
