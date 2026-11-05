@@ -11,10 +11,11 @@ interface Props {
   options: SearchOption[];
   onConnect: (id: number) => void;
   connectLabel: string;
+  connectPlaceholder?: string;
 }
 
 /** Область добавления элементов в сценарий: две одинаковые кнопки — создать новый и подключить существующий. */
-export function AddBar({ createLabel, onCreate, creating, options, onConnect, connectLabel }: Props) {
+export function AddBar({ createLabel, onCreate, creating, options, onConnect, connectLabel, connectPlaceholder = 'Добавить существующий' }: Props) {
   return (
     <div className="flex flex-wrap gap-2">
       <Button variant="outline" className="max-md:h-10" disabled={creating} onClick={onCreate}>
@@ -28,7 +29,7 @@ export function AddBar({ createLabel, onCreate, creating, options, onConnect, co
           label={connectLabel}
           className="h-9 rounded-lg border-border bg-background px-3.5 font-medium hover:bg-muted max-md:h-10"
           icon={<Plus className="size-4" />}
-          placeholder="Подключить существующий"
+          placeholder={connectPlaceholder}
         />
       )}
     </div>

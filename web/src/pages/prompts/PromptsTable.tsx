@@ -247,7 +247,7 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
         creating={create.isPending}
         options={free}
         onConnect={(id) => connect.mutate(id)}
-        connectLabel="Подключить существующий промпт"
+        connectLabel="Добавить существующий промпт"
       />
       <SearchSelect options={templates.map(t => ({ value: String(t.id), label: t.name, hint: t.hint }))}
         value={null} onChange={v => v != null && setTemplateId(Number(v))} label="Взять из шаблона" placeholder="Взять из шаблона"

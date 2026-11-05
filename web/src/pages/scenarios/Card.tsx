@@ -7,7 +7,7 @@ export function Card({ title, action, className, flush, children }: { title?: Re
   return (
     <section className={cn('min-w-0 space-y-2', className)}>
       {(title || action) && (
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-col items-start gap-2">
           {title && <h2 className="text-[15px] font-semibold text-balance">{title}</h2>}
           {action && <div className="flex min-w-0 flex-wrap items-center gap-2">{action}</div>}
         </div>

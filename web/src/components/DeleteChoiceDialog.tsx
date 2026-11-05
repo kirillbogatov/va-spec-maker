@@ -43,7 +43,7 @@ export function DeleteChoiceDialog({ open, onOpenChange, noun, name, scenarios, 
             onClick={pick(onDisconnect)}
           >
             <span className="flex items-center gap-2 font-medium"><Unlink className="size-4" /> Убрать из сценария</span>
-            <span className="text-xs text-muted-foreground">Останется в проекте, его можно будет подключить снова.</span>
+            <span className="text-xs text-muted-foreground">Останется в проекте, его можно будет добавить снова.</span>
           </button>
           <button
             type="button"
