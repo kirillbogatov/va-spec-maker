@@ -1,5 +1,5 @@
 export { createApp } from './app';
-export { parseTextLinks } from './text-links';
+export { normalizeTaskLinks, parseTextLinks } from './text-links';
 export type { App, AppRequest, AppResponse } from './app';
 export { openDb } from './db';
 export type { Db } from './sqlite';

@@ -105,7 +105,7 @@ function Editor({ scenarioId, initial }: { scenarioId: number; initial: Changelo
       {sort.rows(rows, (row, column) => row[column as 'date' | 'task' | 'author' | 'description'] ?? '').map((r, i) => (
         <div key={r.key} className={cn(ROW, COLS, 'md:items-start')}>
           <Input type="date" className={cn(FIELD, 'min-w-0')} aria-label={`Дата, строка ${i + 1}`} value={r.date ?? ''} onChange={(e) => patch(r.key, { date: e.target.value })} />
-          <TaskInput className={FIELD} value={r.task} aria-label={`Задача, строка ${i + 1}`} onChange={(e) => patch(r.key, { task: e.target.value })} />
+          <TaskInput className={FIELD} value={r.task} aria-label={`Задача, строка ${i + 1}`} onValueChange={(task) => patch(r.key, { task })} />
           <Input className={FIELD} value={r.author} aria-label={`Автор, строка ${i + 1}`} onChange={(e) => patch(r.key, { author: e.target.value })} />
           <Textarea
             rows={1}

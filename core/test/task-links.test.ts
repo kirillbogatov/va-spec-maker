@@ -2,10 +2,31 @@ import JSZip from 'jszip';
 import { expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { openDb } from '../src/db';
-import { parseTextLinks } from '../src/text-links';
+import { normalizeTaskLinks, parseTextLinks } from '../src/text-links';
 
 const url = 'https://jira.e-kama.com/browse/CHM-3757';
 const task = `[CHM-3757](${url})`;
+
+it.each([
+  [url, task],
+  ['jira.e-kama.com/browse/CHM-3757', task],
+  [`${url}/?focusedCommentId=42#comment-42`, `[CHM-3757](${url}/?focusedCommentId=42#comment-42)`],
+  [`${url}?filter=$&`, `[CHM-3757](${url}?filter=$&)`],
+  ['https://jira.example.com/browse/ABC%2D42', '[ABC-42](https://jira.example.com/browse/ABC%2D42)'],
+  ['https://example.com/browse/ABC-42', '[https://example.com/browse/ABC-42](https://example.com/browse/ABC-42)'],
+  ['https://jira.example.com/projects', '[https://jira.example.com/projects](https://jira.example.com/projects)'],
+  [`[Своя подпись](${url})`, `[Своя подпись](${url})`],
+  ['CHM-3757', 'CHM-3757'],
+  ['javascript:alert(1)', 'javascript:alert(1)'],
+  ['https://', 'https://'],
+])('normalizes a task URL without changing explicit labels: %s', (input, expected) => {
+  expect(normalizeTaskLinks(input)).toBe(expected);
+  expect(normalizeTaskLinks(expected)).toBe(expected);
+});
+
+it('preserves line breaks when converting several pasted tasks', () => {
+  expect(normalizeTaskLinks(`${url}\r\nPlain task\n${url}`)).toBe(`${task}\r\nPlain task\n${task}`);
+});
 
 it('keeps multiple labels, surrounding text, and URL parentheses', () => {
   expect(parseTextLinks(`Fix ${task} and [details](https://example.com/a_(b)).`)).toEqual([
