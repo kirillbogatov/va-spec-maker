@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SearchSelect, type SearchOption } from '@/components/SearchSelect';
 
@@ -12,14 +13,15 @@ interface Props {
   onConnect: (id: number) => void;
   connectLabel: string;
   connectPlaceholder?: string;
+  compact?: boolean;
 }
 
 /** Область добавления элементов в сценарий: две одинаковые кнопки — создать новый и подключить существующий. */
-export function AddBar({ createLabel, onCreate, creating, options, onConnect, connectLabel, connectPlaceholder = 'Добавить существующий' }: Props) {
+export function AddBar({ createLabel, onCreate, creating, options, onConnect, connectLabel, connectPlaceholder = 'Добавить существующий', compact = false }: Props) {
   return (
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" className="max-md:h-10" disabled={creating} onClick={onCreate}>
-        <Plus className="size-4" /> {createLabel}
+      <Button variant="outline" className={cn('max-md:h-10', compact && 'h-8 gap-1.5 px-2.5 text-[13px]')} disabled={creating} onClick={onCreate}>
+        <Plus className={compact ? "size-3.5" : "size-4"} /> {createLabel}
       </Button>
       {options.length > 0 && (
         <SearchSelect
@@ -27,8 +29,8 @@ export function AddBar({ createLabel, onCreate, creating, options, onConnect, co
           value={null}
           onChange={(v) => v != null && onConnect(Number(v))}
           label={connectLabel}
-          className="h-9 rounded-lg border-border bg-background px-3.5 font-medium hover:bg-muted max-md:h-10"
-          icon={<Plus className="size-4" />}
+          className={cn('h-9 rounded-lg border-border bg-background px-3.5 font-medium hover:bg-muted max-md:h-10', compact && 'h-8 gap-1.5 px-2.5 text-[13px]')}
+          icon={<Plus className={compact ? "size-3.5" : "size-4"} />}
           placeholder={connectPlaceholder}
         />
       )}
