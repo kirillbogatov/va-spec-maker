@@ -19,6 +19,7 @@ export function useColumnSort() {
   const [sorting, setSorting] = useState<Sorting | null>(null);
   return {
     sorting,
+    reset: () => setSorting(null),
     toggle: (key: string) => setSorting((current) => current?.key !== key ? { key, direction: 'ascending' } : current.direction === 'ascending' ? { key, direction: 'descending' } : null),
     rows: <T,>(rows: T[], value: (row: T, key: string) => SortValue) => sortByColumn(rows, sorting, value),
   };

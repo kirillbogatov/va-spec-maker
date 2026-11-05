@@ -1,7 +1,7 @@
 import { ResizableColumns } from '@/components/ResizableColumns';
 import { useState } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ADD_ROW, DeleteChoiceDialog, REMOVE_BTN } from '@/components/DeleteChoiceDialog';
@@ -118,7 +118,7 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
             <SaveNote state={status} />
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => setConfirmRemove(true)}>
-                <Trash2 className="size-4" /> Удалить
+                <X className="size-4" /> Удалить
               </Button>
               <Button onClick={() => setOpen(false)}>Готово</Button>
             </div>

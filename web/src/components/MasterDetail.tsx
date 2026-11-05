@@ -95,7 +95,7 @@ export function MasterDetail({ list, children, selected, onBack, flush }: Master
         id={listId}
         style={{ '--master-w': `${width}px` } as CSSProperties}
         className={cn(
-          'relative flex shrink-0 flex-col border-b bg-background text-foreground md:w-[var(--master-w)] md:border-b-0 md:border-r',
+          'relative flex shrink-0 flex-col border-b bg-nav text-foreground md:w-[var(--master-w)] md:border-b-0 md:border-r',
           stacked ? 'max-h-[45vh] md:max-h-none' : 'min-h-0 flex-1 md:flex-none',
           selected && 'hidden',
           listCollapsed && selected !== false ? 'md:hidden' : 'md:flex',
@@ -107,7 +107,7 @@ export function MasterDetail({ list, children, selected, onBack, flush }: Master
         <div onPointerDown={startDrag} aria-hidden className="absolute -right-1 top-0 z-10 hidden h-full w-2 cursor-col-resize touch-none md:block" />
       </aside>
       {!panels && listCollapsed && selected !== false && (
-        <div className="hidden w-10 shrink-0 flex-col items-center border-r bg-background py-2 md:flex">
+        <div className="hidden w-10 shrink-0 flex-col items-center border-r bg-nav py-2 md:flex">
           <button
             ref={restoreButton}
             type="button"
@@ -135,7 +135,7 @@ export function MasterDetail({ list, children, selected, onBack, flush }: Master
             onClick={onBack}
             className={cn(
               'mb-3 inline-flex h-10 shrink-0 items-center gap-1.5 self-start rounded-md px-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring md:hidden',
-              flush ? 'mb-0 ml-2 mt-1' : '-ml-2',
+              flush ? 'mb-0 self-stretch rounded-none bg-nav px-4' : '-ml-2',
             )}
           >
             <ArrowLeft className="size-4" /> Назад к списку

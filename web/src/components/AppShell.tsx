@@ -70,7 +70,7 @@ export function AppShell() {
 
   return (
     <div className="flex h-dvh flex-col md:flex-row">
-      <aside className={cn('hidden shrink-0 flex-col gap-4 overflow-hidden border-r bg-background p-3 md:flex', collapsed ? 'w-16 items-center' : 'w-60')}>
+      <aside className={cn('hidden shrink-0 flex-col gap-4 overflow-hidden border-r bg-nav p-3 md:flex', collapsed ? 'w-16 items-center' : 'w-60')}>
         <div className={cn('flex items-center gap-2', collapsed ? 'flex-col' : 'justify-between px-1')}>
           {collapsed ? (
             <button
@@ -153,7 +153,7 @@ export function AppShell() {
         </PanelVisibilityContext.Provider>
       </main>
 
-      <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-5 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-5 border-t bg-nav pb-[env(safe-area-inset-bottom)] md:hidden">
         <NavLink to={path('/scenarios')} className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground', onScenarios && 'font-medium text-brand')}>
           <Workflow className="size-5" /> Сценарии
         </NavLink>

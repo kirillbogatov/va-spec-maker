@@ -143,7 +143,7 @@ test('ручная история сценария тоже защищена о�
   const { pid, first } = await setup(page);
   const other = await context.newPage();
   await other.goto(`/?editor=${first}#/p/${pid}/scenarios/${first}/history`);
-  await expect(other.getByRole('heading', { name: 'История изменений', exact: true })).toBeVisible();
+  await expect(other.getByRole('region', { name: 'История изменений сценария', exact: true })).toBeVisible();
   await other.clock.install();
   await other.getByRole('button', { name: 'Добавить', exact: true }).click();
   await other.getByRole('textbox', { name: 'Задача, строка 1', exact: true }).fill('Моя задача');

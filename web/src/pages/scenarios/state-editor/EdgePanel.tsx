@@ -1,4 +1,4 @@
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,7 +55,7 @@ export function EdgePanel({ step, steps, states, descriptions, intents, dependen
       <PanelHeader>
         <TypeToken kind="intent" className="font-sans text-[11px] uppercase tracking-wide">Переход</TypeToken>
         <div className="flex items-center">
-          <Button variant="ghost" size="icon" aria-label="Удалить переход" onClick={onRemove}><Trash2 className="size-4" /></Button>
+          <Button variant="ghost" size="icon" aria-label="Удалить переход" onClick={onRemove}><X className="size-4" /></Button>
         </div>
       </PanelHeader>
       {errors.length > 0 && (

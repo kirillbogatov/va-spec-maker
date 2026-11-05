@@ -41,7 +41,7 @@ it('keeps ordinary tasks, incomplete links and non-web targets as plain text', (
   }
 });
 
-it('persists Task markup and exports real hyperlinks for scenario and project', async () => {
+it.each([task, url])('persists and exports a short Task hyperlink for scenario and project: %s', async (input) => {
   const db = await openDb();
   try {
     const app = createApp(db);
@@ -53,10 +53,12 @@ it('persists Task markup and exports real hyperlinks for scenario and project', 
     const project = await call('POST', '/api/projects', { name: 'Links' });
     const scenario = await call('POST', `/api/projects/${project.id}/scenarios`, { name: 'Links' });
     await call('PUT', `/api/scenarios/${scenario.id}/changelog`, {
-      rows: [{ task, author: 'Author', description: 'Change' }, { task: 'CHM-PLAIN', author: '', description: '' }],
+      rows: [{ task: input, author: 'Author', description: 'Change' }, { task: 'CHM-PLAIN', author: '', description: '' }],
     });
     const saved = await call('GET', `/api/scenarios/${scenario.id}/changelog`);
     expect(JSON.stringify(saved)).toContain(task);
+    // Старые записи и импортированные данные тоже сокращаются при экспорте.
+    if (input === url) db.prepare('UPDATE scenario_changelog SET task = ? WHERE scenario_id = ? AND position = 0').run(url, scenario.id);
     expect(await call('GET', `/api/scenarios/${scenario.id}/preview`)).toContain(task);
     for (const route of [`/api/scenarios/${scenario.id}`, `/api/projects/${project.id}`]) {
       expect(await call('GET', route + '/export?format=md')).toContain(task);

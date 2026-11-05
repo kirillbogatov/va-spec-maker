@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -240,7 +240,7 @@ function DictEditor<T extends DictItem>({ item, p, onRemoved }: { item: T; p: Pr
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setConfirm(true)}>
-                  <Trash2 className="size-4" /> Удалить
+                  <X className="size-4" /> Удалить
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -1,7 +1,7 @@
 import { waitForSaves } from './saveStore';
 import { toast } from 'sonner';
 import type {
-  ChangelogRow, DictionaryDependency, Entity, HistoryEntry, EntityListItem, EntityValue, Intent, IntentListItem, Keyword, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
+  ChangelogRow, DictionaryDependency, Entity, EntityListItem, EntityValue, Intent, IntentListItem, Keyword, Project, ProjectListItem, Prompt, PromptListItem, Scenario, ScenarioListItem,
 } from './types';
 import type { EntityKind } from './entityTypes';
 import type { IntentMode } from './intentMode';
@@ -106,7 +106,6 @@ export const api = {
     save: (id: number, body: Omit<Scenario, 'id' | 'project_id'>, expected?: Scenario) =>
       req<Scenario>('PUT', `/api/scenarios/${id}`, body, expected ? { expected } : undefined),
     remove: (id: number) => req<void>('DELETE', `/api/scenarios/${id}`),
-    history: (id: number) => req<HistoryEntry[]>('GET', `/api/scenarios/${id}/history`),
     changelog: (id: number) => req<ChangelogRow[]>('GET', `/api/scenarios/${id}/changelog`),
     saveChangelog: (id: number, rows: ChangelogRow[], expected?: ChangelogRow[]) =>
       req<ChangelogRow[]>('PUT', `/api/scenarios/${id}/changelog`, { rows }, expected ? { expected } : undefined),

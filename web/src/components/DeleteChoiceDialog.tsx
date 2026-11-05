@@ -1,4 +1,4 @@
-import { Trash2, Unlink } from 'lucide-react';
+import { X, Unlink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ScenarioLink } from '@/lib/types';
@@ -50,7 +50,7 @@ export function DeleteChoiceDialog({ open, onOpenChange, noun, name, scenarios, 
             className="grid gap-0.5 rounded-lg border p-3 text-left outline-none hover:bg-destructive-bg focus-visible:ring-3 focus-visible:ring-ring/50"
             onClick={pick(onRemove)}
           >
-            <span className="flex items-center gap-2 font-medium text-destructive"><Trash2 className="size-4" /> Удалить из всего проекта</span>
+            <span className="flex items-center gap-2 font-medium text-destructive"><X className="size-4" /> Удалить из всего проекта</span>
             <span className="text-xs text-muted-foreground">
               {scenarios.length > 1 ? `Пропадёт из сценариев: ${scenarios.map((s) => s.name).join(', ')}. ` : 'Безвозвратно. '}
               {removeNote}

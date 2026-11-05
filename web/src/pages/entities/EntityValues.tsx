@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -103,7 +103,7 @@ export function EntityValues({ values, onChange }: { values: EntityValue[]; onCh
                   aria-label={`Удалить значение ${v.value || i + 1}`}
                   onClick={() => onChange(values.filter((_, j) => j !== i))}
                 >
-                  <Trash2 className="size-4" />
+                  <X className="size-4" />
                 </Button>
                 <div className="col-span-2 min-w-0 md:col-span-1">
                   <Synonyms value={v.synonyms} label={v.value || `значения ${i + 1}`} onChange={(synonyms) => patchValue(i, { synonyms })} />

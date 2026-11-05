@@ -1,7 +1,6 @@
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { notFound } from '../errors';
-import { logPromptChanged } from '../history';
 import { assertSameProject, connect, disconnect } from '../links';
 import { assertUniqueName } from '../unique';
 import { cleanStrings, parseId, requireString } from '../validate';
@@ -107,7 +106,6 @@ export function promptsRouter(db: Db): RouterT {
     assertUniqueName(db, 'prompts', cur.project_id, requireString(b.name, 'Название'), 'Промпт', id);
     const next = { name: requireString(b.name, 'Название'), full_answers: cleanStrings(b.full_answers) };
     db.prepare('UPDATE prompts SET name = ?, full_answers = ? WHERE id = ?').run(next.name, JSON.stringify(next.full_answers), id);
-    logPromptChanged(db, id, cur, next);
     res.json(load(id));
   });
 

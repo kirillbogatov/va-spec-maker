@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Trash2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddBar } from '@/components/AddBar';
 import { ResizableColumns } from '@/components/ResizableColumns';
@@ -81,7 +81,7 @@ export function DependenciesTable({ dependencies, entities, onChange, onDictiona
           <span className="min-w-0 break-words text-sm">{nameOf(d) || 'Без названия'}</span>
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">{valuesOf(d).length ? valuesOf(d).map((value) => <span key={value} className="rounded-md bg-secondary px-2 py-1 text-[13px] text-secondary-foreground">{value}</span>) : <span className="text-sm text-muted-foreground">Нет значений</span>}</div>
           <p className={cn('min-w-0 whitespace-pre-wrap break-words text-sm', !descriptionOf(d).trim() && 'text-muted-foreground')}>{descriptionOf(d) || 'Нет описания'}</p>
-          <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label="Удалить зависимость" onClick={() => onChange((deps) => deps.filter((x) => x.ref !== d.ref))}><Trash2 className="size-4" /></Button>
+          <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label="Удалить зависимость" onClick={() => onChange((deps) => deps.filter((x) => x.ref !== d.ref))}><X className="size-4" /></Button>
         </div>)}
         {!dependencies.length && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Внешних зависимостей нет</p>}
       </Card>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Trash2 } from 'lucide-react';
+import { Copy, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,7 +36,7 @@ export function NodePanel({ name, info, prompts, onPatchInfo, isEntry, isTermina
         </div>
         <div className="flex items-center">
           <Button variant="ghost" size="icon" aria-label="Дублировать состояние" title="Дублировать состояние вместе с условиями" onClick={onDuplicate}><Copy className="size-4" /></Button>
-          <Button variant="ghost" size="icon" aria-label="Удалить состояние" onClick={onRemove}><Trash2 className="size-4" /></Button>
+          <Button variant="ghost" size="icon" aria-label="Удалить состояние" onClick={onRemove}><X className="size-4" /></Button>
         </div>
       </PanelHeader>
       <PanelSection title="Состояние">

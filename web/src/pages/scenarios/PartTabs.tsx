@@ -1,4 +1,4 @@
-import { Copy, Plus, Trash2 } from 'lucide-react';
+import { Copy, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -69,7 +69,7 @@ export function PartPanel({ part, canRemove, dependencies, entities, onChange, o
             disabled={!canRemove}
             onClick={onRemove}
           >
-            <Trash2 className="size-4" />
+            <X className="size-4" />
           </Button>
         </div>
       </div>

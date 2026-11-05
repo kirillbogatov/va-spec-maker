@@ -124,7 +124,7 @@
     --kw: #1f7a3d;
     --kw-bg: #e3f4e0;
     --radius: 0.5rem;
-    --sidebar: #ffffff;
+    --sidebar: var(--nav);
     --sidebar-foreground: #171c28;
     --sidebar-primary: #2b55e0;
     --sidebar-primary-foreground: #ffffff;
@@ -139,7 +139,7 @@
     color-scheme: dark;
     --brand: #86a3ff;
     --page: #0d1117;
-    --nav: #161b22;
+    --nav: #010409;
     --nav-2: #21262d;
     --nav-fg: #e6edf3;
     --nav-muted: #9da7b3;
@@ -179,7 +179,7 @@
     --dep-bg: #3d1b29;
     --kw: #8fd6a0;
     --kw-bg: #1d3a27;
-    --sidebar: #161b22;
+    --sidebar: var(--nav);
     --sidebar-foreground: #e6edf3;
     --sidebar-primary: #2b55e0;
     --sidebar-primary-foreground: #ffffff;

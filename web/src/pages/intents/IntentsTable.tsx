@@ -4,7 +4,7 @@ import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ListPlus, Plus, Trash2, X } from 'lucide-react';
+import { ListPlus, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -416,7 +416,7 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
             <SaveNote state={status} />
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => setConfirmRemove(true)}>
-                <Trash2 className="size-4" /> Удалить
+                <X className="size-4" /> Удалить
               </Button>
               <Button onClick={() => setOpen(false)}>Готово</Button>
             </div>

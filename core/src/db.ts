@@ -143,14 +143,6 @@ CREATE TABLE IF NOT EXISTS scenario_states (
   system_action TEXT NOT NULL DEFAULT '',
   UNIQUE (part_id, name)
 );
-CREATE TABLE IF NOT EXISTS scenario_history (
-  id INTEGER PRIMARY KEY,
-  scenario_id INTEGER NOT NULL REFERENCES scenarios(id) ON DELETE CASCADE,
-  day TEXT NOT NULL,
-  key TEXT NOT NULL,
-  text TEXT NOT NULL,
-  refs TEXT NOT NULL DEFAULT '[]'
-);
 CREATE TABLE IF NOT EXISTS scenario_changelog (
   id INTEGER PRIMARY KEY,
   scenario_id INTEGER NOT NULL REFERENCES scenarios(id) ON DELETE CASCADE,
@@ -204,16 +196,6 @@ export function migrate(db: Db): void {
     if (db.prepare(`PRAGMA table_info(${table})`).all().length && !hasColumn(db, table, ddl.split(' ')[0])) {
       db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
     }
-  }
-
-  // Both local editions may open the same persisted database. Keep both history
-  // layouts available rather than relying on their different user_version values.
-  if (db.prepare("PRAGMA table_info(scenario_history)").all().length) {
-    for (const ddl of ["at TEXT NOT NULL DEFAULT ''", "field TEXT NOT NULL DEFAULT ''", "old_value TEXT NOT NULL DEFAULT ''", "new_value TEXT NOT NULL DEFAULT ''", "day TEXT NOT NULL DEFAULT ''", "key TEXT NOT NULL DEFAULT ''", "refs TEXT NOT NULL DEFAULT '[]'"]) {
-      if (!hasColumn(db, 'scenario_history', ddl.split(' ')[0])) db.exec(`ALTER TABLE scenario_history ADD COLUMN ${ddl}`);
-    }
-    db.exec("UPDATE scenario_history SET day = substr(at, 1, 10) WHERE day = '' AND at <> ''");
-    db.exec("UPDATE scenario_history SET at = day || 'T00:00:00.000Z' WHERE at = '' AND day <> ''");
   }
 
   if (db.prepare("PRAGMA table_info(scenario_changelog)").all().length && !hasColumn(db, 'scenario_changelog', 'date')) {

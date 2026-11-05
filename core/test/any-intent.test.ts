@@ -101,17 +101,3 @@ it('migrates the actual schema even for a newer edition version and preserves le
   migrate(db);
   expect(db.prepare('SELECT kind, intent_id, match_any_intent, any_intent FROM scenario_steps WHERE state = ?').get('ANY')).toEqual({ kind: 'error', intent_id: null, match_any_intent: 0, any_intent: 0 });
 });
-
-it('records a wildcard-only history change and does not log a repeated unchanged save', async () => {
-  const { db, call, sid, save } = await setup();
-  const before = await call('GET', `/api/scenarios/${sid}`);
-  before.parts[0].steps[0].match_any_intent = false;
-  await save(before.parts[0].steps);
-  db.prepare('DELETE FROM scenario_history WHERE scenario_id = ?').run(sid);
-  before.parts[0].steps[0].match_any_intent = true;
-  await save(before.parts[0].steps);
-  const history = await call('GET', `/api/scenarios/${sid}/history`);
-  expect(history.some((h: any) => h.text.includes('Любой интент'))).toBe(true);
-  await save(before.parts[0].steps);
-  expect(await call('GET', `/api/scenarios/${sid}/history`)).toEqual(history);
-});

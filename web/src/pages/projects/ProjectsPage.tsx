@@ -2,7 +2,7 @@ import { ImportProjectDialog } from './ImportProjectDialog';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { Copy, Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, X, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/UserMenu';
@@ -166,7 +166,7 @@ export function ProjectsPage() {
                         <DropdownMenuItem className="min-h-9" onClick={() => exportJson(p)}><Download className="size-4" /> Экспорт (.json)</DropdownMenuItem>
                         <DropdownMenuItem className="min-h-9" onClick={() => exportDocx(p)}><FileText className="size-4" /> Скачать .docx</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="min-h-9" variant="destructive" onClick={() => setDeleting(p)}><Trash2 className="size-4" /> Удалить</DropdownMenuItem>
+                        <DropdownMenuItem className="min-h-9" variant="destructive" onClick={() => setDeleting(p)}><X className="size-4" /> Удалить</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

@@ -50,26 +50,8 @@ function upgradeDump(tables: ProjectDump['tables']): ProjectDump['tables'] {
   };
 }
 
-/** В записях истории ссылки на интенты и промпты хранятся по id: после импорта id другие. */
-function remapHistory(row: Record<string, unknown>, maps: Record<string, Map<number, number>>): Record<string, unknown> {
-  let refs: { type?: string; id?: number }[] = [];
-  try {
-    refs = JSON.parse(String(row.refs));
-  } catch {
-    return row;
-  }
-  const next = refs.map((r) => {
-    const map = r.type === 'intent' ? maps.intents : r.type === 'prompt' ? maps.prompts : undefined;
-    if (!map || typeof r.id !== 'number') return r;
-    const { id, ...rest } = r;
-    const to = map.get(id);
-    return to === undefined ? rest : { ...rest, id: to };
-  });
-  return { ...row, refs: JSON.stringify(next) };
-}
-
 /** Порядок важен: родители раньше детей. fk — столбцы-ссылки на id других таблиц дампа. */
-const TABLES: { name: string; where: string; fk: Record<string, string>; remap?: (row: Record<string, unknown>, maps: Record<string, Map<number, number>>) => Record<string, unknown> }[] = [
+const TABLES: { name: string; where: string; fk: Record<string, string> }[] = [
   { name: 'entities', where: IN_PROJECT, fk: {} },
   { name: 'entity_values', where: VIA_ENTITY, fk: { entity_id: 'entities' } },
   { name: 'dependency_dictionary', where: IN_PROJECT, fk: {} },
@@ -87,7 +69,6 @@ const TABLES: { name: string; where: string; fk: Record<string, string>; remap?:
   { name: 'scenario_entities', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', entity_id: 'entities' } },
   { name: 'scenario_states', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', part_id: 'scenario_parts', prompt_id: 'prompts' } },
   { name: 'scenario_steps', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', part_id: 'scenario_parts', intent_id: 'intents', prompt_id: 'prompts' } },
-  { name: 'scenario_history', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios' }, remap: remapHistory },
   { name: 'scenario_changelog', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios' } },
 ];
 
@@ -119,7 +100,7 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
       const rows = tables[t.name];
       if (rows !== undefined && !Array.isArray(rows)) throw badRequest(`Некорректная таблица ${t.name}`);
       for (const original of rows ?? []) {
-        let row = t.remap ? t.remap(original, maps) : original;
+        let row = original;
         if (t.name === 'scenario_steps' && row.match_any_intent !== undefined) {
           const flag = row.match_any_intent;
           if (flag !== true && flag !== false && flag !== 0 && flag !== 1) throw badRequest('Некорректное поле match_any_intent');

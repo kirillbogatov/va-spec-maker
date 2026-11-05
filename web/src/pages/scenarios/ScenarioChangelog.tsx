@@ -1,8 +1,7 @@
 import { ResizableColumns } from '@/components/ResizableColumns';
-import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash2 } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TaskInput } from '@/components/TaskInput';
@@ -13,29 +12,24 @@ import { api, ApiError } from '@/lib/api';
 import { toast } from 'sonner';
 import { downloadBlob } from '@/lib/download';
 import type { ChangelogRow } from '@/lib/types';
+type ChangeLogRow = ChangelogRow & { key?: string };
 import { cn, GHOST } from '@/lib/utils';
-import { AddButton, Card, ROW } from './Card';
+import { ROW } from './Card';
+import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 
-const COLS = 'md:[grid-template-columns:var(--resizable-columns)]';
-const FIELD = cn(GHOST, 'h-8 w-full rounded-md border px-2.5 text-sm max-md:h-10 md:-ml-2.5 md:w-[calc(100%+0.625rem)]');
+const FIELD_LABEL = 'text-xs text-muted-foreground @min-[28rem]/changelog:sr-only';
+const COLS = '@min-[28rem]/changelog:[grid-template-columns:var(--resizable-columns)]';
 
-type Row = ChangelogRow & { key: string };
-
-/** Журнал изменений, который ведут вручную: задача, автор и описание; сохраняется автоматически. */
-export function ScenarioChangelog({ scenarioId }: { scenarioId: number }) {
-  const { data, isSuccess } = useQuery({ queryKey: ['changelog', scenarioId], queryFn: () => api.scenarios.changelog(scenarioId) });
-  return isSuccess ? <Editor scenarioId={scenarioId} initial={data} /> : <Card title="История изменений"><p className="text-sm text-muted-foreground">Загружаю…</p></Card>;
-}
-
-function Editor({ scenarioId, initial }: { scenarioId: number; initial: ChangelogRow[] }) {
+/** Таблица истории изменений, которую заполняют вручную: задача, автор, описание изменений. Сохраняется сама. */
+function ChangeLogForm({ scenarioId, initial }: { scenarioId: number; initial: ChangeLogRow[] }) {
   const qc = useQueryClient();
   const sort = useColumnSort();
-  const [rows, setRows] = useState<Row[]>(() => initial.map((r) => ({ ...r, key: crypto.randomUUID() })));
+  const [rows, setRows] = useState<ChangeLogRow[]>(() => initial.map((r) => ({ ...r, key: crypto.randomUUID() })));
   const baseline = useRef(initial);
   const savedRows = useRef(rows);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
-  const [conflict, setConflict] = useState<{ current: ChangelogRow[] | null } | null>(null);
+  const [conflict, setConflict] = useState<{ current: ChangeLogRow[] | null } | null>(null);
   const [resolving, setResolving] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   useEffect(() => {
@@ -46,13 +40,13 @@ function Editor({ scenarioId, initial }: { scenarioId: number; initial: Changelo
     setRows(next);
     setResetKey((key) => key + 1);
   }, [initial]);
-  const save = async (v: Row[]) => {
+  const save = async (v: ChangeLogRow[]) => {
     try {
       baseline.current = await api.scenarios.saveChangelog(scenarioId, v.map(({ date, task, author, description }) => ({ date, task, author, description })), baseline.current);
       savedRows.current = v;
       qc.setQueryData(['changelog', scenarioId], baseline.current);
     } catch (e) {
-      if (e instanceof ApiError && e.code === 'edit_conflict') setConflict(e.details as { current: ChangelogRow[] | null });
+      if (e instanceof ApiError && e.code === 'edit_conflict') setConflict(e.details as { current: ChangeLogRow[] | null });
       throw e;
     }
   };
@@ -78,50 +72,89 @@ function Editor({ scenarioId, initial }: { scenarioId: number; initial: Changelo
       setResolving(false);
     }
   };
-  const patch = (key: string, p: Partial<ChangelogRow>) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...p } : r)));
-  const add = () => setRows((rs) => [...rs, { key: crypto.randomUUID(), date: '', task: '', author: '', description: '' }]);
+  const patch = (i: number, p: Partial<ChangeLogRow>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...p } : r)));
+  return (
+    <div className="grid min-w-0 gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" className="max-md:h-10" onClick={() => {
+          sort.reset();
+          setRows((rs) => [{ key: crypto.randomUUID(), date: '', task: '', author: '', description: '' }, ...rs]);
+        }}>
+          <Plus className="size-4" /> Добавить
+        </Button>
+        <SaveIndicator state={status} compact />
+      </div>
+      <ResizableColumns storageKey="scenario-changelog" columns={['date', 'task', 'author', 'description']} className="min-w-0 overflow-hidden rounded-xl border bg-card" aria-label="История изменений сценария" initial="minmax(0,124px) minmax(0,1fr) minmax(0,1fr) minmax(0,1.5fr) 32px" trailing="32px">
+        {conflict && <div role="alert" className="border-b bg-muted px-4 py-3">
+          <p className="font-medium">История изменений обновлена в другой вкладке</p>
+          <p className="mt-1 text-sm">Автосохранение приостановлено. Ваши строки остаются в редакторе.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {conflict.current && <>
+              <Button variant="outline" disabled={resolving} onClick={() => void resolve(false)}>Загрузить сохранённую версию</Button>
+              <Button disabled={resolving} onClick={() => void resolve(true)}>Сохранить мои строки поверх</Button>
+            </>}
+            <Button variant="outline" onClick={() => downloadBlob(new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' }), 'История изменений — черновик.json')}>Скачать строки</Button>
+          </div>
+        </div>}
+        <div className={cn(ROW, COLS, 'flex flex-wrap items-center border-t-0 py-1 text-xs font-medium text-muted-foreground @min-[28rem]/changelog:grid')}>
+          <SortHeader column="date" sort={sort}>Дата</SortHeader>
+          <SortHeader column="task" sort={sort}>Задача</SortHeader>
+          <SortHeader column="author" sort={sort}>Автор</SortHeader>
+          <SortHeader column="description" sort={sort}>Описание изменений</SortHeader>
+          <span />
+        </div>
+        {sort.rows(rows, (row, column) => row[column as 'date' | 'task' | 'author' | 'description'] ?? '').map((r) => { const i = rows.indexOf(r); return (
+          <div key={r.key} className={cn(ROW, COLS, '@min-[28rem]/changelog:items-start')}>
+            <label className="grid min-w-0 gap-1">
+              <span className={FIELD_LABEL}>Дата</span>
+              <Input type="date" className={cn(GHOST, 'min-w-0 rounded-md')} aria-label={`Дата, строка ${i + 1}`} value={r.date ?? ''} onChange={(e) => patch(i, { date: e.target.value })} />
+            </label>
+            <label className="grid min-w-0 gap-1">
+              <span className={FIELD_LABEL}>Задача</span>
+              <TaskInput className={cn(GHOST, 'rounded-md')} aria-label={`Задача, строка ${i + 1}`} value={r.task} onValueChange={(task) => patch(i, { task })} />
+            </label>
+            <label className="grid min-w-0 gap-1">
+              <span className={FIELD_LABEL}>Автор</span>
+              <Input className={cn(GHOST, 'rounded-md')} aria-label={`Автор, строка ${i + 1}`} value={r.author} onChange={(e) => patch(i, { author: e.target.value })} />
+            </label>
+            <label className="grid min-w-0 gap-1">
+              <span className={FIELD_LABEL}>Описание изменений</span>
+              <Textarea
+                rows={1}
+                className={cn(GHOST, 'min-h-8 resize-none rounded-md py-1 text-sm md:text-sm')}
+                aria-label={`Описание изменений, строка ${i + 1}`}
+                value={r.description}
+                onChange={(e) => patch(i, { description: e.target.value })}
+              />
+            </label>
+            <Button variant="ghost" size="icon" className="justify-self-end max-md:size-10" aria-label={`Удалить строку ${i + 1}`} onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>
+              <X className="size-4" />
+            </Button>
+          </div>
+        ); })}
+        {rows.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Записей пока нет</p>}
+      </ResizableColumns>
+    </div>
+  );
+}
+
+/** Редактируемая история изменений сценария на отдельной вкладке. */
+export function ScenarioChangelog({ scenarioId }: { scenarioId: number }) {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['changelog', scenarioId],
+    queryFn: () => api.scenarios.changelog(scenarioId),
+    refetchOnMount: 'always',
+    gcTime: 0,
+  });
 
   return (
-    <ResizableColumns storageKey="scenario-changelog" columns={['date', 'task', 'author', 'description']} initial="minmax(0,145px) minmax(0,180px) minmax(0,180px) minmax(0,1fr) 32px" trailing="32px">
-    <Card flush title="История изменений" action={<><SaveIndicator state={status} compact /><AddButton onClick={add}>Добавить</AddButton></>}>
-      {conflict && <div role="alert" className="border-b bg-muted px-4 py-3">
-        <p className="font-medium">История изменений обновлена в другой вкладке</p>
-        <p className="mt-1 text-sm">Автосохранение приостановлено. Ваши строки остаются в редакторе.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {conflict.current && <>
-            <Button variant="outline" disabled={resolving} onClick={() => void resolve(false)}>Загрузить сохранённую версию</Button>
-            <Button disabled={resolving} onClick={() => void resolve(true)}>Сохранить мои строки поверх</Button>
-          </>}
-          <Button variant="outline" onClick={() => downloadBlob(new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' }), 'История изменений — черновик.json')}>Скачать строки</Button>
-        </div>
+    <div className="@container/changelog min-w-0">
+      {isLoading && <p role="status" className="text-sm text-muted-foreground">Загрузка…</p>}
+      {error && <div className="rounded-xl border bg-card px-4 py-3">
+        <p role="alert" className="text-sm text-destructive">Не удалось загрузить историю: {(error as Error).message}</p>
+        <Button variant="outline" className="mt-3" onClick={() => void refetch()}>Повторить</Button>
       </div>}
-      <div className={cn(ROW, COLS, 'flex flex-wrap items-center border-t-0 py-1 text-xs font-medium text-muted-foreground md:grid')}>
-        <SortHeader column="date" sort={sort}>Дата</SortHeader>
-        <SortHeader column="task" sort={sort}>Задача</SortHeader>
-        <SortHeader column="author" sort={sort}>Автор</SortHeader>
-        <SortHeader column="description" sort={sort}>Описание изменений</SortHeader>
-        <span />
-      </div>
-      {sort.rows(rows, (row, column) => row[column as 'date' | 'task' | 'author' | 'description'] ?? '').map((r, i) => (
-        <div key={r.key} className={cn(ROW, COLS, 'md:items-start')}>
-          <Input type="date" className={cn(FIELD, 'min-w-0')} aria-label={`Дата, строка ${i + 1}`} value={r.date ?? ''} onChange={(e) => patch(r.key, { date: e.target.value })} />
-          <TaskInput className={FIELD} value={r.task} aria-label={`Задача, строка ${i + 1}`} onValueChange={(task) => patch(r.key, { task })} />
-          <Input className={FIELD} value={r.author} aria-label={`Автор, строка ${i + 1}`} onChange={(e) => patch(r.key, { author: e.target.value })} />
-          <Textarea
-            rows={1}
-            className={cn(FIELD, 'field-sizing-content h-auto min-h-8 resize-none py-1.5')}
-            value={r.description}
-
-            aria-label={`Описание изменений, строка ${i + 1}`}
-            onChange={(e) => patch(r.key, { description: e.target.value })}
-          />
-          <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label={`Удалить строку ${i + 1}`} onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}>
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
-      ))}
-      {rows.length === 0 && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Записей пока нет</p>}
-    </Card>
-    </ResizableColumns>
+      {data && <ChangeLogForm scenarioId={scenarioId} initial={data} />}
+    </div>
   );
 }

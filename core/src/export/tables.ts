@@ -1,6 +1,7 @@
 import type { ProjectSpec, TransitionRow } from './model';
 import { rangeText } from '../entity-types';
 import { STRINGS, type SpecLang } from './i18n';
+import { normalizeTaskLinks } from '../text-links';
 
 /** Содержимое ячейки таблицы: абзацы, нумерованный список или маркированный список «жирное: обычное». */
 export type Cell =
@@ -140,6 +141,6 @@ export const changelogTable = (rows: ChangelogRow[], lang: SpecLang = 'ru', with
   head: withScenario ? STRINGS[lang].changelogProjectHead : STRINGS[lang].changelogHead,
   widths: withScenario ? [12, 18, 14, 14, 42] : [14, 18, 18, 50],
   rows: rows.map((r): Row => ({
-    cells: [dash(r.date ?? ''), ...(withScenario ? [dash(r.scenario ?? '')] : []), { text: r.task.trim() ? r.task.split(/\r?\n/) : ['-'], links: true }, dash(r.author), dash(r.description)],
+    cells: [dash(r.date ?? ''), ...(withScenario ? [dash(r.scenario ?? '')] : []), { text: r.task.trim() ? normalizeTaskLinks(r.task).split(/\r?\n/) : ['-'], links: true }, dash(r.author), dash(r.description)],
   })),
 });

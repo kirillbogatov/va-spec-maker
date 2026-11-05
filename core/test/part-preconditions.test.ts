@@ -149,16 +149,3 @@ it('tracks part references, guards deletions and propagates dictionary value ren
   await call('DELETE', `/api/entities/${entity.id}`);
   await call('DELETE', `/api/keywords/${concept.id}`);
 });
-
-it('records structured, free-text and all/any part precondition changes without noise on unchanged saves', async () => {
-  const { db, call, sid, body, save } = await setup();
-  db.prepare('DELETE FROM scenario_history WHERE scenario_id = ?').run(sid);
-  body.parts[0].preconditions![0].value = 'cold';
-  body.parts[0].precondition = 'После подтверждения пользователя';
-  body.parts[0].precond_mode = 'any';
-  await save();
-  const history = await call('GET', `/api/scenarios/${sid}/history`);
-  expect(history.filter((h: any) => /предуслов/i.test(h.text)).length).toBeGreaterThanOrEqual(3);
-  await save();
-  expect(await call('GET', `/api/scenarios/${sid}/history`)).toEqual(history);
-});

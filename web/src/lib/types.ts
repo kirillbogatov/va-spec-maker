@@ -46,10 +46,6 @@ export interface Prompt {
   id: number; project_id: number; name: string; full_answers: string[];
 }
 
-/** Ссылка из записи истории на объект, к которому можно перейти. */
-export interface HistoryRef { type: 'intent' | 'prompt' | 'state' | 'part' | 'dependency' | 'error'; name: string; id?: number; part?: string }
-/** Запись истории сценария: день (ГГГГ-ММ-ДД) и текст, в котором {0}, {1}… — места для ссылок. */
-export interface HistoryEntry { id: number; day: string; text: string; refs: HistoryRef[] }
 /** Строка журнала изменений, который ведут вручную. */
 export interface ChangelogRow { date?: string; task: string; author: string; description: string }
 

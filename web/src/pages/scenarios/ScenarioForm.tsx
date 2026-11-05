@@ -3,7 +3,7 @@ import type { DictionaryDependency } from '@/lib/types';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ellipsis, Trash2 } from 'lucide-react';
+import { Ellipsis, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,7 +21,6 @@ import type { Dependency, Layout, Scenario, ScenarioPart, Step } from '@/lib/typ
 import { DependenciesTable } from './DependenciesTable';
 import { reconcile } from './dependencies';
 import { ScenarioChangelog } from './ScenarioChangelog';
-import { ScenarioHistory } from './ScenarioHistory';
 import { ScenarioIntents } from './ScenarioIntents';
 import { ScenarioPrompts } from './ScenarioPrompts';
 import { analyzeSteps } from '@/lib/states';
@@ -164,7 +163,6 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     qc.invalidateQueries({ queryKey: ['scenarios', projectId] });
     qc.invalidateQueries({ queryKey: ['scenario', scenario.id] });
     qc.invalidateQueries({ queryKey: ['dependency-dictionary', projectId] });
-    qc.invalidateQueries({ queryKey: ['history', scenario.id] });
   };
   const status = useAutosave(draft, saveDraft, { enabled: !conflict && !resolving && !deleted, resetKey });
 
@@ -255,7 +253,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
 
   // Колонка содержимого: на вкладках без схемы ограничена по ширине
   const column = 'min-h-0 flex-1 overflow-y-auto';
-  const inner = 'px-4 py-4 md:px-8 md:py-5';
+  const inner = 'mx-auto w-full max-w-[max(70rem,70%)] min-w-0 px-4 py-4 md:px-8 md:py-5';
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -273,10 +271,10 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
           </div>
         </div>
       )}
-      <header className="shrink-0 border-b bg-page px-4 pt-3 md:px-8 md:pt-4">
+      <header className="shrink-0 border-b bg-nav px-4 pt-3 md:px-8 md:pt-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Input
-            className={cn(GHOST, '-ml-2 h-11 w-full min-w-0 flex-1 max-sm:flex-none rounded-md px-2 text-[26px] font-semibold leading-tight tracking-tight sm:basis-64 md:text-[26px]')}
+            className={cn(GHOST, '-ml-2 h-10 w-full min-w-0 flex-1 max-sm:flex-none rounded-md px-2 text-xl font-semibold leading-tight tracking-tight sm:basis-64 md:h-9 md:text-xl')}
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             aria-label="Название сценария"
@@ -290,7 +288,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 className="size-4" /> Удалить сценарий
+                  <X className="size-4" /> Удалить сценарий
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -401,13 +399,12 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
         <div className={column}>
           <div className={cn(inner, 'grid min-w-0 gap-4')}>
             <ScenarioChangelog scenarioId={scenario.id} />
-            <ScenarioHistory scenarioId={scenario.id} />
           </div>
         </div>
       )}
       {tab === 'preview' && (
         <div className={column}>
-          <div className="px-4 py-4 md:px-8 md:py-5">
+          <div className={inner}>
             <ScenarioPreview scenarioId={scenario.id} version={status} />
           </div>
         </div>

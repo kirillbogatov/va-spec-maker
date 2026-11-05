@@ -22,7 +22,7 @@ it.skipIf(!existsSync(otherDbUrl))('creates, loads and edits prompts across repe
       const created = await call('POST', '/api/scenarios/1/prompts', { name: `PRM_${pass}` });
       expect(created.status).toBe(201);
       const id = (created.body as { id: number }).id;
-      const urls = ['/api/scenarios/1', '/api/projects/1/prompts', '/api/scenarios/1/prompts', `/api/prompts/${id}`, '/api/scenarios/1/history', '/api/scenarios/1/changelog', '/api/projects/1/dependency-dictionary'];
+      const urls = ['/api/scenarios/1', '/api/projects/1/prompts', '/api/scenarios/1/prompts', `/api/prompts/${id}`, '/api/scenarios/1/changelog', '/api/projects/1/dependency-dictionary'];
       for (const url of urls) expect((await call('GET', url)).status, url).toBe(200);
       expect((await call('PUT', `/api/prompts/${id}`, { name: `PRM_EDITED_${pass}`, full_answers: ['Ответ'], short_answers: ['Краткий'] })).status).toBe(200);
       for (const url of urls) expect((await call('GET', url)).status, url).toBe(200);

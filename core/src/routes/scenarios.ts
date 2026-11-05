@@ -5,7 +5,7 @@ import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
 import { connect } from '../links';
-import { clearHistory, listHistory, logCreated, logScenarioChanges, type ScenarioSnapshot } from '../history';
+import { normalizeTaskLinks } from '../text-links';
 import { optString, parseId, requireString } from '../validate';
 
 const matchAnyIntent = (value: unknown): boolean => {
@@ -114,7 +114,6 @@ export function scenariosRouter(db: Db): RouterT {
     const info = db.transaction(() => {
       const i = db.prepare('INSERT INTO scenarios(project_id, name) VALUES (?, ?)').run(pid, name);
       db.prepare('INSERT INTO scenario_parts(scenario_id, position, name) VALUES (?, 0, ?)').run(i.lastInsertRowid, name);
-      logCreated(db, Number(i.lastInsertRowid));
       return i;
     })();
     res.status(201).json({ id: Number(info.lastInsertRowid), name });
@@ -262,18 +261,11 @@ export function scenariosRouter(db: Db): RouterT {
         }
         for (const st of Object.values(p.layout as Layout)) if (st.prompt_id !== null) connect(db, 'prompt', id, st.prompt_id);
       }
-      logScenarioChanges(db, id, cur as unknown as ScenarioSnapshot, load(id) as unknown as ScenarioSnapshot);
     })();
     res.json(load(id));
   });
 
-  r.get('/scenarios/:id/history', (req, res) => {
-    const id = parseId(req.params.id);
-    load(id);
-    res.json(listHistory(db, id));
-  });
-
-  /** Журнал изменений, который ведут вручную: задача, автор, описание. В автоматическую историю не попадает. */
+  /** Журнал изменений, который ведут вручную: задача, автор, описание. Порядок строк сохраняется. */
   const changelog = (id: number) =>
     db.prepare('SELECT date, task, author, description FROM scenario_changelog WHERE scenario_id = ? ORDER BY position, id').all(id) as { date: string; task: string; author: string; description: string }[];
 
@@ -287,7 +279,7 @@ export function scenariosRouter(db: Db): RouterT {
     const id = parseId(req.params.id);
     load(id);
     const rows = (Array.isArray(req.body?.rows) ? req.body.rows : []).map((x: any) => ({
-      date: optString(x?.date), task: optString(x?.task), author: optString(x?.author), description: optString(x?.description),
+      date: optString(x?.date), task: normalizeTaskLinks(optString(x?.task)), author: optString(x?.author), description: optString(x?.description),
     }));
     db.transaction(() => {
       db.prepare('DELETE FROM scenario_changelog WHERE scenario_id = ?').run(id);
@@ -295,13 +287,6 @@ export function scenariosRouter(db: Db): RouterT {
       rows.forEach((x: { date: string; task: string; author: string; description: string }, i: number) => ins.run(id, i, x.date, x.task, x.author, x.description));
     })();
     res.json(changelog(id));
-  });
-
-  r.delete('/scenarios/:id/history', (req, res) => {
-    const id = parseId(req.params.id);
-    load(id);
-    clearHistory(db, id);
-    res.status(204).end();
   });
 
   r.delete('/scenarios/:id', (req, res) => {

@@ -14,7 +14,7 @@ it('loads scenario data and saves a prompt with a high-version database from the
   const created = await call('POST', '/api/scenarios/1/prompts', { name: 'PRM_TEST' });
   expect(created.status).toBe(201);
   const id = (created.body as { id: number }).id;
-  for (const url of ['/api/scenarios/1', '/api/projects/1/prompts', '/api/scenarios/1/prompts', `/api/prompts/${id}`, '/api/scenarios/1/history', '/api/projects/1/dependency-dictionary']) {
+  for (const url of ['/api/scenarios/1', '/api/projects/1/prompts', '/api/scenarios/1/prompts', `/api/prompts/${id}`, '/api/projects/1/dependency-dictionary']) {
     expect((await call('GET', url)).status, url).toBe(200);
   }
   expect((await call('PUT', `/api/prompts/${id}`, { name: 'PRM_UPDATED', full_answers: ['Ответ'], short_answers: [] })).status).toBe(200);
