@@ -3,7 +3,7 @@ import type { DictionaryDependency } from '@/lib/types';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ellipsis, X } from 'lucide-react';
+import { Ellipsis } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -303,7 +303,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
               <DropdownMenuContent align="end">
                 {!scenario.is_template && <DropdownMenuItem onClick={() => { setTemplateName(`${prefixes.scenarioTemplate}${draft.name}`); setSavingTemplate(true); }}>Сохранить как шаблон</DropdownMenuItem>}
                 <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
-                  <X className="size-4" /> Удалить сценарий
+                  Удалить сценарий
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
