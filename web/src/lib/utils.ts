@@ -3,7 +3,7 @@ import { twMerge } from 'tailwind-merge';
 
 /** Поле без рамки: рамка и фон проявляются при наведении и фокусе (как на референсе). */
 export const GHOST =
-  'border-transparent bg-transparent shadow-none hover:bg-muted focus-visible:border-ring focus-visible:bg-background dark:bg-transparent dark:hover:bg-muted';
+  'border-transparent bg-transparent shadow-none hover:bg-muted focus-visible:border-ring focus-visible:bg-background dark:bg-transparent dark:hover:bg-muted dark:focus-visible:bg-secondary';
 
 /** Поля диалога и инспектора: видимая рамка вместо «призрачного» стиля таблицы. */
 export const FIELD = 'border-input bg-background shadow-xs hover:bg-background';

@@ -80,6 +80,7 @@
 
 /* Палитра: холодный нейтральный фон, глубокий синий акцент, у каждого типа объекта свой тихий цвет-метка. */
 :root {
+    color-scheme: light;
     --brand: #2b55e0;
     --page: #f3f4f7;
     --nav: #ffffff;
@@ -133,36 +134,38 @@
     --sidebar-ring: #2b55e0;
 }
 
+/* GitHub Dark: графитовые поверхности Primer, фирменный синий — на кнопках. */
 .dark {
+    color-scheme: dark;
     --brand: #86a3ff;
-    --page: #0f131c;
-    --nav: #171c28;
-    --nav-2: #171c28;
-    --nav-fg: #e8ecf4;
-    --nav-muted: #a0aabd;
-    --faint: #8791a5;
-    --background: #171c28;
-    --foreground: #e8ecf4;
-    --card: #171c28;
-    --card-foreground: #e8ecf4;
-    --popover: #1b2130;
-    --popover-foreground: #e8ecf4;
-    --primary: #86a3ff;
-    --primary-foreground: #0f131c;
-    --secondary: #212838;
-    --secondary-foreground: #e8ecf4;
-    --muted: #212838;
-    --muted-foreground: #a0aabd;
-    --accent: #1e2a52;
+    --page: #0d1117;
+    --nav: #161b22;
+    --nav-2: #21262d;
+    --nav-fg: #e6edf3;
+    --nav-muted: #9da7b3;
+    --faint: #919ba7;
+    --background: #0d1117;
+    --foreground: #e6edf3;
+    --card: #161b22;
+    --card-foreground: #e6edf3;
+    --popover: #161b22;
+    --popover-foreground: #e6edf3;
+    --primary: #2b55e0;
+    --primary-foreground: #ffffff;
+    --secondary: #21262d;
+    --secondary-foreground: #e6edf3;
+    --muted: #21262d;
+    --muted-foreground: #9da7b3;
+    --accent: #1c2b52;
     --accent-foreground: #a9bdff;
-    --destructive: #ff8a84;
-    --destructive-bg: #3e1a18;
-    --success: #5fd08a;
-    --success-bg: #12301e;
-    --warning: #f0b45a;
-    --warning-bg: #3a2a10;
-    --border: #2a3243;
-    --input: #3a4358;
+    --destructive: #ff7b72;
+    --destructive-bg: #3d1b1f;
+    --success: #56d364;
+    --success-bg: #14291d;
+    --warning: #e3b341;
+    --warning-bg: #30240f;
+    --border: #30363d;
+    --input: #6e7681;
     --ring: #86a3ff;
     --int: #8da8ff;
     --int-bg: #1f2b55;
@@ -176,15 +179,20 @@
     --dep-bg: #3d1b29;
     --kw: #8fd6a0;
     --kw-bg: #1d3a27;
-    --sidebar: #171c28;
-    --sidebar-foreground: #e8ecf4;
-    --sidebar-primary: #86a3ff;
-    --sidebar-primary-foreground: #0f131c;
-    --sidebar-accent: #1e2a52;
+    --sidebar: #161b22;
+    --sidebar-foreground: #e6edf3;
+    --sidebar-primary: #2b55e0;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1c2b52;
     --sidebar-accent-foreground: #a9bdff;
-    --sidebar-border: #2a3243;
+    --sidebar-border: #30363d;
     --sidebar-ring: #86a3ff;
 }
+
+/* React Flow поставляет нелайерные стили, поэтому цвета схемы задаём явно. */
+.dark .react-flow__edge-path.stroke-faint { stroke: var(--faint); }
+.dark .react-flow__edge-path.stroke-brand { stroke: var(--brand); }
+.dark .react-flow__edge-path.stroke-destructive { stroke: var(--destructive); }
 
 @layer base {
   * {

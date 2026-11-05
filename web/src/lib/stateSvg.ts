@@ -1,4 +1,12 @@
-import { BW, CW, stateBox, edgeBox, type Measure } from './schemeSvg';
+import { BW, CW, stateBox, edgeBox, type Measure, type SchemeColors } from './schemeSvg';
+
+/** Живые блоки следуют теме, экспорт сохраняет исходную бумажную палитру. */
+const SCREEN_SCHEME_COLORS: SchemeColors = {
+  fg: 'var(--foreground)', muted: 'var(--muted-foreground)', faint: 'var(--faint)', line: 'var(--border)',
+  brand: 'var(--brand)', st: 'var(--st)', stBorder: 'var(--st)', ent: 'var(--ent)', endBorder: 'var(--ent)',
+  prm: 'var(--prm)', int: 'var(--int)', intBg: 'var(--int-bg)', bad: 'var(--destructive)',
+  card: 'var(--card)', stBg: 'var(--st-bg)',
+};
 
 /** Развёрнутый редактор использует ту же отрисовку и измерение текста, что экспорт этой версии приложения. */
 let context: CanvasRenderingContext2D | null = null;
@@ -18,10 +26,10 @@ export function stateBlock(scheme: {
   const box = stateBox(measure, { name, number,
     tag: scheme.unreachable.has(name) ? 'unreachable' : scheme.entry === name ? 'start' : !scheme.hasOut.has(name) ? 'end' : null,
     description: scheme.info[name]?.description ?? '', action: scheme.info[name]?.system_action ?? '', prompt: scheme.promptOf(name),
-  });
+  }, SCREEN_SCHEME_COLORS);
   return { h: box.height, svg: box.svg(0, 0) };
 }
 export function transitionCard(card: { title: string; conds: string[]; any: boolean; bad: boolean; example?: string }, number: number) {
-  const box = edgeBox(measure, { id: '', from: '', to: '', number, intent: card.title, conds: card.conds, mode: card.any ? 'any' : 'all', example: card.example ?? '' });
+  const box = edgeBox(measure, { id: '', from: '', to: '', number, intent: card.title, conds: card.conds, mode: card.any ? 'any' : 'all', example: card.example ?? '' }, SCREEN_SCHEME_COLORS);
   return { h: box.height, svg: box.svg(0, 0) };
 }

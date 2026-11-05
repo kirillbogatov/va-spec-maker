@@ -13,7 +13,6 @@ import { findNumberMatches, type NumberSlot } from '@/lib/entityTypes';
 import { KeywordChips } from '@/components/KeywordChips';
 import { useKeywordMatcher } from '@/lib/keywords';
 import { type ValueItem, type ValueKind } from '@/lib/values';
-import { cn, GHOST } from '@/lib/utils';
 
 const COLLAPSED = 7;
 
@@ -108,7 +107,7 @@ export function PhrasesCell({ value, onChange, mode, highlight = [], numbers = [
               </span>
             )}
           <Input
-            className={cn(GHOST, 'h-full min-w-0 flex-1 rounded-none border-0 shadow-none focus-visible:ring-0')}
+            className="h-full min-w-0 flex-1 rounded-none border-0 bg-background shadow-none focus-visible:ring-0"
             aria-label={addKind === 'phrase' ? 'Добавить тренировочную фразу' : 'Добавить паттерн'}
             value={text}
             onChange={(e) => setText(e.target.value)}

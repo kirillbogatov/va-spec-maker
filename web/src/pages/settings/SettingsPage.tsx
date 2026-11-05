@@ -1,4 +1,5 @@
 import { useProjectId } from '@/hooks/project';
+import { useTheme } from '@/lib/theme';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { INTENT_MODES, useIntentMode, writeIntentMode } from '@/lib/intentMode';
@@ -8,6 +9,7 @@ import { PREFIX_FIELDS, usePrefixes, writePrefix } from '@/lib/prefixes';
 
 /** Настройки проекта: с чего начинается название нового интента, сущности, промпта, зависимости и сценария. */
 export function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const projectId = useProjectId();
   const prefixes = usePrefixes(projectId);
   const normalize = useNormalize(projectId);
@@ -18,6 +20,21 @@ export function SettingsPage() {
       <div className="mx-auto max-w-xl">
         <h1 className="text-xl font-semibold tracking-tight">Настройки</h1>
         <section className="mt-6 rounded-xl border bg-card p-4">
+          <h2 id="interface-theme-label" className="text-sm font-semibold">Тема интерфейса</h2>
+          <div role="radiogroup" aria-labelledby="interface-theme-label" className="mt-3 grid grid-cols-3 rounded-lg border p-0.5 sm:inline-grid">
+            {([
+              { value: 'light', label: 'Светлая' },
+              { value: 'dark', label: 'Темная' },
+              { value: 'system', label: 'Системная' },
+            ] as const).map((option) => (
+              <label key={option.value} className="relative min-w-0 cursor-pointer">
+                <input type="radio" name="interface-theme" value={option.value} checked={theme === option.value} onChange={() => setTheme(option.value)} className="peer sr-only" />
+                <span className="flex min-h-10 items-center justify-center whitespace-nowrap rounded-md px-2.5 text-sm text-muted-foreground transition-colors peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background sm:px-4">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </section>
+        <section className="mt-4 rounded-xl border bg-card p-4">
           <h2 className="text-sm font-semibold">Префиксы названий</h2>
           <p className="mt-1 text-[13px] text-muted-foreground">Подставляются в поле при создании нового объекта.</p>
           <div className="mt-4 flex flex-col gap-3">

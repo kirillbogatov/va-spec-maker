@@ -18,8 +18,8 @@ export function StateNode({ data }: NodeProps<Node<StateNodeData>>) {
   return (
     <div
       className={cn(
-        'flex h-full w-full flex-col justify-center rounded-[9px] text-left',
-        !data.expanded && 'border bg-card px-3',
+        'flex h-full w-full flex-col rounded-[9px] text-left',
+        !data.expanded && 'border bg-card px-3 py-2 [&>span]:shrink-0',
         !data.expanded && (data.entry ? 'border-brand' : data.unreachable ? 'border-dashed border-destructive' : data.terminal ? 'border-ent/60' : 'border-st/40'),
         data.selected && 'ring-2 ring-brand',
       )}
@@ -72,7 +72,7 @@ export function TransitionEdge({ data, markerEnd, selected }: EdgeProps<Edge<Tra
             className={cn(
               'nodrag nopan pointer-events-auto absolute flex cursor-pointer items-center justify-center font-mono text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring',
               data.expanded ? 'rounded-lg hover:ring-1 hover:ring-int' : 'gap-1 rounded-full px-2.5',
-              data.expanded ? selected && 'ring-2 ring-brand' : selected ? 'bg-brand text-primary-foreground' : bad ? 'bg-destructive-bg text-destructive ring-1 ring-destructive' : 'bg-int-bg text-int hover:ring-1 hover:ring-int',
+              data.expanded ? selected && 'ring-2 ring-brand' : selected ? 'bg-primary text-primary-foreground' : bad ? 'bg-destructive-bg text-destructive ring-1 ring-destructive' : 'bg-int-bg text-int hover:ring-1 hover:ring-int',
             )}
           >
             {data.expanded ? <ExpandedBlock block={data.expanded} /> : <>

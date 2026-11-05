@@ -34,6 +34,7 @@ test('правки чата: развёрнутые блоки и SVG испол
   await page.getByRole('button', { name: 'Развернуть блоки', exact: true }).click();
   await expect(node(page, 'VA_ACTIVATION').getByText('S1', { exact: true })).toBeVisible();
   await expect(node(page, 'ST_LIGHT_ON')).toContainText('ДЕЙСТВИЕ');
+  await expect(node(page, 'ST_LIGHT_ON').locator('svg line')).toHaveCount(3);
   const edge = page.getByRole('button').and(page.getByTitle(/DEP_HOME_MODE=night/));
   await expect(edge).toContainText('ИНТЕНТ');
   await expect(edge).toContainText('УСЛОВИЯ');

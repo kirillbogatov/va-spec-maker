@@ -27,8 +27,9 @@ export type Measure = (text: string, font: string) => number;
 
 const C = {
   fg: '#1b2230', muted: '#566074', faint: '#6b7589', line: '#dfe3ea', brand: '#2b55e0',
-  st: '#7a3fd1', stBorder: '#bc9fe8', ent: '#0b7f74', endBorder: '#55a9a1', prm: '#9a5b00', int: '#2b55e0', intBg: '#e8edfd', bad: '#c0302b',
+  st: '#7a3fd1', stBorder: '#bc9fe8', ent: '#0b7f74', endBorder: '#55a9a1', prm: '#9a5b00', int: '#2b55e0', intBg: '#e8edfd', bad: '#c0302b', card: '#fff', stBg: '#f1eafa',
 };
+export type SchemeColors = typeof C;
 const SANS = "'IBM Plex Sans', system-ui, sans-serif";
 const MONO = "'IBM Plex Mono', ui-monospace, Consolas, monospace";
 
@@ -101,69 +102,71 @@ const LABEL: Style = { size: 9, weight: 500, fill: C.faint, upper: true, spacing
 
 interface Box { width: number; height: number; svg: (x: number, y: number) => string }
 
-export function stateBox(m: Measure, s: SchemeState): Box {
+export function stateBox(m: Measure, s: SchemeState, palette: SchemeColors = C): Box {
+  const labelStyle = { ...LABEL, fill: palette.faint };
   const lines: Line[] = [];
   const L = 14;
   const inner = BW - L - 10;
   const pill = `S${s.number}`;
-  const pillW = Math.ceil(width(m, pill, { size: 9.5, weight: 500, mono: true, fill: C.st })) + 12;
-  lines.push({ x: 8 + pillW / 2, y: base(6, 15, 9.5), anchor: 'middle', runs: [{ text: pill, style: { size: 9.5, weight: 500, mono: true, fill: C.st } }] });
-  lines.push({ x: 8 + pillW + 5, y: base(6, 15, 9), runs: [{ text: 'Состояние', style: LABEL }] });
-  let y = 26;
+  const pillW = Math.ceil(width(m, pill, { size: 9.5, weight: 500, mono: true, fill: palette.st })) + 12;
+  lines.push({ x: 8 + pillW / 2, y: base(6, 15, 9.5), anchor: 'middle', runs: [{ text: pill, style: { size: 9.5, weight: 500, mono: true, fill: palette.st } }] });
+  lines.push({ x: 8 + pillW + 5, y: base(6, 15, 9), runs: [{ text: 'Состояние', style: labelStyle }] });
+  let y = 29;
   if (s.tag) {
-    const tag = { start: ['Старт', C.brand], end: ['Конец', C.ent], unreachable: ['Недостижимо', C.bad] }[s.tag];
+    const tag = { start: ['Старт', palette.brand], end: ['Конец', palette.ent], unreachable: ['Недостижимо', palette.bad] }[s.tag];
     lines.push({ x: L, y: base(y, 12, 9), runs: [{ text: tag[0], style: { size: 9, weight: 600, fill: tag[1], upper: true, spacing: 0.6 } }] });
     y += 12;
   }
-  y = block(m, lines, L, y, inner, s.name, { size: 12, weight: 500, mono: true, fill: C.st }, 16);
-  if (s.description.trim()) y = block(m, lines, L, y, inner, s.description.trim(), { size: 11, fill: C.muted }, 15);
+  y = block(m, lines, L, y, inner, s.name, { size: 12, weight: 500, mono: true, fill: palette.st }, 16);
+  if (s.description.trim()) y = block(m, lines, L, y, inner, s.description.trim(), { size: 11, fill: palette.muted }, 15);
   y += 6;
   const rule = y;
-  const rules = [rule];
+  const rules = [24, rule];
   y += 5;
   const section = (label: string, fill: () => void) => {
     if (label === 'Действие') { rules.push(y); y += 5; }
-    y = block(m, lines, L, y, inner, label, LABEL, 12);
+    y = block(m, lines, L, y, inner, label, labelStyle, 12);
     fill();
     y += 3;
   };
   section('Ответ', () => {
-    if (!s.prompt) { y = block(m, lines, L, y, inner, '—', { size: 11, fill: C.muted }, 14); return; }
-    y = block(m, lines, L, y, inner, s.prompt.name, { size: 10.5, mono: true, fill: C.prm }, 14);
-    if (s.prompt.text.trim()) y = block(m, lines, L, y, inner, `«${s.prompt.text.trim()}»`, { size: 10.5, italic: true, fill: C.muted }, 14);
+    if (!s.prompt) { y = block(m, lines, L, y, inner, '—', { size: 11, fill: palette.muted }, 14); return; }
+    y = block(m, lines, L, y, inner, s.prompt.name, { size: 10.5, mono: true, fill: palette.prm }, 14);
+    if (s.prompt.text.trim()) y = block(m, lines, L, y, inner, `«${s.prompt.text.trim()}»`, { size: 10.5, italic: true, fill: palette.muted }, 14);
   });
-  section('Действие', () => { y = block(m, lines, L, y, inner, s.action.trim() || '—', { size: 11, fill: s.action.trim() ? C.fg : C.muted }, 14); });
+  section('Действие', () => { y = block(m, lines, L, y, inner, s.action.trim() || '—', { size: 11, fill: s.action.trim() ? palette.fg : palette.muted }, 14); });
   const height = y + 4;
-  const border = s.tag === 'start' ? `stroke="${C.brand}" stroke-width="1.6"`
-    : s.tag === 'end' ? `stroke="${C.endBorder}" stroke-width="1.3"`
-    : s.tag === 'unreachable' ? `stroke="${C.bad}" stroke-width="1.3" stroke-dasharray="4 3"`
-    : `stroke="${C.stBorder}" stroke-width="1.3"`;
+  const border = s.tag === 'start' ? `stroke="${palette.brand}" stroke-width="1.6"`
+    : s.tag === 'end' ? `stroke="${palette.endBorder}" stroke-width="1.3"`
+    : s.tag === 'unreachable' ? `stroke="${palette.bad}" stroke-width="1.3" stroke-dasharray="4 3"`
+    : `stroke="${palette.stBorder}" stroke-width="1.3"`;
   return {
     width: BW, height,
     svg: (x, y0) => `<g transform="translate(${x} ${y0})">`
-      + `<rect width="${BW}" height="${height}" rx="8" fill="#fff" ${border}/>`
-      + rules.map((rule) => `<line x1="0" x2="${BW}" y1="${rule}" y2="${rule}" stroke="${C.line}"/>`).join('')
-      + `<rect x="8" y="6" width="${pillW}" height="15" rx="7.5" fill="#f1eafa"/>`
+      + `<rect width="${BW}" height="${height}" rx="8" fill="${palette.card}" ${border}/>`
+      + rules.map((rule) => `<line x1="0" x2="${BW}" y1="${rule}" y2="${rule}" stroke="${palette.line}"/>`).join('')
+      + `<rect x="8" y="6" width="${pillW}" height="15" rx="7.5" fill="${palette.stBg}"/>`
       + lines.map(textEl).join('')
       + '</g>',
   };
 }
 
-export function edgeBox(m: Measure, e: SchemeEdge): Box {
+export function edgeBox(m: Measure, e: SchemeEdge, palette: SchemeColors = C): Box {
+  const labelStyle = { ...LABEL, fill: palette.faint };
   const lines: Line[] = [];
   const P = 8;
   const inner = CW - 2 * P;
   let y = 6;
   const pillText = `E${e.number}`;
-  const pillW = Math.ceil(width(m, pillText, { size: 9.5, weight: 500, mono: true, fill: C.int })) + 12;
-  lines.push({ x: P + pillW / 2, y: base(y, 15, 9.5), anchor: 'middle', runs: [{ text: pillText, style: { size: 9.5, weight: 500, mono: true, fill: C.int } }] });
+  const pillW = Math.ceil(width(m, pillText, { size: 9.5, weight: 500, mono: true, fill: palette.int })) + 12;
+  lines.push({ x: P + pillW / 2, y: base(y, 15, 9.5), anchor: 'middle', runs: [{ text: pillText, style: { size: 9.5, weight: 500, mono: true, fill: palette.int } }] });
   const head = 'Переход';
-  lines.push({ x: P + pillW + 5, y: base(y, 15, 9), runs: [{ text: head, style: { size: 9, weight: 600, fill: C.faint, upper: true, spacing: 0.45 } }] });
+  lines.push({ x: P + pillW + 5, y: base(y, 15, 9), runs: [{ text: head, style: { size: 9, weight: 600, fill: palette.faint, upper: true, spacing: 0.45 } }] });
   const pillY = y;
   y += 17;
-  const cond: Style = { size: 10, mono: true, fill: C.fg };
+  const cond: Style = { size: 10, mono: true, fill: palette.fg };
   const rules: number[] = [];
-  const section = (title: string) => { rules.push(y); y += 5; y = block(m, lines, P, y, inner, title, LABEL, 12); };
+  const section = (title: string) => { rules.push(y); y += 5; y = block(m, lines, P, y, inner, title, labelStyle, 12); };
   section('Интент');
   if (e.intent) {
     y = block(m, lines, P, y, inner, e.intent, cond, 14);
@@ -172,15 +175,15 @@ export function edgeBox(m: Measure, e: SchemeEdge): Box {
   y += 4;
   section(e.conds.length > 1 ? `Условия · ${e.mode === 'any' ? 'любое' : 'все'}` : 'Условия');
   for (const c of e.conds) y = block(m, lines, P, y, inner, c, cond, 14);
-  if (!e.conds.length) y = block(m, lines, P, y, inner, '—', { ...cond, fill: C.muted }, 14);
-  if (e.example.trim()) y = block(m, lines, P, y + 2, inner, `«${e.example.trim()}»`, { size: 10.5, italic: true, fill: C.muted }, 14);
+  if (!e.conds.length) y = block(m, lines, P, y, inner, '—', { ...cond, fill: palette.muted }, 14);
+  if (e.example.trim()) y = block(m, lines, P, y + 2, inner, `«${e.example.trim()}»`, { size: 10.5, italic: true, fill: palette.muted }, 14);
   const height = y + 6;
   return {
     width: CW, height,
     svg: (x, y0) => `<g transform="translate(${x} ${y0})">`
-      + `<rect width="${CW}" height="${height}" rx="8" fill="#fff" stroke="${C.int}" stroke-width="1.2"/>`
-      + `<rect x="${P}" y="${pillY}" width="${pillW}" height="15" rx="7.5" fill="${C.intBg}"/>`
-      + rules.map((rule) => `<line x1="0" x2="${CW}" y1="${rule}" y2="${rule}" stroke="${C.line}"/>`).join('')
+      + `<rect width="${CW}" height="${height}" rx="8" fill="${palette.card}" stroke="${palette.int}" stroke-width="1.2"/>`
+      + `<rect x="${P}" y="${pillY}" width="${pillW}" height="15" rx="7.5" fill="${palette.intBg}"/>`
+      + rules.map((rule) => `<line x1="0" x2="${CW}" y1="${rule}" y2="${rule}" stroke="${palette.line}"/>`).join('')
       + lines.map(textEl).join('')
       + '</g>',
   };

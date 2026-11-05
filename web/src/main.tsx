@@ -10,7 +10,10 @@ import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/hooks/useAuth';
 import { DEMO } from '@/lib/demoMode';
 import { onBackendChange } from '@/lib/backend';
+import { initializeTheme } from '@/lib/theme';
 import App from './App';
+
+initializeTheme();
 
 const onError = (e: Error) => toast.error(e.message);
 const queryClient = new QueryClient({

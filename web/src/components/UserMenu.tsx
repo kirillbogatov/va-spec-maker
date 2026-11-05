@@ -26,7 +26,7 @@ export function UserMenu({ variant, collapsed = false, settingsTo }: Props) {
   const [password, setPassword] = useState(false);
   const [users, setUsers] = useState(false);
   const avatar = (
-    <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-brand text-xs font-semibold uppercase text-primary-foreground">
+    <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold uppercase text-primary-foreground">
       {user.login.slice(0, 2)}
     </span>
   );

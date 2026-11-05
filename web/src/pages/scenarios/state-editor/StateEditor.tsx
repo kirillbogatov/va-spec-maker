@@ -81,6 +81,12 @@ function ZoomControls() {
 
 function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, focusState, exportMeta }: Props) {
   const canvas = useRef<HTMLDivElement>(null);
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void document.fonts.ready.then(() => { if (active) setFontsReady(true); });
+    return () => { active = false; };
+  }, []);
   const projectId = useProjectId();
   const keywords = useKeywords(projectId);
   const statePrefix = usePrefixes(projectId).state;
@@ -148,7 +154,7 @@ function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis
   const sizes = useMemo(
     () => new Map(names.map((n) => [n, expandedNodes.get(n) ?? nodeSize(n, layout[n]?.description ?? '', promptName(n), n === analysis.states[0] || !hasOut.has(n) || unreachable.has(n))])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [names, layout, prompts, analysis.states, hasOut, unreachable, expandedNodes],
+    [names, layout, prompts, analysis.states, hasOut, unreachable, expandedNodes, fontsReady],
   );
   const graphKey = JSON.stringify([names.map((n) => [n, sizes.get(n), layout[n]?.order]), analysis.edges.map((e) => [e.id, e.from, e.to, labels.get(e.id), expandedEdges.get(e.id)])]);
   const [placed, setPlaced] = useState<LayoutResult | null>(null);
@@ -480,13 +486,26 @@ function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis
   );
 }
 
-/** Размер узла: ширина по имени; высота — метка, имя, подпись (до двух строк) и промпт. */
+/** Высота по реальным переносам текста: 8px сверху/снизу и 1px рамки с каждой стороны. */
 function nodeSize(name: string, description: string, prompt: string, tagged: boolean): { width: number; height: number } {
   const width = Math.min(260, Math.max(140, Math.round(Math.max(name.length, prompt.length) * 7.8 + 28)));
-  const text = description.trim();
-  const perLine = Math.max(10, Math.floor((width - 24) / 6.4));
-  const lines = text ? Math.min(2, text.split(/\r?\n/).reduce((n, l) => n + Math.max(1, Math.ceil(l.length / perLine)), 0)) : 0;
-  return { width, height: 16 + 16 + (tagged ? 12 : 0) + lines * 16 + (prompt ? 16 : 0) };
+  const measure = document.createElement('div');
+  measure.setAttribute('aria-hidden', 'true');
+  measure.style.cssText = `position:fixed;left:-10000px;top:0;visibility:hidden;pointer-events:none;width:${width - 26}px;line-height:16px;`;
+  const title = document.createElement('div');
+  title.style.cssText = 'font-family:var(--font-mono);font-size:13px;font-weight:500;word-break:break-all;';
+  title.textContent = name;
+  measure.append(title);
+  if (description) {
+    const detail = document.createElement('div');
+    detail.style.cssText = 'font-family:var(--font-sans);font-size:12px;font-weight:400;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;';
+    detail.textContent = description;
+    measure.append(detail);
+  }
+  document.body.append(measure);
+  const contentHeight = measure.offsetHeight;
+  measure.remove();
+  return { width, height: 18 + contentHeight + (tagged ? 12 : 0) + (prompt ? 16 : 0) };
 }
 
 const CHAR_W = 7.3;
