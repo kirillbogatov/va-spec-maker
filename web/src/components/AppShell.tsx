@@ -26,9 +26,6 @@ const DICTIONARY: NavItem[] = [
   { to: '/entities', label: 'Сущности', icon: Shapes, key: 'entities' },
   { to: '/lists/prompts', label: 'Промпты', icon: ScrollText, key: 'prompts' },
   { to: '/lists/keywords', label: 'Ключевые слова', icon: KeyRound, key: 'keywords' },
-];
-
-const EXTERNAL: NavItem[] = [
   { to: '/dependencies', label: 'Зависимости', icon: SlidersHorizontal, key: 'deps' },
 ];
 
@@ -68,7 +65,7 @@ export function AppShell() {
   const dictionary = DICTIONARY.filter((d) => d.key !== 'keywords' || keywordsMode);
   const [searching, setSearching] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [closedGroups, setClosedGroups] = useState({ dictionary: false, external: false, templates: true });
+  const [closedGroups, setClosedGroups] = useState({ dictionary: false, templates: true });
   const restoreButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -84,14 +81,13 @@ export function AppShell() {
   const on = (m: string) => pathname === m || pathname.startsWith(`${m}/`);
   const onScenarios = on(path('/scenarios'));
   const onDictionary = dictionary.some((d) => on(path(d.to)));
-  const onExternal = EXTERNAL.some((d) => on(path(d.to)));
   const onTemplates = TEMPLATES.some((d) => on(path(d.to)));
 
-  const renderGroup = (key: keyof typeof closedGroups, title: string, items: NavItem[], withDivider = false) => (
-    <div className={cn('flex shrink-0 flex-col gap-0.5', withDivider && 'border-t border-border pt-3')}>
+  const renderGroup = (key: keyof typeof closedGroups, title: string, items: NavItem[]) => (
+    <div className="flex shrink-0 flex-col gap-1">
       {!collapsed && <button type="button" aria-expanded={!closedGroups[key]} aria-controls={`nav-group-${key}`}
         onClick={() => setClosedGroups(groups => ({ ...groups, [key]: !groups[key] }))}
-        className="mb-1 flex min-h-8 items-center justify-between gap-2 rounded-md px-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+        className="flex min-h-8 items-center justify-between gap-2 rounded-md px-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
         <span>{title}</span><ChevronDown aria-hidden className={cn('size-3.5 shrink-0 transition-transform', closedGroups[key] && '-rotate-90')} />
       </button>}
       <div id={`nav-group-${key}`} className={cn('flex flex-col gap-0.5', !collapsed && closedGroups[key] && 'hidden')}>
@@ -152,8 +148,8 @@ export function AppShell() {
           )}
         </button>
 
-        <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto" aria-label="Основная навигация">
-          <div className="flex shrink-0 flex-col gap-0.5 border-b border-border pb-3">
+        <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto" aria-label="Основная навигация">
+          <div className="flex shrink-0 flex-col gap-0.5">
             <NavLink to={path('/scenarios')} onClick={() => setCollapsed(false)} title="Сценарии" aria-label="Сценарии" className={() => cn(itemClass(onScenarios), collapsed && 'w-8 justify-center px-0')}>
               <Workflow className="size-4" />
               {!collapsed && (
@@ -166,8 +162,7 @@ export function AppShell() {
           </div>
 
           {renderGroup('dictionary', 'Словарь проекта', dictionary)}
-          {renderGroup('external', 'Внешние зависимости', EXTERNAL, true)}
-          {renderGroup('templates', 'Шаблоны', TEMPLATES, true)}
+          {renderGroup('templates', 'Шаблоны', TEMPLATES)}
 
           <div className="min-h-0 flex-1" />
         </nav>
@@ -184,7 +179,7 @@ export function AppShell() {
         </PanelVisibilityContext.Provider>
       </main>
 
-      <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-7 border-t bg-nav pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-6 border-t bg-nav pb-[env(safe-area-inset-bottom)] md:hidden">
         <NavLink to={path('/scenarios')} className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground', onScenarios && 'font-medium text-brand')}>
           <Workflow className="size-5" /> Сценарии
         </NavLink>
@@ -194,19 +189,6 @@ export function AppShell() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" side="top">
             {dictionary.map((d) => (
-              <DropdownMenuItem key={d.to} onClick={() => navigate(path(d.to))}>
-                {d.label}
-                {counts[d.key] !== undefined && <span className="ml-auto pl-4 text-xs text-muted-foreground">{counts[d.key]}</span>}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<button type="button" className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground', onExternal && 'font-medium text-brand')} />}>
-            <SlidersHorizontal className="size-5" /> Связи
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" side="top">
-            {EXTERNAL.map((d) => (
               <DropdownMenuItem key={d.to} onClick={() => navigate(path(d.to))}>
                 {d.label}
                 {counts[d.key] !== undefined && <span className="ml-auto pl-4 text-xs text-muted-foreground">{counts[d.key]}</span>}

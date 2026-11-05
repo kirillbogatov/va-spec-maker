@@ -99,15 +99,16 @@ test('scenario templates support both sources, cloning and saving from the actio
   await expect(page.getByLabel('Описание сценария', { exact: true })).toHaveValue('Описание для шаблона');
 });
 
-test('navigation groups collapse with templates closed by default below external dependencies', async ({ page }) => {
+test('navigation groups collapse with dependencies inside the project dictionary', async ({ page }) => {
   await openDemoProject(page);
   const menu = page.locator('aside').first();
   const templates = menu.getByRole('button', { name: 'Шаблоны', exact: true });
   await expect(templates).toHaveAttribute('aria-expanded', 'false');
   await expect(menu.getByRole('link', { name: 'Шаблоны ответов', exact: true })).toBeHidden();
   const groups = menu.locator('button[aria-controls^="nav-group-"]');
-  await expect(groups).toHaveText(['Словарь проекта', 'Внешние зависимости', 'Шаблоны']);
-  for (const name of ['Словарь проекта', 'Внешние зависимости']) {
+  await expect(groups).toHaveText(['Словарь проекта', 'Шаблоны']);
+  await expect(menu.locator('#nav-group-dictionary').getByRole('link', { name: 'Зависимости', exact: true })).toBeVisible();
+  for (const name of ['Словарь проекта']) {
     const group = menu.getByRole('button', { name, exact: true });
     await expect(group).toHaveAttribute('aria-expanded', 'true');
     await group.click();
@@ -119,6 +120,16 @@ test('navigation groups collapse with templates closed by default below external
   await expect(templates).toHaveAttribute('aria-expanded', 'true');
   await expect(menu.getByRole('link', { name: 'Шаблоны ответов', exact: true }).locator('svg')).toHaveClass(/lucide-files/);
   await expect(menu.getByRole('link', { name: 'Шаблоны сценариев', exact: true }).locator('svg')).toHaveClass(/lucide-panels-top-left/);
+  await page.screenshot({ path: 'test-results/navigation-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobile = page.locator('nav[aria-label="Основная навигация"]').last();
+  await expect(mobile.getByRole('button', { name: 'Связи', exact: true })).toHaveCount(0);
+  await mobile.getByRole('button', { name: 'Словарь', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: /Зависимости/ })).toBeVisible();
+  await page.screenshot({ path: 'test-results/navigation-mobile.png', fullPage: true });
+  await page.getByRole('menuitem', { name: /Зависимости/ }).click();
+  await expect(page).toHaveURL(/dependencies$/);
+
 });
 
 test('empty template lists always have a collapse control and fit desktop and mobile', async ({ page }) => {
