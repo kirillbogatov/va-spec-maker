@@ -8,6 +8,7 @@ import { intentsRouter } from './routes/intents';
 import { keywordsRouter } from './routes/keywords';
 import { projectsRouter } from './routes/projects';
 import { promptsRouter } from './routes/prompts';
+import { responseTemplatesRouter } from './routes/response-templates';
 import { scenariosRouter } from './routes/scenarios';
 
 export interface AppRequest { method: string; url: string; body?: unknown }
@@ -17,7 +18,7 @@ export interface App { handle(r: AppRequest): Promise<AppResponse> }
 export function createApp(db: Db): App {
   const routers: RouterT[] = [
     projectsRouter(db), entitiesRouter(db), intentsRouter(db), dependencyDictionaryRouter(db), keywordsRouter(db),
-    promptsRouter(db), scenariosRouter(db), exportRouter(db),
+    promptsRouter(db), responseTemplatesRouter(db), scenariosRouter(db), exportRouter(db),
   ];
   return {
     async handle({ method, url, body }) {

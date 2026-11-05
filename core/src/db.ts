@@ -63,6 +63,14 @@ CREATE TABLE IF NOT EXISTS prompts (
   full_answers TEXT NOT NULL DEFAULT '[]',
   UNIQUE (project_id, name)
 );
+CREATE TABLE IF NOT EXISTS response_templates (
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  full_answers TEXT NOT NULL DEFAULT '[]',
+  short_answers TEXT NOT NULL DEFAULT '[]',
+  UNIQUE (project_id, name)
+);
 CREATE TABLE IF NOT EXISTS dependency_dictionary (
   id INTEGER PRIMARY KEY,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -183,6 +191,8 @@ const hasColumn = (db: Db, table: string, column: string) =>
 export function migrate(db: Db): void {
   // Edition-specific migration numbers overlap; inspect the actual schema.
   const compatibleColumns: [string, string][] = [
+    ["scenarios", "is_template INTEGER NOT NULL DEFAULT 0"],
+    ["prompts", "short_answers TEXT NOT NULL DEFAULT '[]'"],
     ["scenario_parts", "preconditions TEXT NOT NULL DEFAULT '[]'"],
     ["scenario_parts", "precondition TEXT NOT NULL DEFAULT ''"],
     ["scenario_parts", "precond_mode TEXT NOT NULL DEFAULT 'all'"],

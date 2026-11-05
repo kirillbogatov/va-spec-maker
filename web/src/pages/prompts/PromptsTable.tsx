@@ -8,6 +8,7 @@ import { ADD_ROW, DeleteChoiceDialog, REMOVE_BTN } from '@/components/DeleteChoi
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { AddBar } from '@/components/AddBar';
+import { SearchSelect } from '@/components/SearchSelect';
 import { Textarea } from '@/components/ui/textarea';
 import { SaveNote } from '@/components/SaveIndicator';
 import { TypeToken } from '@/components/TypeToken';
@@ -20,6 +21,44 @@ import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 
 type Draft = Omit<Prompt, 'id' | 'project_id'>;
 
+/** Варианты ответа одного вида: всегда есть хотя бы одно поле ввода, пустой вариант при уходе из поля убирается. */
+function AnswerList({ label, items, onChange, note }: { label: string; items: string[]; onChange: (v: string[]) => void; note?: string }) {
+  const answers = items.length ? items : [''];
+  return (
+    <div className="grid gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="grid gap-1.5">
+        {answers.map((a, i) => (
+          <div key={i} className="flex items-start gap-1">
+            <Textarea
+              rows={1}
+              className="field-sizing-content min-h-8 resize-none rounded-md bg-background px-2 py-1 text-sm leading-6 max-md:min-h-10 md:text-sm"
+              aria-label={answers.length > 1 ? `${label} ${i + 1}` : label}
+              value={a}
+              onChange={(e) => onChange(answers.map((x, j) => (j === i ? e.target.value : x)))}
+              onBlur={() => !a.trim() && answers.length > 1 && onChange(answers.filter((_, j) => j !== i))}
+            />
+            {answers.length > 1 && (
+              <button type="button" className={REMOVE_BTN} aria-label="Удалить вариант ответа" onClick={() => onChange(answers.filter((_, j) => j !== i))}>
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          className={cn(ADD_ROW, 'inline-flex items-center gap-2 border px-2.5 outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50')}
+          disabled={!answers[answers.length - 1].trim()}
+          onClick={() => onChange([...answers, ''])}
+        >
+          <Plus className="size-3.5 shrink-0" /> вариант ответа
+        </button>
+      </div>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
+    </div>
+  );
+}
+
 /** Промпт: имя жетоном, ответы ассистента — редактируемый текст с авто-высотой. */
 function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { prompt: Prompt; link: PromptListItem; startRenaming: boolean; onDisconnect: () => void; onRemove: () => void }) {
   const qc = useQueryClient();
@@ -27,20 +66,19 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
   const [draft, setDraft] = useState<Draft>({
     name: prompt.name,
     full_answers: prompt.full_answers,
+    short_answers: prompt.short_answers,
   });
   const [open, setOpen] = useState(startRenaming);
   const status = useAutosave(draft, async (d) => {
     if (!d.name.trim()) return;
-    await api.prompts.save(prompt.id, { ...d, full_answers: d.full_answers.filter((a) => a.trim()) });
+    await api.prompts.save(prompt.id, { ...d, full_answers: d.full_answers.filter((a) => a.trim()), short_answers: d.short_answers.filter((a) => a.trim()) });
     qc.invalidateQueries({ queryKey: ['prompts'] });
     qc.invalidateQueries({ queryKey: ['prompt', prompt.id] });
   });
   const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
-  // Всегда есть хотя бы одно поле ввода
-  const answers = draft.full_answers.length ? draft.full_answers : [''];
-  const setAnswer = (i: number, v: string) => patch({ full_answers: answers.map((a, j) => (j === i ? v : a)) });
 
   const filled = draft.full_answers.filter((a) => a.trim());
+  const shortFilled = draft.short_answers.filter((a) => a.trim());
 
   return (
     <div role="button" tabIndex={0} onClick={(e) => { if (!(e.target as HTMLElement).closest('button')) setOpen(true); }} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(true); } }} className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-4 py-2 outline-none first:border-t-0 hover:bg-muted/60 focus-visible:bg-muted/60 md:[grid-template-columns:var(--resizable-columns)]">
@@ -55,6 +93,16 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
           <>
             <span className="truncate">{filled[0]}</span>
             {filled.length > 1 && <span className="shrink-0 whitespace-pre text-faint"> · ещё {filled.length - 1}</span>}
+          </>
+        )}
+      </span>
+      <span className="col-span-1 row-start-3 flex min-w-0 text-sm text-muted-foreground md:col-start-3 md:row-start-1">
+        {shortFilled.length === 0 ? (
+          <span className="truncate text-faint">как полный</span>
+        ) : (
+          <>
+            <span className="truncate">{shortFilled[0]}</span>
+            {shortFilled.length > 1 && <span className="shrink-0 whitespace-pre text-faint"> · ещё {shortFilled.length - 1}</span>}
           </>
         )}
       </span>
@@ -83,36 +131,13 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
                 onChange={(e) => patch({ name: e.target.value })}
               />
             </label>
-            <div className="grid gap-1">
-              <span className="text-xs text-muted-foreground">Ответ ассистента</span>
-              <div className="grid gap-1.5">
-                {answers.map((a, i) => (
-                  <div key={i} className="flex items-start gap-1">
-                    <Textarea
-                      rows={1}
-                      className="field-sizing-content min-h-8 resize-none rounded-md bg-background px-2 py-1 text-sm leading-6 max-md:min-h-10 md:text-sm"
-                      aria-label={answers.length > 1 ? `Ответ ассистента ${i + 1}` : 'Ответ ассистента'}
-                      value={a}
-                      onChange={(e) => setAnswer(i, e.target.value)}
-                      onBlur={() => !a.trim() && answers.length > 1 && patch({ full_answers: answers.filter((_, j) => j !== i) })}
-                    />
-                    {answers.length > 1 && (
-                      <button type="button" className={REMOVE_BTN} aria-label="Удалить вариант ответа" onClick={() => patch({ full_answers: answers.filter((_, j) => j !== i) })}>
-                        <X className="size-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className={cn(ADD_ROW, 'inline-flex items-center gap-2 border px-2.5 outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50')}
-                  disabled={!answers[answers.length - 1].trim()}
-                  onClick={() => patch({ full_answers: [...answers, ''] })}
-                >
-                  <Plus className="size-3.5 shrink-0" /> вариант ответа
-                </button>
-              </div>
-            </div>
+            <AnswerList label="Полный ответ" items={draft.full_answers} onChange={(v) => patch({ full_answers: v })} />
+            <AnswerList
+              label="Короткий ответ"
+              items={draft.short_answers}
+              onChange={(v) => patch({ short_answers: v })}
+              note="Если короткий ответ не задан, используется полный ответ."
+            />
           </div>
           <DialogFooter className="shrink-0 -mx-5 -mb-5 mt-4 px-5 sm:items-center sm:justify-between">
             <SaveNote state={status} />
@@ -146,17 +171,58 @@ function PromptRowLoader({ link, startRenaming, onDisconnect, onRemove }: { link
   return <PromptRow prompt={data} link={link} startRenaming={startRenaming} onDisconnect={onDisconnect} onRemove={onRemove} />;
 }
 
+function PromptFromTemplate({ templateId, scenarioId, existingNames, onClose, onCreated }: {
+  templateId: number; scenarioId: number; existingNames: string[]; onClose: () => void; onCreated: () => void;
+}) {
+  const { data, error, refetch } = useQuery({ queryKey: ['response-template', templateId], queryFn: () => api.responseTemplates.get(templateId), gcTime: 0 });
+  return <Dialog open onOpenChange={o => !o && onClose()}>
+    <DialogContent className="max-h-[90dvh] flex flex-col overflow-hidden sm:max-w-xl">
+      <DialogHeader><DialogTitle>Промпт из шаблона</DialogTitle></DialogHeader>
+      {data ? <PromptTemplateDraft template={data} scenarioId={scenarioId} existingNames={existingNames} onCreated={onCreated} /> : error ?
+        <div role="alert" className="space-y-3 text-sm"><p>Не удалось загрузить шаблон.</p><Button variant="outline" onClick={() => void refetch()}>Повторить загрузку</Button></div> :
+        <p role="status" className="text-sm text-muted-foreground">Загрузка шаблона…</p>}
+    </DialogContent>
+  </Dialog>;
+}
+
+function PromptTemplateDraft({ template, scenarioId, existingNames, onCreated }: {
+  template: Prompt; scenarioId: number; existingNames: string[]; onCreated: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [full, setFull] = useState([...template.full_answers]);
+  const [short, setShort] = useState([...template.short_answers]);
+  const create = useMutation({
+    mutationFn: () => api.prompts.create(scenarioId, name.trim(), { template_id: template.id, full_answers: full, short_answers: short }),
+    onSuccess: onCreated,
+  });
+  const duplicate = existingNames.some(n => n.trim().toLowerCase() === name.trim().toLowerCase());
+  return <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={e => { e.preventDefault(); if (name.trim() && !duplicate && !create.isPending) create.mutate(); }}>
+    <div className="min-h-0 space-y-4 overflow-y-auto px-1">
+      <label className="grid gap-1 text-xs text-muted-foreground">Промпт
+        <Input autoFocus aria-label="Промпт" value={name} onChange={e => setName(e.target.value)} aria-invalid={duplicate} />
+      </label>
+      {duplicate && <p role="alert" className="text-sm text-destructive">Промпт с таким названием уже существует</p>}
+      <AnswerList label="Полный ответ" items={full} onChange={setFull} />
+      <AnswerList label="Короткий ответ" items={short} onChange={setShort} note="Если короткий ответ не задан, используется полный ответ." />
+      {create.error && <p role="alert" className="text-sm text-destructive">{create.error.message}</p>}
+    </div>
+    <DialogFooter><Button type="submit" disabled={!name.trim() || duplicate || create.isPending}>{create.isPending ? 'Создание…' : 'Создать'}</Button></DialogFooter>
+  </form>;
+}
+
 export function PromptsTable({ scenarioId }: { scenarioId: number }) {
   const sort = useColumnSort();
   const projectId = useProjectId();
   const qc = useQueryClient();
   // Только что созданный промпт: его название редактируется сразу
   const [fresh, setFresh] = useState<number | null>(null);
+  const [templateId, setTemplateId] = useState<number | null>(null);
+  const { data: templates = [] } = useQuery({ queryKey: ['response-templates', projectId], queryFn: () => api.responseTemplates.list(projectId) });
   const { data: items = [], isSuccess } = useQuery({ queryKey: ['prompts', 'scenario', scenarioId], queryFn: () => api.prompts.listByScenario(scenarioId) });
   const details = useQueries({ queries: items.map((item) => ({ queryKey: ['prompt', item.id], queryFn: () => api.prompts.get(item.id) })) });
   const sorted = sort.rows(items, (item, column) => {
     const detail = details[items.indexOf(item)]?.data;
-    return column === 'full' ? detail?.full_answers.join(' ') ?? item.hint : item.name;
+    return column === 'full' ? detail?.full_answers.join(' ') ?? item.hint : column === 'short' ? (detail?.short_answers.some((text) => text.trim()) ? detail.short_answers : detail?.full_answers)?.join(' ') ?? '' : item.name;
   });
   // Название промпта уникально в рамках всего проекта, а не только сценария
   const { data: all = [] } = useQuery({ queryKey: ['prompts', projectId], queryFn: () => api.prompts.list(projectId) });
@@ -175,6 +241,7 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
 
   return (
     <div className="grid gap-4">
+      <div className="flex flex-wrap items-center gap-2">
       <AddBar
         createLabel="Промпт"
         onCreate={() => create.mutate(uniqueName('Новый промпт', all.map((p) => p.name)))}
@@ -183,11 +250,18 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
         onConnect={(id) => connect.mutate(id)}
         connectLabel="Подключить существующий промпт"
       />
-      <ResizableColumns storageKey="scenario-prompts" columns={['name', 'full']} initial="230px minmax(0,1fr)" className="overflow-hidden rounded-xl border bg-card" aria-label="Промпты сценария">
+      <SearchSelect options={templates.map(t => ({ value: String(t.id), label: t.name, hint: t.hint }))}
+        value={null} onChange={v => v != null && setTemplateId(Number(v))} label="Взять из шаблона" placeholder="Взять из шаблона"
+        className="h-9 rounded-lg border-border bg-background px-3.5 font-medium hover:bg-muted max-md:h-10" />
+      </div>
+      {templateId != null && <PromptFromTemplate key={templateId} templateId={templateId} scenarioId={scenarioId} existingNames={all.map(p => p.name)}
+        onClose={() => setTemplateId(null)} onCreated={() => { setTemplateId(null); refresh(); }} />}
+      <ResizableColumns storageKey="scenario-prompts" columns={['name', 'full', 'short']} initial="230px minmax(0,1fr) minmax(0,1fr)" className="overflow-hidden rounded-xl border bg-card" aria-label="Промпты сценария">
         <div className="flex flex-wrap items-center gap-x-3 border-b px-4 py-1 text-xs font-medium text-muted-foreground md:grid md:[grid-template-columns:var(--resizable-columns)]">
           <SortHeader column="name" sort={sort}>Промпт</SortHeader>
-          <SortHeader column="full" sort={sort}>Ответ ассистента</SortHeader>
-                  </div>
+          <SortHeader column="full" sort={sort}>Полный ответ</SortHeader>
+          <SortHeader column="short" sort={sort}>Короткий ответ</SortHeader>
+        </div>
         {sorted.map((p) => (
           <PromptRowLoader key={p.id} link={p} startRenaming={p.id === fresh} onDisconnect={() => disconnect.mutate(p.id)} onRemove={() => remove.mutate(p.id)} />
         ))}

@@ -17,6 +17,8 @@ export default function App() {
         <Route index element={<Navigate to="scenarios" replace />} />
         <Route path="lists/intents/:itemId?" element={<IntentsPage />} />
         <Route path="lists/prompts/:itemId?" element={<PromptsPage />} />
+        <Route path="templates/responses/:itemId?" element={<PromptsPage key="response-templates" templates />} />
+        <Route path="templates/scenarios/:id?/:tab?" element={<ScenariosPage key="scenario-templates" templates />} />
         <Route path="entities/:itemId?" element={<EntitiesPage />} />
         <Route path="dependencies/:itemId?" element={<DependenciesPage />} />
         <Route path="lists/keywords/:itemId?" element={<KeywordsPage />} />

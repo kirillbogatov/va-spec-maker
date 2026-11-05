@@ -5,6 +5,7 @@ import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
 import { connect } from '../links';
+import { copyScenario } from '../scenario-copy';
 import { normalizeTaskLinks } from '../text-links';
 import { optString, parseId, requireString } from '../validate';
 
@@ -74,8 +75,8 @@ export function scenariosRouter(db: Db): RouterT {
   };
 
   const load = (id: number) => {
-    const head = db.prepare('SELECT id, project_id, name, description FROM scenarios WHERE id = ?').get(id) as
-      | { id: number; project_id: number; name: string; description: string }
+    const head = db.prepare('SELECT id, project_id, name, description, is_template FROM scenarios WHERE id = ?').get(id) as
+      | { id: number; project_id: number; name: string; description: string; is_template: number }
       | undefined;
     if (!head) throw notFound('Сценарий');
     let partRows = db.prepare('SELECT id, name, description, layout, preconditions, precondition, precond_mode FROM scenario_parts WHERE scenario_id = ? ORDER BY position, id').all(id) as { id: number; name: string; description: string; layout: string; preconditions: string; precondition: string; precond_mode: string }[];
@@ -91,7 +92,7 @@ export function scenariosRouter(db: Db): RouterT {
     const entities = (db
       .prepare('SELECT entity_id, followup_prompt, required, is_array FROM scenario_entities WHERE scenario_id = ? ORDER BY position, id')
       .all(id) as { entity_id: number; followup_prompt: string; required: number; is_array: number }[]).map((e) => ({ ...e, required: !!e.required, is_array: !!e.is_array }));
-    return { ...head, entities, dependencies, parts: partRows.map(loadPart) };
+    return { ...head, is_template: !!head.is_template, entities, dependencies, parts: partRows.map(loadPart) };
   };
 
   r.get('/projects/:pid/scenarios', (req, res) => {
@@ -101,7 +102,7 @@ export function scenariosRouter(db: Db): RouterT {
         .prepare(
           `SELECT s.id, s.name, s.description,
                   (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id AND t.kind <> 'error') AS step_count
-           FROM scenarios s WHERE s.project_id = ? ORDER BY s.id`,
+           FROM scenarios s WHERE s.project_id = ? AND s.is_template = 0 ORDER BY s.id`,
         )
         .all(pid),
     );
@@ -111,6 +112,13 @@ export function scenariosRouter(db: Db): RouterT {
     const pid = parseId(req.params.pid);
     const name = requireString(req.body?.name, 'Название');
     if (!db.prepare('SELECT 1 FROM projects WHERE id = ?').get(pid)) throw notFound('Проект');
+    if (req.body?.template_id != null) {
+      const source = db.prepare('SELECT id FROM scenarios WHERE id = ? AND project_id = ? AND is_template = 1')
+        .get(parseId(req.body.template_id), pid) as { id: number } | undefined;
+      if (!source) throw notFound('Шаблон сценария');
+      res.status(201).json(copyScenario(db, pid, source.id, name, false));
+      return;
+    }
     const info = db.transaction(() => {
       const i = db.prepare('INSERT INTO scenarios(project_id, name) VALUES (?, ?)').run(pid, name);
       db.prepare('INSERT INTO scenario_parts(scenario_id, position, name) VALUES (?, 0, ?)').run(i.lastInsertRowid, name);
@@ -121,6 +129,28 @@ export function scenariosRouter(db: Db): RouterT {
 
   r.get('/scenarios/:id', (req, res) => {
     res.json(load(parseId(req.params.id)));
+  });
+
+  r.get('/projects/:pid/scenario-templates', (req, res) => {
+    res.json(db.prepare(`SELECT s.id, s.name, s.description,
+      (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id AND t.kind <> 'error') AS step_count
+      FROM scenarios s WHERE project_id = ? AND is_template = 1 ORDER BY id`).all(parseId(req.params.pid)));
+  });
+
+  r.post('/projects/:pid/scenario-templates', (req, res) => {
+    const pid = parseId(req.params.pid);
+    const name = requireString(req.body?.name, 'Название');
+    if (!db.prepare('SELECT 1 FROM projects WHERE id = ?').get(pid)) throw notFound('Проект');
+    if (req.body?.source_id != null) {
+      res.status(201).json(copyScenario(db, pid, parseId(req.body.source_id), name, true));
+      return;
+    }
+    const id = db.transaction(() => {
+      const id = Number(db.prepare('INSERT INTO scenarios(project_id, name, is_template) VALUES (?, ?, 1)').run(pid, name).lastInsertRowid);
+      db.prepare('INSERT INTO scenario_parts(scenario_id, position, name) VALUES (?, 0, ?)').run(id, name);
+      return id;
+    })();
+    res.status(201).json({ id, name });
   });
 
   r.put('/scenarios/:id', (req, res) => {

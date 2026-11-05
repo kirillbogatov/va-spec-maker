@@ -23,6 +23,7 @@ export interface DictItem {
 }
 
 export interface ScenarioRef {
+  is_template?: boolean | number;
   id: number;
   name: string;
 }
@@ -39,6 +40,7 @@ interface Props<T extends DictItem> {
   loading?: boolean;
   /** Идентификаторы (интенты, сущности, промпты) набираются моноширинным шрифтом. */
   mono?: boolean;
+  hideUsage?: boolean;
   /** Название группы в списке; null — элемент без группы. */
   groupOf?: (i: T) => string | null;
   /** Название группы для элементов, у которых groupOf вернул null. */
@@ -252,19 +254,19 @@ function DictEditor<T extends DictItem>({ item, p, onRemoved }: { item: T; p: Pr
           onChange={(e) => patch({ name: e.target.value } as Partial<T>)}
           aria-label="Название"
         />
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 text-sm text-muted-foreground">
+        {!p.hideUsage && <p className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 text-sm text-muted-foreground">
           {usedIn.length > 0 && <span>Используется в</span>}
           {usedIn.length === 0 && <span className="text-faint">Не используется в текущих сценариях</span>}
           {usedIn.map((s) => (
             <Link
               key={s.id}
-              to={path(`/scenarios/${s.id}`)}
+              to={path(`${s.is_template ? '/templates/scenarios' : '/scenarios'}/${s.id}`)}
               className="inline-flex min-h-8 items-center rounded-md bg-muted px-2 text-[13px] text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-ring md:min-h-6"
             >
               {s.name} →
             </Link>
           ))}
-        </p>
+        </p>}
       </div>
       {commentKey && (
         <DictCard title="Описание">

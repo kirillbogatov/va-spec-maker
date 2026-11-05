@@ -5,7 +5,7 @@ import { assertSameProject, connect, disconnect } from '../links';
 import { assertUniqueName } from '../unique';
 import { cleanStrings, parseId, requireString } from '../validate';
 
-interface PromptRow { id: number; project_id: number; name: string; full_answers: string }
+interface PromptRow { id: number; project_id: number; name: string; full_answers: string; short_answers: string }
 
 /** Сколько раз промпт выбран в строках таблиц (ошибки) и в состояниях схемы. */
 const USES = `((SELECT COUNT(*) FROM scenario_steps t WHERE t.prompt_id = prompts.id) + (SELECT COUNT(*) FROM scenario_states st WHERE st.prompt_id = prompts.id))`;
@@ -15,16 +15,17 @@ export function promptsRouter(db: Db): RouterT {
 
   const load = (id: number) => {
     const p = db
-      .prepare('SELECT id, project_id, name, full_answers FROM prompts WHERE id = ?')
+      .prepare('SELECT id, project_id, name, full_answers, short_answers FROM prompts WHERE id = ?')
       .get(id) as PromptRow | undefined;
     if (!p) throw notFound('Промпт');
-    return { ...p, full_answers: JSON.parse(p.full_answers) as string[] };
+    return { ...p, full_answers: JSON.parse(p.full_answers) as string[], short_answers: JSON.parse(p.short_answers) as string[] };
   };
 
   const scenariosOf = (id: number) =>
-    db
-      .prepare('SELECT s.id, s.name FROM scenario_prompts sp JOIN scenarios s ON s.id = sp.scenario_id WHERE sp.prompt_id = ? ORDER BY s.id')
-      .all(id) as { id: number; name: string }[];
+    (db
+      .prepare('SELECT s.id, s.name, s.is_template FROM scenario_prompts sp JOIN scenarios s ON s.id = sp.scenario_id WHERE sp.prompt_id = ? ORDER BY s.id')
+      .all(id) as { id: number; name: string; is_template: number }[])
+      .map(({ is_template, ...scenario }) => is_template ? { ...scenario, is_template: true } : scenario);
 
   /** hint — первый непустой ответ: краткое описание для выпадающих списков. */
   const listRows = (rows: unknown[]) =>
@@ -38,7 +39,16 @@ export function promptsRouter(db: Db): RouterT {
   const create = (pid: number, body: any) => {
     const name = requireString(body?.name, 'Название');
     assertUniqueName(db, 'prompts', pid, name, 'Промпт');
-    const info = db.prepare("INSERT INTO prompts(project_id, name, full_answers) VALUES (?, ?, '[]')").run(pid, name);
+    let full = cleanStrings(body?.full_answers);
+    let short = cleanStrings(body?.short_answers);
+    if (body?.template_id != null) {
+      const template = db.prepare('SELECT full_answers, short_answers FROM response_templates WHERE id = ? AND project_id = ?')
+        .get(parseId(body.template_id), pid) as { full_answers: string; short_answers: string } | undefined;
+      if (!template) throw notFound('Шаблон ответа');
+      full = body.full_answers === undefined ? JSON.parse(template.full_answers) : full;
+      short = body.short_answers === undefined ? JSON.parse(template.short_answers) : short;
+    }
+    const info = db.prepare('INSERT INTO prompts(project_id, name, full_answers, short_answers) VALUES (?, ?, ?, ?)').run(pid, name, JSON.stringify(full), JSON.stringify(short));
     return { id: Number(info.lastInsertRowid), name };
   };
 
@@ -91,7 +101,9 @@ export function promptsRouter(db: Db): RouterT {
   });
 
   r.delete('/scenarios/:sid/prompts/:pid', (req, res) => {
-    disconnect(db, 'prompt', parseId(req.params.sid), parseId(req.params.pid));
+    const sid = parseId(req.params.sid);
+    const pid = parseId(req.params.pid);
+    disconnect(db, 'prompt', sid, pid);
     res.status(204).end();
   });
 
@@ -104,8 +116,10 @@ export function promptsRouter(db: Db): RouterT {
     const cur = load(id);
     const b = (req.body ?? {}) as Record<string, unknown>;
     assertUniqueName(db, 'prompts', cur.project_id, requireString(b.name, 'Название'), 'Промпт', id);
-    const next = { name: requireString(b.name, 'Название'), full_answers: cleanStrings(b.full_answers) };
-    db.prepare('UPDATE prompts SET name = ?, full_answers = ? WHERE id = ?').run(next.name, JSON.stringify(next.full_answers), id);
+    const name = requireString(b.name, 'Название');
+    const full = cleanStrings(b.full_answers);
+    const short = b.short_answers === undefined ? cur.short_answers : cleanStrings(b.short_answers);
+    db.prepare('UPDATE prompts SET name = ?, full_answers = ?, short_answers = ? WHERE id = ?').run(name, JSON.stringify(full), JSON.stringify(short), id);
     res.json(load(id));
   });
 

@@ -137,9 +137,9 @@ export function loadProjectSpec(db: Db, projectId: number, lang: SpecLang = 'ru'
     | ProjectSpec['project']
     | undefined;
   if (!project) throw notFound('Проект');
-  const projectParts = (db.prepare('SELECT id, name FROM scenarios WHERE project_id = ? ORDER BY id').all(projectId) as { id: number; name: string }[])
+  const projectParts = (db.prepare('SELECT id, name FROM scenarios WHERE project_id = ? AND is_template = 0 ORDER BY id').all(projectId) as { id: number; name: string }[])
     .flatMap((scenario) => loadScenarioDoc(db, scenario.id, lang).parts.map((part) => ({ ...part, scenario: scenario.name })));
-  return { ...buildSpec(db, projectId, project, lang), parts: projectParts, changelog: db.prepare('SELECT c.date, s.name AS scenario, c.task, c.author, c.description FROM scenario_changelog c JOIN scenarios s ON s.id = c.scenario_id WHERE s.project_id = ? ORDER BY s.id, c.position, c.id').all(projectId) as NonNullable<ProjectSpec['changelog']> };
+  return { ...buildSpec(db, projectId, project, lang), parts: projectParts, changelog: db.prepare('SELECT c.date, s.name AS scenario, c.task, c.author, c.description FROM scenario_changelog c JOIN scenarios s ON s.id = c.scenario_id WHERE s.project_id = ? AND s.is_template = 0 ORDER BY s.id, c.position, c.id').all(projectId) as NonNullable<ProjectSpec['changelog']> };
 }
 
 function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], lang: SpecLang, scope?: Scope): ProjectSpec {
@@ -205,7 +205,7 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
          FROM scenario_dependencies d
          JOIN scenarios s ON s.id = d.scenario_id
          LEFT JOIN entities e ON e.id = d.entity_id
-         WHERE s.project_id = ? AND (? IS NULL OR s.id = ?) ORDER BY s.id, d.position, d.id`,
+         WHERE s.project_id = ? AND ((? IS NULL AND s.is_template = 0) OR s.id = ?) ORDER BY s.id, d.position, d.id`,
       )
       .all(projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null) as { scenario: string; ref: string; name: string; description: string; entity_id: number | null; type: string; options: string }[]
   ).map((d) => {
@@ -240,7 +240,7 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
        JOIN scenarios s ON s.id = t.scenario_id
        LEFT JOIN intents i ON i.id = t.intent_id
        LEFT JOIN prompts p ON p.id = t.prompt_id
-       WHERE s.project_id = ? AND t.kind <> 'error' AND (? IS NULL OR t.scenario_id = ?) AND (? IS NULL OR t.part_id = ?) ORDER BY s.id, t.part_id, t.position, t.id`,
+       WHERE s.project_id = ? AND t.kind <> 'error' AND ((? IS NULL AND s.is_template = 0) OR t.scenario_id = ?) AND (? IS NULL OR t.part_id = ?) ORDER BY s.id, t.part_id, t.position, t.id`,
     )
     .all(STRINGS[lang].anyIntent, projectId, scope?.scenarioId ?? null, scope?.scenarioId ?? null, scope?.partId ?? null, scope?.partId ?? null) as Raw[];
   const entityName = new Map((db.prepare('SELECT id, name FROM entities WHERE project_id = ?').all(projectId) as { id: number; name: string }[]).map((e) => [e.id, e.name]));

@@ -98,15 +98,15 @@ export function MasterDetail({ list, children, selected, onBack, flush }: Master
           'relative flex shrink-0 flex-col border-b bg-nav text-foreground md:w-[var(--master-w)] md:border-b-0 md:border-r',
           stacked ? 'max-h-[45vh] md:max-h-none' : 'min-h-0 flex-1 md:flex-none',
           selected && 'hidden',
-          listCollapsed && selected !== false ? 'md:hidden' : 'md:flex',
+          listCollapsed ? 'md:hidden' : 'md:flex',
         )}
       >
-        <ListControlsContext.Provider value={selected !== false ? { listId, hide: () => toggleList(true), hideButton } : null}>
+        <ListControlsContext.Provider value={{ listId, hide: () => toggleList(true), hideButton }}>
           {list}
         </ListControlsContext.Provider>
         <div onPointerDown={startDrag} aria-hidden className="absolute -right-1 top-0 z-10 hidden h-full w-2 cursor-col-resize touch-none md:block" />
       </aside>
-      {!panels && listCollapsed && selected !== false && (
+      {!panels && listCollapsed && (
         <div className="hidden w-10 shrink-0 flex-col items-center border-r bg-nav py-2 md:flex">
           <button
             ref={restoreButton}
@@ -160,9 +160,10 @@ export function ListHeader({ onCreate, label = 'Создать', extra }: { onCr
       <button
         type="button"
         onClick={onCreate}
-        className="ml-auto inline-flex h-10 shrink-0 items-center gap-1 rounded-sm px-1 text-sm font-medium text-muted-foreground hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:h-8"
+        title={label}
+        className="ml-auto inline-flex h-10 min-w-0 items-center gap-1 rounded-sm px-1 text-sm font-medium text-muted-foreground hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:h-8"
       >
-        <Plus className="size-3.5" /> {label}
+        <Plus className="size-3.5 shrink-0" /> <span className="truncate">{label}</span>
       </button>
       {controls && (
         <button

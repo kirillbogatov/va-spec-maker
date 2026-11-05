@@ -30,6 +30,9 @@ import { canonicalOrder, normalizeEntry, splitLegacySteps } from '@/lib/fsm';
 import { StateEditor } from './state-editor/StateEditor';
 import { PartPanel, PartTabs } from './PartTabs';
 import { duplicatePart } from './duplicatePart';
+import { CreateScenarioDialog } from './CreateScenarioDialog';
+import { waitForSaves } from '@/lib/saveStore';
+import { usePrefixes } from '@/lib/prefixes';
 
 export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'history' | 'preview';
 
@@ -61,6 +64,7 @@ function initialDraft(scenario: Scenario): Draft {
 
 export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Scenario; tab: ScenarioTab; deleted?: boolean }) {
   const projectId = useProjectId();
+  const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const path = usePath();
@@ -85,6 +89,10 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     setDraft(next);
     setResetKey((key) => key + 1);
   }, [scenario]);
+  const base = scenario.is_template ? '/templates/scenarios' : '/scenarios';
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const { data: templateItems = [] } = useQuery({ queryKey: ['scenario-templates', projectId], queryFn: () => api.scenarioTemplates.list(projectId) });
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Имя хранится вместе с ключом: после удаления вкладки диалог ещё закрывается и не должен потерять заголовок
   const [confirmPart, setConfirmPart] = useState<{ key: string; name: string } | null>(null);
@@ -155,7 +163,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
       }
       throw e;
     }
-    qc.invalidateQueries({ queryKey: ['scenarios', projectId] });
+    qc.invalidateQueries({ queryKey: [scenario.is_template ? 'scenario-templates' : 'scenarios', projectId] });
     qc.invalidateQueries({ queryKey: ['scenario', scenario.id] });
     qc.invalidateQueries({ queryKey: ['dependency-dictionary', projectId] });
   };
@@ -236,8 +244,8 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
   const remove = useMutation({
     mutationFn: () => api.scenarios.remove(scenario.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['scenarios', projectId] });
-      navigate(path('/scenarios'));
+      qc.invalidateQueries({ queryKey: [scenario.is_template ? 'scenario-templates' : 'scenarios', projectId] });
+      navigate(path(base));
     },
   });
 
@@ -252,6 +260,17 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <CreateScenarioDialog open={savingTemplate} onOpenChange={setSavingTemplate} templates prefix={prefixes.scenarioTemplate}
+        initialName={templateName} initialSource={scenario.id}
+        existingNames={templateItems.map(s => s.name)} sources={[{ value: String(scenario.id), label: draft.name }]}
+        onCreate={async (name, sourceId) => {
+          await waitForSaves();
+          if (conflict || deleted) throw new Error('Сначала разрешите конфликт сохранения сценария.');
+          const created = await api.scenarioTemplates.create(projectId, name, sourceId);
+          qc.invalidateQueries();
+          toast.success('Шаблон сценария создан');
+          navigate(path(`/templates/scenarios/${created.id}`));
+        }} />
       {conflict && (
         <div role="alert" className="shrink-0 border-b bg-muted px-4 py-3 md:px-8">
           <p className="font-medium">{conflict.current ? 'Сценарий изменён в другой вкладке' : 'Сценарий удалён в другой вкладке'}</p>
@@ -282,6 +301,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
                 <Ellipsis className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {!scenario.is_template && <DropdownMenuItem onClick={() => { setTemplateName(`${prefixes.scenarioTemplate}${draft.name}`); setSavingTemplate(true); }}>Сохранить как шаблон</DropdownMenuItem>}
                 <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
                   <X className="size-4" /> Удалить сценарий
                 </DropdownMenuItem>
@@ -299,7 +319,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
               const i = TABS.findIndex((t) => t.id === tab);
               if (i < 0) return;
               const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
-              navigate(path(`/scenarios/${scenario.id}/${next.id}`));
+              navigate(path(`${base}/${scenario.id}/${next.id}`));
               requestAnimationFrame(() => document.getElementById(`tab-${next.id}`)?.focus());
             }}
           >
@@ -308,7 +328,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
                 key={t.id}
                 id={`tab-${t.id}`}
                 role="tab"
-                to={path(`/scenarios/${scenario.id}/${t.id}`)}
+                to={path(`${base}/${scenario.id}/${t.id}`)}
                 aria-selected={tab === t.id}
                 tabIndex={tab === t.id ? 0 : -1}
                 className={cn(

@@ -18,7 +18,7 @@ export interface Entity {
 }
 
 /** Сценарий, к которому подключён интент или промпт. */
-export interface ScenarioLink { id: number; name: string }
+export interface ScenarioLink { id: number; name: string; is_template?: boolean | number }
 export interface IntentListItem {
   id: number; name: string; enabled: boolean; phrase_count: number; pattern_count?: number;
   /** Комментарий или первая фраза: краткое описание в списках выбора. */
@@ -43,6 +43,7 @@ export interface PromptListItem {
   hint: string;
 }
 export interface Prompt {
+  short_answers: string[];
   id: number; project_id: number; name: string; full_answers: string[];
 }
 
@@ -102,6 +103,7 @@ export interface ScenarioPart {
   precond_mode?: 'all' | 'any';
 }
 export interface Scenario {
+  is_template?: boolean;
   id: number; project_id: number; name: string; description: string;
   entities: ScenarioEntity[]; dependencies: Dependency[]; parts: ScenarioPart[];
 }

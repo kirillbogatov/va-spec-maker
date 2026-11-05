@@ -39,9 +39,10 @@ export function intentsRouter(db: Db): RouterT {
   };
 
   const scenariosOf = (id: number) =>
-    db
-      .prepare('SELECT s.id, s.name FROM scenario_intents si JOIN scenarios s ON s.id = si.scenario_id WHERE si.intent_id = ? ORDER BY s.id')
-      .all(id) as { id: number; name: string }[];
+    (db
+      .prepare('SELECT s.id, s.name, s.is_template FROM scenario_intents si JOIN scenarios s ON s.id = si.scenario_id WHERE si.intent_id = ? ORDER BY s.id')
+      .all(id) as { id: number; name: string; is_template: number }[])
+      .map(({ is_template, ...scenario }) => is_template ? { ...scenario, is_template: true } : scenario);
 
   type ListRow = { id: number; name: string; enabled: number; phrase_count: number; pattern_count: number; hint: string; is_global?: number };
   const decorate = (rows: ListRow[]) =>

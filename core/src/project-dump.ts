@@ -16,7 +16,7 @@ const VIA_INTENT = 'intent_id IN (SELECT id FROM intents WHERE project_id = ?)';
 const VIA_ENTITY = 'entity_id IN (SELECT id FROM entities WHERE project_id = ?)';
 
 /** Поля прошлых версий: в новой схеме их нет или они не используются. Из дампов выбрасываются. */
-const LEGACY: Record<string, string[]> = { intents: ['scenario_id'], prompts: ['scenario_id', 'short_answers'], scenario_steps: ['any_intent'] };
+const LEGACY: Record<string, string[]> = { intents: ['scenario_id'], prompts: ['scenario_id'], scenario_steps: ['any_intent'] };
 const dropLegacy = (table: string, row: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(row).filter(([k]) => !LEGACY[table]?.includes(k)));
 
@@ -63,6 +63,7 @@ const TABLES: { name: string; where: string; fk: Record<string, string> }[] = [
   { name: 'intent_patterns', where: VIA_INTENT, fk: { intent_id: 'intents' } },
   { name: 'intent_entities', where: VIA_INTENT, fk: { intent_id: 'intents', entity_id: 'entities' } },
   { name: 'prompts', where: IN_PROJECT, fk: {} },
+  { name: 'response_templates', where: IN_PROJECT, fk: {} },
   { name: 'scenario_intents', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', intent_id: 'intents' } },
   { name: 'scenario_prompts', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', prompt_id: 'prompts' } },
   { name: 'scenario_dependencies', where: VIA_SCENARIO, fk: { scenario_id: 'scenarios', entity_id: 'entities', dictionary_id: 'dependency_dictionary' } },

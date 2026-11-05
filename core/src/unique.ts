@@ -4,7 +4,7 @@ import { HttpError } from './errors';
 /** Название интента/промпта уникально в проекте без учёта регистра и пробелов по краям. */
 export function assertUniqueName(
   db: Db,
-  table: 'intents' | 'prompts',
+  table: 'intents' | 'prompts' | 'response_templates',
   projectId: number,
   name: string,
   what: string,

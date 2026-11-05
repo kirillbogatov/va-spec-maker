@@ -38,6 +38,7 @@ export function importScenario(db: Db, pid: number, dump: ProjectDump, sid: numb
   tables.keywords = (tables.keywords ?? []).filter(r => keywordIds.has(r.id) || patterns.includes(String(r.name)));
   tables.dependency_dictionary = [];
   tables.project_settings = [];
+  tables.response_templates = [];
   return db.transaction(() => {
     for (const table of ['entities', 'intents', 'prompts', 'keywords']) {
       for (const row of tables[table] ?? []) {

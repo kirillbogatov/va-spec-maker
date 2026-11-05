@@ -4,7 +4,7 @@ import { openDb } from '../src/db';
 
 describe('prompt creation with a saved database', () => {
   it('initializes answers explicitly when the saved schema has no defaults', async () => {
-    const db = await openDb();
+    let db = await openDb();
     // Older saved schemas can require answers without providing SQL defaults.
     db.exec(`DROP TABLE prompts;
       CREATE TABLE prompts (
@@ -13,6 +13,7 @@ describe('prompt creation with a saved database', () => {
         name TEXT NOT NULL,
         full_answers TEXT NOT NULL
       )`);
+    db = await openDb({ data: db.serialize() });
     const app = createApp(db);
     const call = (method: string, url: string, body?: unknown) => app.handle({ method, url, body });
     const pid = ((await call('POST', '/api/projects', { name: 'P' })).body as { id: number }).id;
