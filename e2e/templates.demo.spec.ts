@@ -106,9 +106,9 @@ test('navigation groups collapse with dependencies inside the project dictionary
   await expect(templates).toHaveAttribute('aria-expanded', 'false');
   await expect(menu.getByRole('link', { name: 'Шаблоны ответов', exact: true })).toBeHidden();
   const groups = menu.locator('button[aria-controls^="nav-group-"]');
-  await expect(groups).toHaveText(['Словарь проекта', 'Шаблоны']);
+  await expect(groups).toHaveText(['Справочники', 'Шаблоны']);
   await expect(menu.locator('#nav-group-dictionary').getByRole('link', { name: 'Зависимости', exact: true })).toBeVisible();
-  for (const name of ['Словарь проекта']) {
+  for (const name of ['Справочники']) {
     const group = menu.getByRole('button', { name, exact: true });
     await expect(group).toHaveAttribute('aria-expanded', 'true');
     await group.click();
@@ -124,7 +124,7 @@ test('navigation groups collapse with dependencies inside the project dictionary
   await page.setViewportSize({ width: 390, height: 844 });
   const mobile = page.locator('nav[aria-label="Основная навигация"]').last();
   await expect(mobile.getByRole('button', { name: 'Связи', exact: true })).toHaveCount(0);
-  await mobile.getByRole('button', { name: 'Словарь', exact: true }).click();
+  await mobile.getByRole('button', { name: 'Справочники', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: /Зависимости/ })).toBeVisible();
   await page.screenshot({ path: 'test-results/navigation-mobile.png', fullPage: true });
   await page.getByRole('menuitem', { name: /Зависимости/ }).click();

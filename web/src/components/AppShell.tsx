@@ -161,7 +161,7 @@ export function AppShell() {
             </NavLink>
           </div>
 
-          {renderGroup('dictionary', 'Словарь проекта', dictionary)}
+          {renderGroup('dictionary', 'Справочники', dictionary)}
           {renderGroup('templates', 'Шаблоны', TEMPLATES)}
 
           <div className="min-h-0 flex-1" />
@@ -185,7 +185,7 @@ export function AppShell() {
         </NavLink>
         <DropdownMenu>
           <DropdownMenuTrigger render={<button type="button" className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground', onDictionary && 'font-medium text-brand')} />}>
-            <BookOpen className="size-5" /> Словарь
+            <BookOpen className="size-5" /> Справочники
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" side="top">
             {dictionary.map((d) => (

@@ -501,7 +501,7 @@ export function IntentsTable({ scenarioId }: { scenarioId: number }) {
         creating={create.isPending}
         options={free}
         onConnect={(id) => connect.mutate({ id })}
-        connectLabel="Добавить существующий интент"
+        connectLabel="Добавить из справочника"
       />
       <ResizableColumns storageKey="scenario-intents" columns={['name', 'values', 'entities', 'enabled', 'global']} initial="minmax(140px,1fr) minmax(140px,1.4fr) minmax(140px,1.2fr) 56px 96px" breakpoint="xl" className="overflow-hidden rounded-xl border bg-card" aria-label="Интенты сценария">
         <div className={cn('flex flex-wrap items-center gap-x-3 border-b px-4 py-1 text-xs font-medium text-muted-foreground xl:grid', COLS)}>
