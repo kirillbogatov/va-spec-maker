@@ -19,6 +19,7 @@ interface Props {
   placeholder?: string;
   /** Значок слева в кнопке. */
   icon?: ReactNode;
+  showChevron?: boolean;
   /** Последний пункт списка «+ …», он всегда виден при поиске и вызывает onCreate вместо onChange. */
   createLabel?: string;
   onCreate?: () => void;
@@ -27,7 +28,7 @@ interface Props {
 const CREATE_VALUE = '\u0000create';
 
 /** Выпадающий список с автофильтром по названию и описанию по мере ввода. */
-export function SearchSelect({ options, value, onChange, label, className, renderValue, placeholder, icon, createLabel, onCreate }: Props) {
+export function SearchSelect({ options, value, onChange, label, className, renderValue, placeholder, icon, createLabel, onCreate, showChevron = true }: Props) {
   const selected = options.find((o) => o.value === value) ?? null;
   const items = createLabel && onCreate ? [...options, { value: CREATE_VALUE, label: `+ ${createLabel}` }] : options;
   return (
@@ -44,7 +45,7 @@ export function SearchSelect({ options, value, onChange, label, className, rende
         <span className={cn('flex min-w-0 flex-1 text-left', !selected && placeholder && 'text-muted-foreground')}>
           {renderValue ? renderValue(selected) : selected?.label ?? placeholder}
         </span>
-        <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+        {showChevron && <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />}
       </Combobox.Trigger>
       <Combobox.Portal>
         <Combobox.Positioner sideOffset={4} align="start" className="isolate z-50">

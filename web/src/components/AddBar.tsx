@@ -29,6 +29,7 @@ export function AddBar({ createLabel, onCreate, creating, options, onConnect, co
           value={null}
           onChange={(v) => v != null && onConnect(Number(v))}
           label={connectLabel}
+          showChevron={false}
           className={cn('h-9 rounded-lg border-border bg-background px-3.5 font-medium hover:bg-muted max-md:h-10', compact && 'h-10 gap-1.5 px-2.5 text-[13px] md:h-8')}
           placeholder={connectPlaceholder}
         />
