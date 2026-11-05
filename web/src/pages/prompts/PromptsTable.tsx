@@ -84,7 +84,6 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
     <div role="button" tabIndex={0} onClick={(e) => { if (!(e.target as HTMLElement).closest('button')) setOpen(true); }} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(true); } }} className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-4 py-2 outline-none first:border-t-0 hover:bg-muted/60 focus-visible:bg-muted/60 md:[grid-template-columns:var(--resizable-columns)]">
       <span className="col-start-1 row-start-1 min-w-0">
         <TypeToken kind="prompt" className="text-[12.5px]">{draft.name}</TypeToken>
-        {link.scenarios.length > 1 && <span className="mt-0.5 block text-xs text-faint">также в: {link.scenarios.map((s) => s.name).join(', ')}</span>}
       </span>
       <span className="col-span-1 row-start-2 flex min-w-0 text-sm text-muted-foreground md:col-span-1 md:col-start-2 md:row-start-1">
         {filled.length === 0 ? (

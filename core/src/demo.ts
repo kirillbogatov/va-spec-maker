@@ -213,5 +213,45 @@ export async function seedDemo(app: App): Promise<number> {
     }],
   });
   // Наполнение демо — не правки пользователя: история сценариев начинается с чистого листа
+  // Готовые примеры для раздела «Шаблоны» демо-проекта.
+  for (const [name, full, short] of [
+    ['TEMP_FEATURE_UNAVAILABLE', 'Подключённое устройство не поддерживает эту функцию.', 'Функция недоступна.'],
+    ['TEMP_ALREADY_IN_STATE', 'Функция уже находится в запрошенном состоянии.', 'Уже выполнено.'],
+  ]) {
+    await call(app, 'POST', `/api/projects/${pid}/response-templates`, {
+      name, full_answers: [full], short_answers: [short],
+    });
+  }
+  const toggle = (await call(app, 'POST', `/api/projects/${pid}/scenario-templates`, { name: 'TEMP_FEATURE_ON_OFF' })).id as number;
+  const turnOn = await intent(toggle, 'INT_FEATURE_ON', ['включи функцию', 'активируй функцию']);
+  const turnOff = await intent(toggle, 'INT_FEATURE_OFF', ['выключи функцию', 'отключи функцию']);
+  const enabled = await prompt(toggle, 'PRM_FEATURE_ON', ['Функция включена.']);
+  const disabled = await prompt(toggle, 'PRM_FEATURE_OFF', ['Функция выключена.']);
+  const alreadyOn = await prompt(toggle, 'PRM_FEATURE_ALREADY_ON', ['Функция уже включена.']);
+  const alreadyOff = await prompt(toggle, 'PRM_FEATURE_ALREADY_OFF', ['Функция уже выключена.']);
+  const unavailable = await prompt(toggle, 'PRM_FEATURE_UNAVAILABLE', ['Подключённое устройство не поддерживает эту функцию.']);
+  await fill(toggle, {
+    description: 'Шаблон управления функцией: включение и выключение, повторная команда и недоступность. Замените функцию и системные действия на нужные.',
+    dependencies: [dep('feature_state', 'Состояние функции', 'enum', ['on', 'off', 'unavailable'])],
+    parts: [{
+      name: 'Включение и выключение', description: '',
+      steps: [
+        step('START', 'ST_ON', turnOn, [{ dep: 'feature_state', op: '=', value: 'off' }]),
+        step('START', 'ST_ALREADY_ON', turnOn, [{ dep: 'feature_state', op: '=', value: 'on' }]),
+        step('START', 'ST_OFF', turnOff, [{ dep: 'feature_state', op: '=', value: 'on' }]),
+        step('START', 'ST_ALREADY_OFF', turnOff, [{ dep: 'feature_state', op: '=', value: 'off' }]),
+        step('START', 'ST_UNAVAILABLE', turnOn, [{ dep: 'feature_state', op: '=', value: 'unavailable' }]),
+        step('START', 'ST_UNAVAILABLE', turnOff, [{ dep: 'feature_state', op: '=', value: 'unavailable' }]),
+      ],
+      layout: {
+        START: node(0, 0, 'Проверить текущее состояние функции'),
+        ST_ON: node(280, 0, 'Включить', enabled, 'Включить функцию'),
+        ST_ALREADY_ON: node(560, 0, 'Уже включена', alreadyOn, ''),
+        ST_OFF: node(280, 160, 'Выключить', disabled, 'Выключить функцию'),
+        ST_ALREADY_OFF: node(560, 160, 'Уже выключена', alreadyOff, ''),
+        ST_UNAVAILABLE: node(280, 320, 'Функция недоступна', unavailable, ''),
+      },
+    }],
+  });
   return pid;
 }
