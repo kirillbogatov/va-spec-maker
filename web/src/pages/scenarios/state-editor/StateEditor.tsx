@@ -53,6 +53,8 @@ interface Props {
   focusState?: string | null;
   /** Выбран узел или переход — панель вкладки уступает место. */
   onSelectElement?: () => void;
+  /** Клик по фону открывает свойства текущего подсценария. */
+  onSelectPart?: () => void;
   /** Название и все вкладки сценария для экспорта в SVG. */
   exportMeta?: { title: string; parts: ScenarioPart[] };
 }
@@ -79,7 +81,7 @@ function ZoomControls() {
   );
 }
 
-function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, focusState, exportMeta }: Props) {
+function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis, intents, prompts, dependencies, entities, onChange, partPanel, showPart, tabs, onSelectElement, onSelectPart, focusState, exportMeta }: Props) {
   const canvas = useRef<HTMLDivElement>(null);
   const [fontsReady, setFontsReady] = useState(false);
   useEffect(() => {
@@ -469,7 +471,7 @@ function StateEditorInner({ wide, onWideChange: setWide, steps, layout, analysis
             onConnect={onConnect}
             onNodeClick={(_, n) => setSelected({ type: 'node', name: n.id })}
             onEdgeClick={(_, e) => e.data?.stepKey && setSelected({ type: 'edge', key: e.data.stepKey })}
-            onPaneClick={() => setSelected(null)}
+            onPaneClick={() => { setSelected(null); onSelectPart?.(); }}
             deleteKeyCode={null}
             nodesFocusable
             minZoom={0.15}

@@ -392,6 +392,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
             onChange={({ steps, layout }) => setTransitions(steps, layout)}
             showPart={showPart}
             onSelectElement={() => setShowPart(false)}
+            onSelectPart={() => setShowPart(true)}
             exportMeta={{ title: draft.name, parts: draft.parts }}
             partPanel={
               <PartPanel
