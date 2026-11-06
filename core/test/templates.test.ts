@@ -18,6 +18,7 @@ async function setup() {
 
 it('creates independent prompts from response templates, preserving edited answers and rejecting foreign templates', async () => {
   const { db, call } = await setup();
+  await call('PUT', '/projects/1/prompt-settings', { splitAnswers: true });
   const template = await call('POST', '/projects/1/response-templates', { name: 'PRM_T', full_answers: ['Full', 'Alternative'], short_answers: ['Short'] }, 201);
   await call('POST', '/projects/1/response-templates', { name: ' prm_t ' }, 409);
   const s = await call('POST', '/projects/1/scenarios', { name: 'S' }, 201);
@@ -90,7 +91,7 @@ it('keeps templates in project backups and initializes template support on exist
   const dump = dumpProject(db, 1);
   const pid = importProject(db, dump);
   expect(db.prepare('SELECT name, is_template FROM scenarios WHERE project_id = ?').all(pid)).toEqual([{ name: 'TEMP_Empty', is_template: 1 }]);
-  expect(db.prepare('SELECT name, full_answers FROM response_templates WHERE project_id = ?').all(pid)).toEqual([{ name: 'Response', full_answers: '["Full"]' }]);
+  expect(db.prepare('SELECT name, full_answers FROM response_templates WHERE project_id = ?').all(pid)).toEqual([{ name: 'Response', full_answers: '["Full","Short"]' }]);
   db.exec('DROP TABLE response_templates; ALTER TABLE scenarios DROP COLUMN is_template; ALTER TABLE prompts DROP COLUMN short_answers; PRAGMA user_version = 100');
   db = await openDb({ data: db.serialize() });
   expect(db.prepare('SELECT is_template FROM scenarios').all()).toEqual([{ is_template: 0 }, { is_template: 0 }]);

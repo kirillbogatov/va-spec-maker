@@ -1,3 +1,4 @@
+import { mergeProjectPromptAnswers } from './prompt-settings';
 import { markLegacyTemplateObjects } from './template-objects';
 import { readPreconditions, restoreImportedPreconditions } from './part-preconditions';
 import { backfillDependencyLinks } from './dependency-links';
@@ -54,6 +55,7 @@ function upgradeDump(tables: ProjectDump['tables']): ProjectDump['tables'] {
 /** Порядок важен: родители раньше детей. fk — столбцы-ссылки на id других таблиц дампа. */
 const TABLES: { name: string; where: string; fk: Record<string, string> }[] = [
   { name: 'dictionary_history', where: IN_PROJECT, fk: {} },
+  { name: 'prompt_settings', where: IN_PROJECT, fk: {} },
   { name: 'entities', where: IN_PROJECT, fk: {} },
   { name: 'entity_values', where: VIA_ENTITY, fk: { entity_id: 'entities' } },
   { name: 'dependency_dictionary', where: IN_PROJECT, fk: {} },
@@ -147,6 +149,7 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
     restoreImportedPreconditions(db, pid, maps, importedParts);
     backfillDependencyLinks(db, pid);
     for (const table of ['intents', 'prompts'] as const) markLegacyTemplateObjects(db, table, legacyTemplateObjects[table]);
+    mergeProjectPromptAnswers(db, pid);
     return pid;
   })();
 }

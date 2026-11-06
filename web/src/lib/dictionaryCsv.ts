@@ -20,11 +20,11 @@ export const dependenciesToCsv = (items: DependencyRow[]) =>
 export const parseDependenciesCsv = (text: string): DependencyRow[] =>
   table(text, 'зависимостей').map((r) => ({ name: r.name.trim(), description: r.description ?? '', values: lines(r.values ?? '') }));
 
-export interface PromptRow { name: string; answers: string[] }
-export const promptsToCsv = (items: PromptRow[]) =>
-  toCsv([['name', 'answers'], ...items.map((p) => [p.name, p.answers.join('\n')])]);
+export interface PromptRow { name: string; answers: string[]; short_answers?: string[] }
+export const promptsToCsv = (items: PromptRow[], splitAnswers = false) =>
+  toCsv([splitAnswers ? ['name', 'answers', 'short_answers'] : ['name', 'answers'], ...items.map((p) => [p.name, p.answers.join('\n'), ...(splitAnswers ? [(p.short_answers ?? []).join('\n')] : [])])]);
 export const parsePromptsCsv = (text: string): PromptRow[] =>
-  table(text, 'промптов').map((r) => ({ name: r.name.trim(), answers: lines(r.answers ?? '') }));
+  table(text, 'промптов').map((r) => ({ name: r.name.trim(), answers: lines(r.answers ?? ''), ...(r.short_answers === undefined ? {} : { short_answers: lines(r.short_answers) }) }));
 
 export interface EntityRow {
   name: string; description: string; type: EntityType; multiple_values: boolean; range_min: string; range_max: string;

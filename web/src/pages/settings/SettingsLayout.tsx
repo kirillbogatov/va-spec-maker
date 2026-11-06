@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 const SECTIONS = [
   { id: 'appearance', label: 'Внешний вид' },
   { id: 'nlu', label: 'Интенты и NLU' },
+  { id: 'prompts', label: 'Промпты' },
   { id: 'spec', label: 'Спецификации' },
 ] as const;
 

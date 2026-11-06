@@ -1,3 +1,4 @@
+import { mergeProjectPromptAnswers } from './prompt-settings';
 import { initTemplateObjects } from './template-objects';
 import { initDictionaryHistory } from './dictionary-history';
 import { openSqlite, type Db, type OpenOpts } from './sqlite';
@@ -11,6 +12,11 @@ CREATE TABLE IF NOT EXISTS projects (
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS prompt_settings (
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+  split_answers INTEGER NOT NULL DEFAULT 0 CHECK(split_answers IN (0, 1))
 );
 CREATE TABLE IF NOT EXISTS entities (
   id INTEGER PRIMARY KEY,
@@ -264,5 +270,9 @@ export async function openDb(opts: OpenOpts = {}): Promise<Db> {
   const db = await openSqlite(opts);
   db.exec(SCHEMA);
   migrate(db);
+  // Older projects without a saved preference use unified answers without losing short variants.
+  db.transaction(() => {
+    for (const { id } of db.prepare('SELECT id FROM projects').all()) mergeProjectPromptAnswers(db, id);
+  })();
   return db;
 }

@@ -111,7 +111,7 @@ function pushRecent(pid: number, h: Recent) {
 interface DumpTables {
   intents?: { id: number }[];
   intent_phrases?: { intent_id: number; text: string }[];
-  prompts?: { id: number; full_answers: string }[];
+  prompts?: { id: number; full_answers: string; short_answers?: string }[];
 }
 
 const parseList = (s: string): string[] => {
@@ -161,7 +161,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     const phrases = new Map<number, string>();
     for (const f of tables.intent_phrases ?? []) phrases.set(f.intent_id, `${phrases.get(f.intent_id) ?? ''}\n${f.text}`);
     const answers = new Map<number, string>();
-    for (const p of tables.prompts ?? []) answers.set(p.id, parseList(p.full_answers).join('\n'));
+    for (const p of tables.prompts ?? []) answers.set(p.id, [...parseList(p.full_answers), ...parseList(p.short_answers ?? '[]')].join('\n'));
     return [
       ...(scenarios.data ?? []).map((s): Hit => ({ key: `s${s.id}`, kind: 'scenario', name: s.name, hint: s.description || `${s.step_count} строк`, to: path(`/scenarios/${s.id}`) })),
       ...(intents.data ?? []).map((i): Hit => ({

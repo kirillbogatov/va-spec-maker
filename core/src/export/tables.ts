@@ -108,10 +108,10 @@ export function entitiesTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDe
 
 export function promptsTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef {
   return {
-    head: STRINGS[lang].promptsHead,
-    widths: [30, 70],
+    head: spec.splitPromptAnswers === true ? (lang === 'ru' ? ['Промпт', 'Полный ответ', 'Короткий ответ'] : ['Prompt', 'Full answer', 'Short answer']) : STRINGS[lang].promptsHead,
+    widths: spec.splitPromptAnswers === true ? [26, 40, 34] : [30, 70],
     rows: spec.prompts.map((p) => ({
-      cells: [text(p.name), list(p.full_answers)],
+      cells: spec.splitPromptAnswers === true ? [text(p.name), list(p.full_answers), list(p.short_answers ?? [])] : [text(p.name), list([...p.full_answers, ...(p.short_answers ?? [])])],
     })),
   };
 }

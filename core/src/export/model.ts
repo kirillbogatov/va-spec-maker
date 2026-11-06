@@ -1,3 +1,4 @@
+import { splitPromptAnswers } from '../prompt-settings';
 import { groupConditions } from './conditions';
 import type { Db } from '../sqlite';
 import { orderTransitionRows } from './state-order';
@@ -21,6 +22,7 @@ export type IntentMode = 'phrases' | 'patterns' | 'both' | 'keywords';
 export const parseIntentMode = (v: unknown): IntentMode => (v === 'phrases' || v === 'patterns' || v === 'keywords' ? v : 'both');
 
 export interface ProjectSpec {
+  splitPromptAnswers?: boolean;
   /** Вкладки всех сценариев с метаданными, для выгрузки проекта. */
   parts?: SpecPart[];
   changelog?: { date?: string; scenario?: string; task: string; author: string; description: string }[];
@@ -43,7 +45,7 @@ export interface ProjectSpec {
     multiple_values: boolean;
     values: { value: string; synonyms: string[] }[];
   }[];
-  prompts: { name: string; full_answers: string[] }[];
+  prompts: { name: string; full_answers: string[]; short_answers?: string[] }[];
   dependencies: { scenario: string; name: string; type: string; values: string[]; description?: string }[];
   transitions: TransitionRow[];
 }
@@ -190,12 +192,12 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
 
   const prompts = (
     db
-      .prepare(`SELECT id, name, full_answers FROM prompts WHERE project_id = ? ${scope ? '' : 'AND is_template = 0'} ORDER BY id`)
-      .all(projectId) as { id: number; name: string; full_answers: string }[]
+      .prepare(`SELECT id, name, full_answers, short_answers FROM prompts WHERE project_id = ? ${scope ? '' : 'AND is_template = 0'} ORDER BY id`)
+      .all(projectId) as { id: number; name: string; full_answers: string; short_answers: string }[]
   )
     .filter((p) => !scope || scope.promptIds.has(p.id))
     .map(({ id: _id, ...p }) => p)
-    .map((p) => ({ ...p, full_answers: JSON.parse(p.full_answers) as string[] }));
+    .map((p) => ({ ...p, full_answers: JSON.parse(p.full_answers) as string[], short_answers: JSON.parse(p.short_answers) as string[] }));
 
   const depLabel = new Map<string, string>();
   const dependencies = (
@@ -258,6 +260,7 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
   };
 
   return {
+    splitPromptAnswers: splitPromptAnswers(db, projectId),
     project,
     intents,
     entities,

@@ -1,3 +1,4 @@
+import { PromptSettings } from './PromptSettings';
 import { SettingsLayout } from './SettingsLayout';
 import { useProjectId } from '@/hooks/project';
 import { useTheme } from '@/lib/theme';
@@ -76,6 +77,7 @@ export function SettingsPage() {
               </div>
             </div>
           </section>
+          <PromptSettings projectId={projectId} />
           <section>
             <div className="min-w-0 space-y-4">
               <div className="rounded-xl border bg-card p-4 text-card-foreground">

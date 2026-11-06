@@ -1,3 +1,4 @@
+import { normalizePromptAnswers } from '../prompt-settings';
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { notFound } from '../errors';
@@ -24,8 +25,9 @@ export function responseTemplatesRouter(db: Db): RouterT {
     if (!db.prepare('SELECT 1 FROM projects WHERE id = ?').get(pid)) throw notFound('Проект');
     const name = requireString(req.body?.name, 'Название');
     assertUniqueName(db, 'response_templates', pid, name, 'Шаблон ответа');
+    const answers = normalizePromptAnswers(db, pid, cleanStrings(req.body?.full_answers), cleanStrings(req.body?.short_answers));
     const id = Number(db.prepare('INSERT INTO response_templates(project_id, name, full_answers, short_answers) VALUES (?, ?, ?, ?)')
-      .run(pid, name, JSON.stringify(cleanStrings(req.body?.full_answers)), JSON.stringify(cleanStrings(req.body?.short_answers))).lastInsertRowid);
+      .run(pid, name, JSON.stringify(answers.full_answers), JSON.stringify(answers.short_answers)).lastInsertRowid);
     res.status(201).json(load(id));
   });
   r.get('/response-templates/:id', (req, res) => { res.json(load(parseId(req.params.id))); });
@@ -34,8 +36,9 @@ export function responseTemplatesRouter(db: Db): RouterT {
     const cur = load(id);
     const name = requireString(req.body?.name, 'Название');
     assertUniqueName(db, 'response_templates', cur.project_id, name, 'Шаблон ответа', id);
+    const answers = normalizePromptAnswers(db, cur.project_id, cleanStrings(req.body?.full_answers), cleanStrings(req.body?.short_answers));
     db.prepare('UPDATE response_templates SET name = ?, full_answers = ?, short_answers = ? WHERE id = ?')
-      .run(name, JSON.stringify(cleanStrings(req.body?.full_answers)), JSON.stringify(cleanStrings(req.body?.short_answers)), id);
+      .run(name, JSON.stringify(answers.full_answers), JSON.stringify(answers.short_answers), id);
     res.json(load(id));
   });
   r.delete('/response-templates/:id', (req, res) => {

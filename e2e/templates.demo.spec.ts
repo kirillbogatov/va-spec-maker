@@ -13,6 +13,12 @@ async function gotoSection(page: Page, projectId: number, section: string) {
 
 test('response templates prefill editable answers with the configured prompt prefix', async ({ page }) => {
   const pid = await openDemoProject(page);
+  await gotoSection(page, pid, 'settings');
+  await page.getByRole('tab', { name: 'Промпты', exact: true }).click();
+  const splitAnswers = page.getByRole('switch', { name: 'Разделять краткие и полные ответы', exact: true });
+  await expect(splitAnswers).toBeEnabled();
+  await splitAnswers.click();
+  await expect(splitAnswers).toBeChecked();
   await page.locator('aside').first().getByRole('button', { name: 'Шаблоны', exact: true }).click();
   await page.getByRole('link', { name: 'Шаблоны ответов', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Скрыть список', exact: true })).toBeVisible();

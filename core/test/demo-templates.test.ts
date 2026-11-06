@@ -13,7 +13,7 @@ it('demo templates include reusable answers and all toggle outcomes, and can be 
   };
   const answers = await call('GET', `/api/projects/${pid}/response-templates`);
   expect(answers.map((p: any) => p.name)).toEqual(['TEMP_FEATURE_UNAVAILABLE', 'TEMP_ALREADY_IN_STATE']);
-  expect(answers.every((p: any) => p.full_answers.length && p.short_answers.length)).toBe(true);
+  expect(answers.every((p: any) => p.full_answers.length && !p.short_answers.length)).toBe(true);
   const templates = await call('GET', `/api/projects/${pid}/scenario-templates`);
   const template = templates.find((s: any) => s.name === 'TEMP_FEATURE_ON_OFF');
   expect(template).toBeDefined();

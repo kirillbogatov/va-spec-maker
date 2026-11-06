@@ -1,5 +1,5 @@
 import { renderTableDocx, type Cell, type TableDef } from '@va/core';
-import { api } from './api';
+import { api, req } from './api';
 import type { DictKind } from './dictionaryTransfer';
 import { downloadBlob } from './download';
 import { entityTypeLabel, rangeSummary } from './entityTypes';
@@ -28,7 +28,8 @@ export async function dictionaryTable(kind: DocKind, pid: number): Promise<Table
   }
   if (kind === 'prompts') {
     const items = await Promise.all((await api.prompts.list(pid)).map((p) => api.prompts.get(p.id)));
-    return { head: ['Промпт', 'Ответы'], widths: [30, 70], rows: items.map((p) => ({ cells: [text(p.name), list(p.full_answers)] })) };
+    const { splitAnswers } = await req<{ splitAnswers: boolean }>('GET', `/api/projects/${pid}/prompt-settings`);
+    return { head: splitAnswers ? ['Промпт', 'Полный ответ', 'Короткий ответ'] : ['Промпт', 'Ответ ассистента'], widths: splitAnswers ? [26, 40, 34] : [30, 70], rows: items.map((p) => ({ cells: splitAnswers ? [text(p.name), list(p.full_answers), list(p.short_answers)] : [text(p.name), list([...p.full_answers, ...p.short_answers])] })) };
   }
   if (kind === 'entities') {
     const items = await api.entities.list(pid);

@@ -20,6 +20,10 @@ describe('csv', () => {
 });
 
 describe('dictionary csv', () => {
+  it('preserves separate full and short variants through CSV', () => {
+    const prompts = [{ name: 'P', answers: ['Full 1', 'Full 2'], short_answers: ['Short 1', 'Short 2'] }];
+    expect(parsePromptsCsv(promptsToCsv(prompts, true))).toEqual(prompts);
+  });
   it('зависимости и промпты', () => {
     const deps = [{ name: 'Двигатель', description: 'Состояние двигателя', values: ['запущен', 'заглушен'] }];
     expect(parseDependenciesCsv(dependenciesToCsv(deps))).toEqual(deps);

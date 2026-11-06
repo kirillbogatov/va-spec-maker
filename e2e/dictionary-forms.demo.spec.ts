@@ -72,9 +72,9 @@ for (const width of [1440, 390]) {
     await expect(synonyms.locator('li').first()).toContainText('изменённый синоним QA');
     await page.goto('/#/p/1/lists/prompts');
     await page.getByRole('link', { name: /^PRM_ASK_ROOM/ }).first().click();
-    const answers = page.getByRole('heading', { name: 'Полный ответ', exact: true }).locator('../..');
+    const answers = page.getByRole('heading', { name: 'Ответ ассистента', exact: true }).locator('../..');
     await answers.getByRole('button', { name: 'Добавить вариант', exact: true }).click();
-    const draft = answers.getByRole('textbox', { name: 'Полный ответ: добавить вариант', exact: true });
+    const draft = answers.getByRole('textbox', { name: 'Ответ ассистента: добавить вариант', exact: true });
     await expect(draft).toBeFocused();
     await draft.fill('Новый первый ответ QA'); await draft.press('Enter');
     await expect(answers.getByRole('textbox').first()).toHaveValue('Новый первый ответ QA');

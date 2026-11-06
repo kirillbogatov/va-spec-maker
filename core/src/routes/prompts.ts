@@ -1,3 +1,4 @@
+import { normalizePromptAnswers } from '../prompt-settings';
 import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { notFound } from '../errors';
@@ -48,6 +49,7 @@ export function promptsRouter(db: Db): RouterT {
       full = body.full_answers === undefined ? JSON.parse(template.full_answers) : full;
       short = body.short_answers === undefined ? JSON.parse(template.short_answers) : short;
     }
+    ({ full_answers: full, short_answers: short } = normalizePromptAnswers(db, pid, full, short));
     const info = db.prepare('INSERT INTO prompts(project_id, name, full_answers, short_answers, is_template) VALUES (?, ?, ?, ?, ?)').run(pid, name, JSON.stringify(full), JSON.stringify(short), Number(isTemplate));
     return { id: Number(info.lastInsertRowid), name };
   };
@@ -117,8 +119,9 @@ export function promptsRouter(db: Db): RouterT {
     const b = (req.body ?? {}) as Record<string, unknown>;
     assertUniqueName(db, 'prompts', cur.project_id, requireString(b.name, 'Название'), 'Промпт', id);
     const name = requireString(b.name, 'Название');
-    const full = cleanStrings(b.full_answers);
-    const short = b.short_answers === undefined ? cur.short_answers : cleanStrings(b.short_answers);
+    let full = cleanStrings(b.full_answers);
+    let short = b.short_answers === undefined ? cur.short_answers : cleanStrings(b.short_answers);
+    ({ full_answers: full, short_answers: short } = normalizePromptAnswers(db, cur.project_id, full, short));
     db.prepare('UPDATE prompts SET name = ?, full_answers = ?, short_answers = ? WHERE id = ?').run(name, JSON.stringify(full), JSON.stringify(short), id);
     res.json(load(id));
   });

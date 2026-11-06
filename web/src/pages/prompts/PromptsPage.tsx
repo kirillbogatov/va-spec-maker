@@ -1,3 +1,4 @@
+import { useSplitPromptAnswers } from '@/lib/promptSettings';
 import { useRef, useState } from 'react';
 import { DictionaryTransfer } from '@/components/DictionaryTransfer';
 import { Plus, X } from 'lucide-react';
@@ -106,6 +107,7 @@ export function PromptsPage({ templates = false }: { templates?: boolean }) {
   const listKey = templates ? "response-templates" : "prompts";
   const detailKey = templates ? "response-template" : "prompt";
   const projectId = useProjectId();
+  const splitAnswers = useSplitPromptAnswers(projectId);
   const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();
   const { data: list = [] } = useQuery({ queryKey: [listKey, projectId], queryFn: () => resource.list(projectId) });
@@ -140,20 +142,20 @@ export function PromptsPage({ templates = false }: { templates?: boolean }) {
       body={(d, patch) => (
         <div className="space-y-6">
           <AnswersCard
-            title="Полный ответ"
+            title={splitAnswers ? "Полный ответ" : "Ответ ассистента"}
             field="full_answers"
             d={d}
             patch={patch}
             empty="Ответа пока нет. Добавьте текст, который произнесёт ассистент."
           />
-          <AnswersCard
+          {splitAnswers && <AnswersCard
             title="Короткий ответ"
             field="short_answers"
             d={d}
             patch={patch}
             empty="Если короткий ответ не задан, используется полный ответ."
             note="Если короткий ответ не задан, используется полный ответ."
-          />
+          />}
         </div>
       )}
       emptyText={templates ? "Шаблонов ответов пока нет" : "Промптов пока нет"}

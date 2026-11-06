@@ -1,3 +1,4 @@
+import { promptSettingsRouter } from './prompt-settings';
 import { dictionaryHistoryRouter, withDictionaryHistory } from './dictionary-history';
 import type { Db } from './sqlite';
 import { errorResponse, notFound } from './errors';
@@ -18,7 +19,7 @@ export interface App { handle(r: AppRequest): Promise<AppResponse> }
 
 export function createApp(db: Db): App {
   const routers: RouterT[] = [
-    dictionaryHistoryRouter(db), projectsRouter(db), entitiesRouter(db), intentsRouter(db), dependencyDictionaryRouter(db), keywordsRouter(db),
+    promptSettingsRouter(db), dictionaryHistoryRouter(db), projectsRouter(db), entitiesRouter(db), intentsRouter(db), dependencyDictionaryRouter(db), keywordsRouter(db),
     promptsRouter(db), responseTemplatesRouter(db), scenariosRouter(db), exportRouter(db),
   ];
   return {

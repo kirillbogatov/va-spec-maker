@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, req } from './api';
 import {
   dependenciesToCsv, entitiesToCsv, intentsToCsv, parseDependenciesCsv, parseEntitiesCsv, parseIntentsCsv, parsePromptsCsv, promptsToCsv,
 } from './dictionaryCsv';
@@ -19,7 +19,8 @@ export async function exportDictionary(kind: DictKind, pid: number): Promise<str
   if (kind === 'prompts') {
     const list = await api.prompts.list(pid);
     const items = await Promise.all(list.map((p) => api.prompts.get(p.id)));
-    return promptsToCsv(items.map((p) => ({ name: p.name, answers: p.full_answers })));
+    const { splitAnswers } = await req<{ splitAnswers: boolean }>('GET', `/api/projects/${pid}/prompt-settings`);
+    return promptsToCsv(items.map((p) => ({ name: p.name, answers: p.full_answers, short_answers: p.short_answers })), splitAnswers);
   }
   if (kind === 'entities') return entitiesToCsv(await api.entities.list(pid));
   const [list, entities] = await Promise.all([api.intents.list(pid), api.entities.list(pid)]);
@@ -60,7 +61,7 @@ export async function importDictionary(kind: DictKind, pid: number, text: string
     await run(parseDependenciesCsv(text), existing, async (name) => (await api.dependencyDictionary.create(pid, name)).id, (id, r) => api.dependencyDictionary.save(id, { name: r.name, description: r.description, values: r.values }));
   } else if (kind === 'prompts') {
     const existing = new Map((await api.prompts.list(pid)).map((p) => [key(p.name), p.id]));
-    await run(parsePromptsCsv(text), existing, async (name) => (await api.prompts.createInProject(pid, name)).id, (id, r) => api.prompts.save(id, { name: r.name, full_answers: r.answers }));
+    await run(parsePromptsCsv(text), existing, async (name) => (await api.prompts.createInProject(pid, name)).id, (id, r) => api.prompts.save(id, { name: r.name, full_answers: r.answers, short_answers: r.short_answers }));
   } else if (kind === 'entities') {
     const existing = new Map((await api.entities.list(pid)).map((e) => [key(e.name), e.id]));
     await run(

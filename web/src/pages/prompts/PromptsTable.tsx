@@ -1,3 +1,4 @@
+import { useSplitPromptAnswers } from '@/lib/promptSettings';
 import { usePrefixes } from '@/lib/prefixes';
 import { ResizableColumns } from '@/components/ResizableColumns';
 import { useState } from 'react';
@@ -62,6 +63,7 @@ function AnswerList({ label, items, onChange, note }: { label: string; items: st
 
 /** Промпт: имя жетоном, ответы ассистента — редактируемый текст с авто-высотой. */
 function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { prompt: Prompt; link: PromptListItem; startRenaming: boolean; onDisconnect: () => void; onRemove: () => void }) {
+  const splitAnswers = useSplitPromptAnswers(useProjectId());
   const qc = useQueryClient();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [draft, setDraft] = useState<Draft>({
@@ -96,7 +98,7 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
           </>
         )}
       </span>
-      <span className="col-span-1 row-start-3 flex min-w-0 overflow-hidden text-sm text-muted-foreground md:col-start-3 md:row-start-1">
+      {splitAnswers && <span className="col-span-1 row-start-3 flex min-w-0 overflow-hidden text-sm text-muted-foreground md:col-start-3 md:row-start-1">
         {shortFilled.length === 0 ? (
           <span className="truncate text-faint">как полный</span>
         ) : (
@@ -105,7 +107,7 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
             {shortFilled.length > 1 && <span className="shrink-0 whitespace-pre text-faint"> · ещё {shortFilled.length - 1}</span>}
           </>
         )}
-      </span>
+      </span>}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90dvh] flex flex-col gap-0 overflow-hidden p-5 sm:max-w-xl"
         onKeyDown={(e) => {
@@ -131,13 +133,13 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
                 onChange={(e) => patch({ name: e.target.value })}
               />
             </label>
-            <AnswerList label="Полный ответ" items={draft.full_answers} onChange={(v) => patch({ full_answers: v })} />
-            <AnswerList
+            <AnswerList label={splitAnswers ? "Полный ответ" : "Ответ ассистента"} items={draft.full_answers} onChange={(v) => patch({ full_answers: v })} />
+            {splitAnswers && <AnswerList
               label="Короткий ответ"
               items={draft.short_answers}
               onChange={(v) => patch({ short_answers: v })}
               note="Если короткий ответ не задан, используется полный ответ."
-            />
+            />}
           </div>
           <DialogFooter className="shrink-0 -mx-5 -mb-5 mt-4 px-5 sm:items-center sm:justify-between">
             <SaveNote state={status} />
@@ -188,6 +190,7 @@ function PromptFromTemplate({ templateId, scenarioId, existingNames, onClose, on
 function PromptTemplateDraft({ template, scenarioId, existingNames, onCreated }: {
   template: Prompt; scenarioId: number; existingNames: string[]; onCreated: () => void;
 }) {
+  const splitAnswers = useSplitPromptAnswers(useProjectId());
   const prefix = usePrefixes(useProjectId()).prompt;
   const [name, setName] = useState(prefix);
   const [full, setFull] = useState([...template.full_answers]);
@@ -203,8 +206,8 @@ function PromptTemplateDraft({ template, scenarioId, existingNames, onCreated }:
         <Input autoFocus aria-label="Промпт" value={name} onChange={e => setName(e.target.value)} aria-invalid={duplicate} />
       </label>
       {duplicate && <p role="alert" className="text-sm text-destructive">Промпт с таким названием уже существует</p>}
-      <AnswerList label="Полный ответ" items={full} onChange={setFull} />
-      <AnswerList label="Короткий ответ" items={short} onChange={setShort} note="Если короткий ответ не задан, используется полный ответ." />
+      <AnswerList label={splitAnswers ? "Полный ответ" : "Ответ ассистента"} items={full} onChange={setFull} />
+      {splitAnswers && <AnswerList label="Короткий ответ" items={short} onChange={setShort} note="Если короткий ответ не задан, используется полный ответ." />}
       {create.error && <p role="alert" className="text-sm text-destructive">{create.error.message}</p>}
     </div>
     <DialogFooter><Button type="submit" disabled={!name.trim() || name.trim() === prefix.trim() || duplicate || create.isPending}>{create.isPending ? 'Создание…' : 'Создать'}</Button></DialogFooter>
@@ -215,6 +218,7 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
   const sort = useColumnSort();
   const projectId = useProjectId();
   const prefixes = usePrefixes(projectId);
+  const splitAnswers = useSplitPromptAnswers(useProjectId());
   const qc = useQueryClient();
   // Только что созданный промпт: его название редактируется сразу
   const [fresh, setFresh] = useState<number | null>(null);
@@ -258,11 +262,11 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
       </div>
       {templateId != null && <PromptFromTemplate key={templateId} templateId={templateId} scenarioId={scenarioId} existingNames={all.map(p => p.name)}
         onClose={() => setTemplateId(null)} onCreated={() => { setTemplateId(null); refresh(); }} />}
-      <ResizableColumns storageKey="scenario-prompts" columns={['name', 'full', 'short']} initial="230px minmax(0,1fr) minmax(0,1fr)" className="overflow-hidden rounded-xl border bg-card" aria-label="Промпты сценария">
+      <ResizableColumns key={String(splitAnswers)} storageKey={`scenario-prompts-${splitAnswers ? "split" : "unified"}`} columns={splitAnswers ? ['name', 'full', 'short'] : ['name', 'full']} initial={splitAnswers ? "230px minmax(0,1fr) minmax(0,1fr)" : "230px minmax(0,1fr)"} className="overflow-hidden rounded-xl border bg-card" aria-label="Промпты сценария">
         <div className="flex flex-wrap items-center gap-x-3 border-b px-4 py-1 text-xs font-medium text-muted-foreground md:grid md:[grid-template-columns:var(--resizable-columns)]">
           <SortHeader column="name" sort={sort}>Промпт</SortHeader>
-          <SortHeader column="full" sort={sort}>Полный ответ</SortHeader>
-          <SortHeader column="short" sort={sort}>Короткий ответ</SortHeader>
+          <SortHeader column="full" sort={sort}>{splitAnswers ? "Полный ответ" : "Ответ ассистента"}</SortHeader>
+          {splitAnswers && <SortHeader column="short" sort={sort}>Короткий ответ</SortHeader>}
         </div>
         {sorted.map((p) => (
           <PromptRowLoader key={p.id} link={p} startRenaming={p.id === fresh} onDisconnect={() => disconnect.mutate(p.id)} onRemove={() => remove.mutate(p.id)} />
