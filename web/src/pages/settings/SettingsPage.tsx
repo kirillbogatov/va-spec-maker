@@ -22,7 +22,6 @@ export function SettingsPage() {
         <h1 className="text-xl font-semibold tracking-tight mb-6">Настройки</h1>
         <SettingsLayout>
           <section>
-            <h2 className="mb-6 text-base font-semibold">Внешний вид</h2>
             <div className="min-w-0 space-y-4">
               <div className="rounded-xl border bg-card p-4 text-card-foreground">
                 <h3 id="interface-theme-label" className="text-sm font-semibold">Тема интерфейса</h3>
@@ -42,7 +41,6 @@ export function SettingsPage() {
             </div>
           </section>
           <section>
-            <h2 className="mb-6 text-base font-semibold">Интенты и NLU</h2>
             <div className="min-w-0 space-y-4">
               <div className="rounded-xl border bg-card p-4 text-card-foreground">
                 <h3 className="text-sm font-semibold">Как описывать интенты</h3>
@@ -79,7 +77,6 @@ export function SettingsPage() {
             </div>
           </section>
           <section>
-            <h2 className="mb-6 text-base font-semibold">Спецификации</h2>
             <div className="min-w-0 space-y-4">
               <div className="rounded-xl border bg-card p-4 text-card-foreground">
                 <h3 className="text-sm font-semibold">Префиксы элементов</h3>
