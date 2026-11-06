@@ -1,6 +1,6 @@
 import { Textarea } from '@/components/ui/textarea';
 import { useRef, useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { DictionaryValues } from '@/components/DictionaryValues';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DictionaryTransfer } from '@/components/DictionaryTransfer';
 import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
@@ -53,57 +53,10 @@ function EditableValue({ value, values, onRename }: { value: string; values: str
 
 /** Возможные значения зависимости: список с полем добавления. */
 function ValuesList({ value, onChange, onRename }: { value: string[]; onChange: (v: string[]) => void; onRename: (from: string, to: string) => void }) {
-  const [text, setText] = useState('');
-  const add = () => {
-    const items = splitTags(text);
-    if (items.length) onChange([...value, ...items]);
-    setText('');
-  };
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <Input
-          className="h-10 md:h-9"
-          aria-label="Новое значение"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              add();
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={add}
-          disabled={!text.trim()}
-          className="inline-flex h-10 shrink-0 items-center gap-1 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50 md:h-9"
-        >
-          <Plus className="size-3.5" /> Добавить
-        </button>
-      </div>
-      {value.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Значений пока нет.</p>
-      ) : (
-        <ul className="divide-y divide-border rounded-md border">
-          {value.map((v, i) => (
-            <li key={`${v}-${i}`} className="group flex min-h-10 items-center gap-2 px-3 py-1 hover:bg-muted md:min-h-9">
-              <EditableValue value={v} values={value} onRename={(next) => onRename(v, next)} />
-              <button
-                type="button"
-                aria-label={`Удалить значение ${v}`}
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
-                onClick={() => onChange(value.filter((_, j) => j !== i))}
-              >
-                <X className="size-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+  return <DictionaryValues title="Возможные значения" label="Новое значение" empty="Значений пока нет."
+    value={value} onChange={onChange} parse={splitTags}
+    renderValue={(item) => <EditableValue value={item} values={value} onRename={(next) => onRename(item, next)} />}
+    removeLabel={(item) => `Удалить значение ${item}`} />;
 }
 
 export function DependenciesPage() {
@@ -131,7 +84,6 @@ export function DependenciesPage() {
       body={(d, patch) => (
         <>
         <DictCard title="Описание"><Textarea rows={1} className="resize-y rounded-md bg-background" aria-label="Описание зависимости" value={d.description} onChange={(event) => patch({ description: event.target.value })} /></DictCard>
-        <DictCard title="Возможные значения">
           <ValuesList
             value={d.values}
             onChange={(values) => patch({ values })}
@@ -140,7 +92,6 @@ export function DependenciesPage() {
               valueRenames: [...(d.valueRenames ?? []), { id: crypto.randomUUID(), from, to }],
             })}
           />
-        </DictCard>
         </>
       )}
       emptyText="Зависимостей пока нет"

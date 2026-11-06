@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { DictionaryTransfer } from '@/components/DictionaryTransfer';
 import { Plus, X } from 'lucide-react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
-import { ADD_ROW, REMOVE_BTN } from '@/components/DeleteChoiceDialog';
-import { Input } from '@/components/ui/input';
+import { REMOVE_BTN } from '@/components/DeleteChoiceDialog';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useProjectId } from '@/hooks/project';
 import { usePrefixes } from '@/lib/prefixes';
@@ -23,17 +23,54 @@ function AnswersCard({ title, field, d, patch, empty, note }: {
   note?: string;
 }) {
   const items = d[field];
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState<string | null>(null);
+  const draftRef = useRef<HTMLTextAreaElement>(null);
+  const commit = () => {
+    if (draft?.trim()) patch({ [field]: [draft.trim(), ...items] });
+    setDraft(null);
+  };
   const add = () => {
-    if (draft.trim()) patch({ [field]: [...items, draft.trim()] });
+    if (draft?.trim()) patch({ [field]: [draft.trim(), ...items] });
     setDraft('');
+    draftRef.current?.focus();
   };
   return (
-    <DictCard title={title}>
+    <DictCard title={title} action={
+      <Button size="action" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={add}>
+        <Plus className="size-3.5" /> Добавить вариант
+      </Button>
+    }>
       <div className="flex flex-col gap-1.5">
-        {items.length === 0 && <p className="text-sm text-muted-foreground">{empty}</p>}
-        {items.length > 0 && (
-          <div className="divide-y divide-input rounded-md border border-input bg-background">
+        {items.length === 0 && draft === null && <p className="text-sm text-muted-foreground">{empty}</p>}
+        {(items.length > 0 || draft !== null) && (
+          <div className="divide-y divide-input overflow-hidden rounded-md border border-input bg-background">
+            {draft !== null && (
+              <div className="group flex items-stretch">
+                <Textarea
+                  ref={draftRef}
+                  autoFocus
+                  rows={1}
+                  className="min-h-9 min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent px-2.5 py-2 font-mono text-[12.5px] leading-5 shadow-none focus-visible:ring-0 max-md:min-h-11 md:text-[12.5px] dark:bg-transparent"
+                  aria-label={`${title}: добавить вариант`}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onBlur={commit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+                    if (e.key === 'Escape') { e.preventDefault(); setDraft(null); }
+                  }}
+                />
+                <button
+                  type="button"
+                  aria-label="Отменить добавление варианта"
+                  className={`${REMOVE_BTN} my-auto mr-1 size-7 max-md:size-9`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setDraft(null)}
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            )}
             {items.map((a, i) => (
               <div key={i} className="group flex items-stretch focus-within:bg-muted/50">
                 <Textarea
@@ -56,22 +93,6 @@ function AnswersCard({ title, field, d, patch, empty, note }: {
             ))}
           </div>
         )}
-        <div className="relative">
-          <Plus className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className={`${ADD_ROW} pl-8 font-mono text-[12.5px] placeholder:font-sans placeholder:text-sm md:text-[12.5px]`}
-            aria-label={`${title}: добавить вариант`}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={add}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                add();
-              }
-            }}
-          />
-        </div>
         {items.length > 1 && <p className="text-[13px] text-muted-foreground">Ассистент выберет один из вариантов.</p>}
         {note && items.length > 0 && <p className="text-[13px] text-muted-foreground">{note}</p>}
       </div>
@@ -117,7 +138,7 @@ export function PromptsPage({ templates = false }: { templates?: boolean }) {
       usedIn={(i) => i.scenarios}
       subtitle={(i) => i.full_answers.find((a) => a.trim()) ?? ''}
       body={(d, patch) => (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <AnswersCard
             title="Полный ответ"
             field="full_answers"

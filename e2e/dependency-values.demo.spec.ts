@@ -25,6 +25,7 @@ test('редактирование значений зависимости по 
   await editing.press('Enter');
   await expect(page.getByRole('alert')).toHaveText('Введите значение');
   await editing.press('Escape');
+  await page.getByRole('heading', { name: 'Возможные значения', exact: true }).locator('..').getByRole('button', { name: 'Добавить', exact: true }).click();
   await page.getByLabel('Новое значение', { exact: true }).fill('Existing value');
   await page.getByLabel('Новое значение', { exact: true }).press('Enter');
   await expect(saving).toHaveCount(0);

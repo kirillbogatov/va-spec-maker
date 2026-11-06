@@ -1,5 +1,5 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
+import { DictionaryMaster } from '@/components/DictionaryMaster';
 import { KeywordsHint } from '@/components/KeywordChips';
 import { Switch } from '@/components/ui/switch';
 import { useProjectId } from '@/hooks/project';
@@ -29,6 +29,7 @@ export function IntentsPage() {
   const loading = loaded.some((q) => q.isPending);
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['intents'] });
+    qc.invalidateQueries({ queryKey: ['intent'] });
     qc.invalidateQueries({ queryKey: ['entities'] });
   };
   const create = useMutation({ mutationFn: (name: string) => api.intents.createInProject(projectId, name), onSuccess: refresh });
@@ -69,8 +70,10 @@ export function IntentsPage() {
         const numbers = numberSlots(d.entities.flatMap((e) => entities.find((x) => x.id === e.entity_id) ?? []));
         return (
           <>
-            <DictCard title={MODE_TITLE[mode]} hint={mode === 'keywords' ? <KeywordsHint /> : undefined}>
+            <EntitiesCell title="Сущности в интенте" value={d.entities} entities={entities} onChange={(e) => patch({ entities: e })} />
               <PhrasesCell
+                title={MODE_TITLE[mode]}
+                titleHint={mode === 'keywords' ? <KeywordsHint /> : undefined}
                 mode={mode}
                 value={d.values}
                 highlight={words}
@@ -78,10 +81,7 @@ export function IntentsPage() {
                 owners={owners}
                 onChange={(items) => patch(valuesPatch(items))}
               />
-            </DictCard>
-            <DictCard title="Сущности в интенте">
-              <EntitiesCell value={d.entities} entities={entities} onChange={(e) => patch({ entities: e })} />
-            </DictCard>
+
           </>
         );
       }}

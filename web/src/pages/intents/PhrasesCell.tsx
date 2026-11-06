@@ -1,5 +1,9 @@
-import { useState, type ReactNode } from 'react';
-import { ListPlus, X } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
+import { ListPlus, Plus, X } from 'lucide-react';
+import { DictCard } from '@/components/DictionaryMaster';
+import { ResizableColumns } from '@/components/ResizableColumns';
+import { SortHeader, useColumnSort } from '@/components/ColumnSort';
+import { cn } from '@/lib/utils';
 import { KindToggle } from '@/components/KindToggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +21,8 @@ import { type ValueItem, type ValueKind } from '@/lib/values';
 const COLLAPSED = 7;
 
 interface Props {
+  title?: string;
+  titleHint?: ReactNode;
   mode: IntentMode;
   value: ValueItem[];
   onChange: (value: ValueItem[]) => void;
@@ -51,131 +57,87 @@ export function Slotted({ text, words, numbers = [], owners }: { text: string; w
   return <>{parts}</>;
 }
 
-/** Значения интента (тренировочные фразы и паттерны): поле добавления (Enter / вставка нескольких строк) со значком типа и список, свёрнутый после 7 строк. */
-export function PhrasesCell({ value, onChange, mode, highlight = [], numbers = [], owners }: Props) {
+/** Ввод новой строки сверху, ключевые слова остаются вычисляемыми из фразы. */
+export function PhrasesCell({ title, titleHint, value, onChange, mode, highlight = [], numbers = [], owners }: Props) {
   const [text, setText] = useState('');
-  const matchKw = useKeywordMatcher(useProjectId());
-  const kw = mode === 'keywords';
-  // Тип новых значений, добавляемых полем или списком; в режиме «оба» выбирается значком
+  const [adding, setAdding] = useState(!title);
+  const input = useRef<HTMLInputElement>(null);
   const [pickedKind, setAddKind] = useState<ValueKind>('phrase');
   const both = mode === 'both';
   const addKind = both ? pickedKind : modeKind(mode);
+  const matchKw = useKeywordMatcher(useProjectId());
+  const kw = mode === 'keywords';
+  const sort = useColumnSort();
+  const words = [...new Set(highlight.map((w) => w.trim()).filter((w) => w.length > 1))].sort((a, b) => b.length - a.length);
   const add = (raw: string) => {
     const items = parsePhrases(raw).map((t): ValueItem => ({ text: t, kind: addKind }));
-    if (items.length) onChange([...value, ...items]);
+    if (items.length) onChange(title ? [...items, ...value] : [...value, ...items]);
     setText('');
+    if (title) setAdding(false);
   };
-  const words = [...new Set(highlight.map((w) => w.trim()).filter((w) => w.length > 1))].sort((a, b) => b.length - a.length);
   const [all, setAll] = useState(false);
-  // Скрытые режимом значения остаются в данных, но не показываются; индексы — по полному списку
-  const visible = value.flatMap((v, index) => (modeShows(mode, v.kind) ? [{ v, index }] : []));
-  const shown = all ? visible : visible.slice(0, COLLAPSED);
+  const visible = value.flatMap((v, index) => modeShows(mode, v.kind) ? [{ v, index }] : []);
+  const sorted = title ? sort.rows(visible, ({ v }, column) => column === 'keywords' ? matchKw(v.text).join(', ') : v.text) : visible;
+  const shown = all ? sorted : sorted.slice(0, COLLAPSED);
   const [bulk, setBulk] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const bulkCount = parsePhrases(bulkText).length;
-  const closeBulk = () => {
-    setBulk(false);
-    setBulkText('');
-  };
-
-  return (
-    <div className="space-y-2">
+  const closeBulk = () => { setBulk(false); setBulkText(''); };
+  const cols = cn('grid grid-cols-[minmax(0,1fr)_32px] items-center gap-x-3 px-4', kw && 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)_32px] md:[grid-template-columns:var(--resizable-columns)]');
+  const content = (
+    <div className={cn(title ? 'overflow-hidden rounded-xl border bg-card' : 'space-y-2', title && !adding && !bulk && !shown.length && 'border-0 bg-transparent')}>
+      {title && (shown.length > 0 || adding || bulk) && <div className={cn(cols, 'border-b py-1 text-xs font-medium text-muted-foreground')}>
+        <SortHeader column="text" sort={sort}>{kw ? 'Фраза' : title}</SortHeader>
+        {kw && <SortHeader column="keywords" sort={sort}>Ключевые слова</SortHeader>}<span />
+      </div>}
       {bulk ? (
-        <div className="grid gap-2 rounded-md border p-2">
-          <Textarea
-            autoFocus
-            rows={6}
-            className="font-mono text-[13px]"
-            aria-label="Значения списком"
-            value={bulkText}
-            onChange={(e) => setBulkText(e.target.value)}
-          />
-          <div className="flex items-center justify-between gap-2">
+        <div className="grid gap-2 p-2">
+          <Textarea autoFocus rows={6} aria-label="Значения списком" className="font-mono text-[13px]" value={bulkText} onChange={(e) => setBulkText(e.target.value)} />
+          <div className="flex flex-wrap items-center justify-between gap-2">
             {both ? <KindToggle kind={addKind} onChange={setAddKind} /> : <span />}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={closeBulk}>Отмена</Button>
-              <Button disabled={!bulkCount} onClick={() => { add(bulkText); closeBulk(); }}>Добавить{bulkCount ? ` · ${bulkCount}` : ''}</Button>
-            </div>
+            <div className="flex gap-2"><Button variant="outline" onClick={closeBulk}>Отмена</Button>
+              <Button disabled={!bulkCount} onClick={() => { add(bulkText); closeBulk(); }}>Добавить{bulkCount ? ` · ${bulkCount}` : ''}</Button></div>
           </div>
         </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 min-w-0 flex-1 items-stretch overflow-hidden rounded-md border border-input focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 md:h-9">
-            {both && (
-              <span className="flex w-11 shrink-0 items-center justify-center border-r border-input">
-                <KindToggle kind={addKind} bare className="size-6 max-md:size-8" onChange={setAddKind} />
-              </span>
-            )}
-          <Input
-            className="h-full min-w-0 flex-1 rounded-none border-0 bg-background shadow-none focus-visible:ring-0"
-            aria-label={addKind === 'phrase' ? 'Добавить тренировочную фразу' : 'Добавить паттерн'}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                add(text);
-              }
-            }}
-            onPaste={(e) => {
-              const pasted = e.clipboardData.getData('text');
-              if (/\r?\n/.test(pasted)) {
-                e.preventDefault();
-                add(pasted);
-              }
-            }}
-          />
+      ) : adding && (
+        <div className={cn(cols, title && shown.length > 0 && 'border-b')}
+          onBlur={title ? (e) => { if (!e.currentTarget.contains(e.relatedTarget)) add(text); } : undefined}>
+          <div className="flex min-w-0 items-center">
+            {both && <KindToggle kind={addKind} onChange={setAddKind} />}
+            <Input ref={input} autoFocus={!!title} className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 md:h-9 dark:bg-transparent"
+              aria-label={addKind === 'phrase' ? 'Добавить тренировочную фразу' : 'Добавить паттерн'} value={text} onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); add(text); }
+                if (title && e.key === 'Escape') { e.preventDefault(); setText(''); setAdding(false); }
+              }} onPaste={(e) => { const pasted = e.clipboardData.getData('text'); if (/\r?\n/.test(pasted)) { e.preventDefault(); add(pasted); } }} />
           </div>
-          {kw && (
-            <div aria-label="Ключевые слова новой фразы" className="hidden h-10 min-w-0 flex-1 items-center rounded-md border border-dashed bg-muted/40 px-3 md:flex md:h-9">
-              <KeywordChips names={matchKw(text)} text={text} />
-            </div>
-          )}
-          <Button size="action" variant="outline"  onClick={() => setBulk(true)}>
-            <ListPlus className="size-4" /> Добавить несколько
-          </Button>
+          {kw && <div aria-label="Ключевые слова новой фразы" className="min-w-0 py-2"><KeywordChips names={matchKw(text)} text={text} /></div>}
+          {title ? <Button variant="ghost" size="icon" aria-label="Отменить добавление" onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { setText(''); setAdding(false); }}><X className="size-3.5" /></Button>
+            : <Button size="action" variant="outline" onClick={() => setBulk(true)}><ListPlus className="size-4" /> Добавить несколько</Button>}
         </div>
       )}
-      {shown.length > 0 && (
-      <ul className="divide-y divide-border rounded-md border">
-        {shown.map(({ v, index }) => (
-          <li key={index} className="group flex min-h-11 items-stretch hover:bg-muted md:min-h-10">
-            {both && (
-              <span className="flex w-11 shrink-0 items-center justify-center border-r">
-                <KindToggle
-                  kind={v.kind}
-                  bare
-                  className="size-6 max-md:size-8"
-                  onChange={(kind) => onChange(value.map((x, j) => (j === index ? { ...x, kind } : x)))}
-                />
-              </span>
-            )}
-            <span className="min-w-0 flex-1 self-center break-words px-3 py-2 font-mono text-[13px] leading-[18px]">
-              {v.kind === 'phrase' ? <Slotted text={v.text} words={words} numbers={numbers} owners={owners} /> : v.text}
-              {kw && <span className="mt-1 block md:hidden"><KeywordChips names={matchKw(v.text)} text={v.text} /></span>}
-            </span>
-            {kw && (
-              <span className="hidden w-[40%] shrink-0 items-center border-l px-3 py-1 md:flex">
-                <KeywordChips names={matchKw(v.text)} text={v.text} />
-              </span>
-            )}
-            <button
-              type="button"
-              aria-label="Удалить"
-              className="mr-3 inline-flex size-7 shrink-0 items-center justify-center self-center rounded text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
-              onClick={() => onChange(value.filter((_, j) => j !== index))}
-            >
-              <X className="size-3.5" />
-            </button>
-          </li>
-        ))}
-      </ul>
-      )}
-      {visible.length > COLLAPSED && (
-        <button type="button" className="inline-flex min-h-8 items-center px-2 text-[13px] text-brand hover:underline" onClick={() => setAll(!all)}>
-          {all ? 'Свернуть' : `Показать все (${visible.length})`}
-        </button>
-      )}
+      {title && !adding && !bulk && !shown.length && <p className="text-sm text-muted-foreground">Значений пока нет.</p>}
+      {shown.length > 0 && <ul className={cn('divide-y divide-border', !title && 'rounded-md border')}>
+        {shown.map(({ v, index }) => <li key={index} className={cn(cols, 'group min-h-11 py-2 md:min-h-10')}>
+          <span className="flex min-w-0 items-center gap-2 font-mono text-[13px]">
+            {both && <KindToggle kind={v.kind} onChange={(kind) => onChange(value.map((x, j) => j === index ? { ...x, kind } : x))} />}
+            <span className="min-w-0 break-words">{v.kind === 'phrase' ? <Slotted text={v.text} words={words} numbers={numbers} owners={owners} /> : v.text}</span>
+          </span>
+          {kw && <span className="min-w-0"><KeywordChips names={matchKw(v.text)} text={v.text} /></span>}
+          <Button variant="ghost" size="icon" aria-label="Удалить" className="text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
+            onClick={() => onChange(value.filter((_, j) => j !== index))}><X className="size-3.5" /></Button>
+        </li>)}
+      </ul>}
+      {visible.length > COLLAPSED && <button type="button" className="inline-flex min-h-8 items-center px-2 text-[13px] text-brand hover:underline" onClick={() => setAll(!all)}>
+        {all ? 'Свернуть' : `Показать все (${visible.length})`}</button>}
     </div>
   );
+  return title ? <DictCard title={title} hint={titleHint} action={<>
+    <Button size="action" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={() => { if (text.trim()) add(text); setAdding(true); input.current?.focus(); }}><Plus className="size-3.5" /> Добавить</Button>
+    <Button size="action" variant="outline" onClick={() => setBulk(true)}><ListPlus className="size-4" /> Добавить несколько</Button>
+  </>}>
+    <ResizableColumns storageKey="dictionary-intent-values" columns={kw ? ['text', 'keywords'] : ['text']}
+      initial={kw ? 'minmax(0,1fr) minmax(0,1fr) 32px' : 'minmax(0,1fr) 32px'} trailing="32px">{content}</ResizableColumns>
+  </DictCard> : content;
 }

@@ -22,21 +22,26 @@ function EntityBody({ d, patch }: { d: EntityListItem; patch: (p: Partial<Entity
   const change = (next: EntityKind) => (next.type !== d.type && hasData ? setPending(next) : apply(next));
   return (
     <>
-      <DictCard title="Тип">
-        <EntityTypeFields kind={kind} onChange={change} />
+      <DictCard title="Свойства" flush>
+        <div className="space-y-4 p-4">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Тип</p>
+            <EntityTypeFields kind={kind} onChange={change} />
+          </div>
+          <label className="flex cursor-pointer items-start gap-3 border-t pt-4">
+            <Switch className="mt-0.5" checked={d.multiple_values} onCheckedChange={(multiple_values) => patch({ multiple_values })} aria-label="Можно назвать несколько значений сразу" />
+            <span>
+              <span className="block text-sm font-semibold">Можно назвать несколько значений сразу</span>
+              <span className="block text-[13px] text-muted-foreground">
+                {d.multiple_values
+                  ? 'Включено: «включи свет на кухне и в спальне» передаст оба значения.'
+                  : 'Выключено: «включи свет на кухне и в спальне» передаст только одно значение.'}
+              </span>
+            </span>
+          </label>
+        </div>
       </DictCard>
       {d.type === 'string' && <EntityValues values={d.values} onChange={(values) => patch({ values })} />}
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border bg-card p-4">
-        <Switch className="mt-0.5" checked={d.multiple_values} onCheckedChange={(multiple_values) => patch({ multiple_values })} aria-label="Можно назвать несколько значений сразу" />
-        <span>
-          <span className="block text-sm font-semibold">Можно назвать несколько значений сразу</span>
-          <span className="block text-[13px] text-muted-foreground">
-            {d.multiple_values
-              ? 'Включено: «включи свет на кухне и в спальне» передаст оба значения.'
-              : 'Выключено: «включи свет на кухне и в спальне» передаст только одно значение.'}
-          </span>
-        </span>
-      </label>
       <ConfirmDialog
         open={pending !== null}
         onOpenChange={(o) => !o && setPending(null)}

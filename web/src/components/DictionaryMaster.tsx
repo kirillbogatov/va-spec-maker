@@ -14,6 +14,7 @@ import { KIND_LABEL, type ObjectKind } from '@/components/TypeToken';
 import { useAutosave } from '@/hooks/useAutosave';
 import { usePath } from '@/hooks/project';
 import type { EntityKind } from '@/lib/entityTypes';
+import { Card } from '@/pages/scenarios/Card';
 import { cn, GHOST } from '@/lib/utils';
 
 export interface DictItem {
@@ -93,20 +94,9 @@ const SEARCH_WHERE: Record<ObjectKind, string> = {
   keyword: 'ключевых словах',
 };
 
-/** Карточка раздела внутри детали: заголовок, действия справа. */
-export function DictCard({ title, hint, action, children }: { title: string; hint?: ReactNode; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="rounded-xl border bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
-        <h3 className="text-sm font-semibold">
-          {title}
-          {hint && <span className="ml-1.5">{hint}</span>}
-        </h3>
-        {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
-      </div>
-      <div className="p-4">{children}</div>
-    </section>
-  );
+/** Общее оформление секций сценариев с подсказкой ключевых слов. */
+export function DictCard({ title, hint, ...props }: React.ComponentProps<typeof Card> & { hint?: ReactNode }) {
+  return <Card {...props} title={hint ? <>{title}<span className="ml-1.5 inline-flex align-middle">{hint}</span></> : title} />;
 }
 
 /** Склонение: plural(3, 'фраза', 'фразы', 'фраз') — «3 фразы». */
@@ -230,7 +220,7 @@ function DictEditor<T extends DictItem>({ item, p, onRemoved }: { item: T; p: Pr
   const comment = commentKey ? String((draft as Record<string, unknown>)[commentKey] ?? '') : '';
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="space-y-2">
         <div className="flex min-h-10 flex-wrap items-center justify-between gap-2">
           <span className={cn('inline-flex items-center rounded-[5px] px-2 py-0.5 text-xs font-semibold uppercase tracking-wide', CHIP[p.kind])}>
@@ -252,12 +242,12 @@ function DictEditor<T extends DictItem>({ item, p, onRemoved }: { item: T; p: Pr
           </span>
         </div>
         <Input
-          className={cn(GHOST, 'h-11 w-full px-2 text-[22px] font-semibold leading-tight md:text-[22px]', p.mono && 'font-mono')}
+          className={cn(GHOST, 'h-11 w-full border-0 px-0 text-[22px] font-semibold leading-tight md:text-[22px]', p.mono && 'font-mono')}
           value={draft.name}
           onChange={(e) => patch({ name: e.target.value } as Partial<T>)}
           aria-label="Название"
         />
-        {!p.hideUsage && <p className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 text-sm text-muted-foreground">
+        {!p.hideUsage && <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           {usedIn.length > 0 && <span>Используется в</span>}
           {usedIn.length === 0 && <span className="text-faint">Не используется в текущих сценариях</span>}
           {usedIn.map((s) => (

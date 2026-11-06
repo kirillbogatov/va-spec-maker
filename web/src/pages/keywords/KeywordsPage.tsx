@@ -1,9 +1,7 @@
-import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { DictCard, DictionaryMaster } from '@/components/DictionaryMaster';
-import { Input } from '@/components/ui/input';
+import { DictionaryMaster } from '@/components/DictionaryMaster';
+import { DictionaryValues } from '@/components/DictionaryValues';
 import { TransferMenu } from '@/components/TransferMenu';
 import { Navigate } from 'react-router-dom';
 import { usePath, useProjectId } from '@/hooks/project';
@@ -15,57 +13,8 @@ import { splitTags } from '@/lib/parse';
 
 /** Синонимы ключевого слова: список с полем добавления. */
 function SynonymsList({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
-  const [text, setText] = useState('');
-  const add = () => {
-    const items = splitTags(text);
-    if (items.length) onChange([...value, ...items]);
-    setText('');
-  };
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <Input
-          className="h-10 md:h-9"
-          aria-label="Новый синоним"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              add();
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={add}
-          disabled={!text.trim()}
-          className="inline-flex h-10 shrink-0 items-center gap-1 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50 md:h-9"
-        >
-          <Plus className="size-3.5" /> Добавить
-        </button>
-      </div>
-      {value.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Синонимов пока нет.</p>
-      ) : (
-        <ul className="divide-y divide-border rounded-md border">
-          {value.map((v, i) => (
-            <li key={`${v}-${i}`} className="group flex min-h-10 items-center gap-2 px-3 py-1 hover:bg-muted md:min-h-9">
-              <span className="min-w-0 flex-1 break-words text-sm">{v}</span>
-              <button
-                type="button"
-                aria-label={`Удалить синоним ${v}`}
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
-                onClick={() => onChange(value.filter((_, j) => j !== i))}
-              >
-                <X className="size-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+  return <DictionaryValues title="Синонимы" label="Новый синоним" empty="Синонимов пока нет."
+    value={value} onChange={onChange} parse={splitTags} removeLabel={(item) => `Удалить синоним ${item}`} />;
 }
 
 /** Справочник ключевых слов проекта: код и синонимы, импорт из txt, экспорт в txt и docx. */
@@ -115,9 +64,7 @@ export function KeywordsPage() {
         />
       }
       body={(d, patch) => (
-        <DictCard title="Синонимы">
           <SynonymsList value={d.synonyms} onChange={(synonyms) => patch({ synonyms })} />
-        </DictCard>
       )}
       emptyText="Ключевых слов пока нет"
       createTitle="Новое ключевое слово"
