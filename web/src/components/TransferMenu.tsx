@@ -1,3 +1,4 @@
+import { DictionaryHistoryMenuItem } from './DictionaryHistory';
 import { useRef } from 'react';
 import { Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ export function TransferMenu({ accept, format, importLabel = 'справочни
           <MoreHorizontal className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DictionaryHistoryMenuItem />
           <DropdownMenuItem onClick={() => fileRef.current?.click()}>
             <Upload className="size-4" /> Импорт {importLabel}
           </DropdownMenuItem>

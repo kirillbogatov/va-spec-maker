@@ -1,3 +1,4 @@
+import { dictionaryHistoryRouter, withDictionaryHistory } from './dictionary-history';
 import type { Db } from './sqlite';
 import { errorResponse, notFound } from './errors';
 import { Res, type RouterT } from './router';
@@ -17,7 +18,7 @@ export interface App { handle(r: AppRequest): Promise<AppResponse> }
 
 export function createApp(db: Db): App {
   const routers: RouterT[] = [
-    projectsRouter(db), entitiesRouter(db), intentsRouter(db), dependencyDictionaryRouter(db), keywordsRouter(db),
+    dictionaryHistoryRouter(db), projectsRouter(db), entitiesRouter(db), intentsRouter(db), dependencyDictionaryRouter(db), keywordsRouter(db),
     promptsRouter(db), responseTemplatesRouter(db), scenariosRouter(db), exportRouter(db),
   ];
   return {
@@ -34,7 +35,9 @@ export function createApp(db: Db): App {
           const params = Object.fromEntries(route.keys.map((k, i) => [k, decodeURIComponent(m[i + 1])]));
           const res = new Res();
           try {
-            await route.handler({ params, query, body: clone }, res);
+            if (method === 'GET') await route.handler({ params, query, body: clone }, res);
+            else withDictionaryHistory(db, () => route.handler({ params, query, body: clone }, res),
+              path.match(/^\/projects\/\d+\/(concepts|keywords)\/import\/?$/)?.[1]);
           } catch (e) {
             const er = errorResponse(e);
             return { status: er.status, headers: {}, body: er.body };

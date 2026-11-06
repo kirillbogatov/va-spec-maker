@@ -75,7 +75,7 @@ it('copies all scenario data and editable dictionaries through scenario → temp
   expect((await call('GET', '/projects/1/scenarios')).map((s: any) => s.id)).toEqual([1, c.id]);
   expect((await call('GET', '/projects/1/scenario-templates')).map((s: any) => s.id)).toEqual([t.id, t2.id]);
   expect((await call('GET', '/projects'))[0].scenario_count).toBe(0); // Other project first.
-  expect(loadProjectSpec(db, 1).parts.map(p => p.scenario)).toEqual(['Source', 'Copy']);
+  expect(loadProjectSpec(db, 1).parts?.map(p => p.scenario)).toEqual(['Source', 'Copy']);
   const before = db.prepare('SELECT COUNT(*) AS n FROM scenarios').get();
   await call('POST', '/projects/2/scenario-templates', { name: 'Foreign', source_id: 1 }, 404);
   await call('POST', '/projects/1/scenarios', { name: 'Not template', template_id: 1 }, 404);

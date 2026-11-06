@@ -36,7 +36,7 @@ export function promptsRouter(db: Db): RouterT {
       scenarios: scenariosOf(r.id),
     }));
 
-  const create = (pid: number, body: any) => {
+  const create = (pid: number, body: any, isTemplate = false) => {
     const name = requireString(body?.name, 'Название');
     assertUniqueName(db, 'prompts', pid, name, 'Промпт');
     let full = cleanStrings(body?.full_answers);
@@ -48,13 +48,13 @@ export function promptsRouter(db: Db): RouterT {
       full = body.full_answers === undefined ? JSON.parse(template.full_answers) : full;
       short = body.short_answers === undefined ? JSON.parse(template.short_answers) : short;
     }
-    const info = db.prepare('INSERT INTO prompts(project_id, name, full_answers, short_answers) VALUES (?, ?, ?, ?)').run(pid, name, JSON.stringify(full), JSON.stringify(short));
+    const info = db.prepare('INSERT INTO prompts(project_id, name, full_answers, short_answers, is_template) VALUES (?, ?, ?, ?, ?)').run(pid, name, JSON.stringify(full), JSON.stringify(short), Number(isTemplate));
     return { id: Number(info.lastInsertRowid), name };
   };
 
   r.get('/projects/:pid/prompts', (req, res) => {
     const pid = parseId(req.params.pid);
-    res.json(listRows(db.prepare(`SELECT id, name, full_answers, full_answers <> '[]' AS has_answer, ${USES} AS step_count FROM prompts WHERE project_id = ? ORDER BY id`).all(pid)));
+    res.json(listRows(db.prepare(`SELECT id, name, full_answers, full_answers <> '[]' AS has_answer, ${USES} AS step_count FROM prompts WHERE project_id = ? AND is_template = 0 ORDER BY id`).all(pid)));
   });
 
   /** Промпты, подключённые к сценарию, в порядке подключения. */
@@ -82,10 +82,10 @@ export function promptsRouter(db: Db): RouterT {
   /** Создаёт промпт в проекте и сразу подключает его к сценарию. */
   r.post('/scenarios/:sid/prompts', (req, res) => {
     const sid = parseId(req.params.sid);
-    const s = db.prepare('SELECT project_id FROM scenarios WHERE id = ?').get(sid) as { project_id: number } | undefined;
+    const s = db.prepare('SELECT project_id, is_template FROM scenarios WHERE id = ?').get(sid) as { project_id: number; is_template: number } | undefined;
     if (!s) throw notFound('Сценарий');
     const created = db.transaction(() => {
-      const c = create(s.project_id, req.body);
+      const c = create(s.project_id, req.body, !!s.is_template);
       connect(db, 'prompt', sid, c.id);
       return c;
     })();

@@ -1,3 +1,5 @@
+import { initTemplateObjects } from './template-objects';
+import { initDictionaryHistory } from './dictionary-history';
 import { openSqlite, type Db, type OpenOpts } from './sqlite';
 import { backfillDependencyLinks } from './dependency-links';
 
@@ -254,6 +256,8 @@ export function migrate(db: Db): void {
     db.exec('PRAGMA user_version = 5');
   }
   backfillDependencyLinks(db);
+  initTemplateObjects(db);
+  initDictionaryHistory(db);
 }
 
 export async function openDb(opts: OpenOpts = {}): Promise<Db> {

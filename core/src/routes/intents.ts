@@ -62,7 +62,7 @@ export function intentsRouter(db: Db): RouterT {
 
   r.get('/projects/:pid/intents', (req, res) => {
     const rows = db
-      .prepare(`SELECT i.id, i.name, i.enabled, ${PHRASES} AS phrase_count, ${PATTERNS} AS pattern_count, ${HINT} AS hint FROM intents i WHERE i.project_id = ? ORDER BY i.name`)
+      .prepare(`SELECT i.id, i.name, i.enabled, ${PHRASES} AS phrase_count, ${PATTERNS} AS pattern_count, ${HINT} AS hint FROM intents i WHERE i.project_id = ? AND i.is_template = 0 ORDER BY i.name`)
       .all(parseId(req.params.pid)) as ListRow[];
     res.json(decorate(rows));
   });
@@ -79,10 +79,10 @@ export function intentsRouter(db: Db): RouterT {
     res.json(decorate(rows));
   });
 
-  const create = (pid: number, body: any) => {
+  const create = (pid: number, body: any, isTemplate = false) => {
     const name = requireString(body?.name, 'Название');
     assertUniqueName(db, 'intents', pid, name, 'Интент');
-    const info = db.prepare('INSERT INTO intents(project_id, name) VALUES (?, ?)').run(pid, name);
+    const info = db.prepare('INSERT INTO intents(project_id, name, is_template) VALUES (?, ?, ?)').run(pid, name, Number(isTemplate));
     return { id: Number(info.lastInsertRowid), name };
   };
 
@@ -95,10 +95,10 @@ export function intentsRouter(db: Db): RouterT {
   /** Создаёт интент в проекте и сразу подключает его к сценарию. */
   r.post('/scenarios/:sid/intents', (req, res) => {
     const sid = parseId(req.params.sid);
-    const s = db.prepare('SELECT project_id FROM scenarios WHERE id = ?').get(sid) as { project_id: number } | undefined;
+    const s = db.prepare('SELECT project_id, is_template FROM scenarios WHERE id = ?').get(sid) as { project_id: number; is_template: number } | undefined;
     if (!s) throw notFound('Сценарий');
     const created = db.transaction(() => {
-      const c = create(s.project_id, req.body);
+      const c = create(s.project_id, req.body, !!s.is_template);
       connect(db, 'intent', sid, c.id);
       if (typeof req.body?.is_global === 'boolean') setGlobal(db, sid, c.id, req.body.is_global);
       return c;

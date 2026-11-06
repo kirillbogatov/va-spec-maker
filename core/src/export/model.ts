@@ -148,7 +148,7 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
     synonyms: JSON.parse(k.synonyms) as string[],
   }));
   const intents = (
-    (db.prepare('SELECT id, name FROM intents WHERE project_id = ? ORDER BY id').all(projectId) as { id: number; name: string }[]).filter(
+    (db.prepare(`SELECT id, name FROM intents WHERE project_id = ? ${scope ? '' : 'AND is_template = 0'} ORDER BY id`).all(projectId) as { id: number; name: string }[]).filter(
       (i) => !scope || scope.intentIds.has(i.id),
     )
   ).map((i) => {
@@ -190,7 +190,7 @@ function buildSpec(db: Db, projectId: number, project: ProjectSpec['project'], l
 
   const prompts = (
     db
-      .prepare('SELECT id, name, full_answers FROM prompts WHERE project_id = ? ORDER BY id')
+      .prepare(`SELECT id, name, full_answers FROM prompts WHERE project_id = ? ${scope ? '' : 'AND is_template = 0'} ORDER BY id`)
       .all(projectId) as { id: number; name: string; full_answers: string }[]
   )
     .filter((p) => !scope || scope.promptIds.has(p.id))

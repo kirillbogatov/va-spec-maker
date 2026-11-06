@@ -18,7 +18,7 @@ export function DependencyEditor({ initial, existing, onClose, onSave }: {
 }) {
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description);
-  const [values, setValues] = useState(() => initial.values.map((value) => ({ key: crypto.randomUUID(), original: value, value })));
+  const [values, setValues] = useState(() => (initial.values.length ? initial.values : ['']).map((value) => ({ key: crypto.randomUUID(), original: value, value })));
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

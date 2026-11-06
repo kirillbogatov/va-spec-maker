@@ -32,7 +32,7 @@ export function copyScenario(db: Db, projectId: number, sourceId: number, name: 
         let n = 2;
         while (names.has(candidate.trim().toLowerCase())) candidate = `${original.name}_${name}_${n++}`;
         names.add(candidate.trim().toLowerCase());
-        const target = insert(table, { ...original, name: candidate });
+        const target = insert(table, { ...original, name: candidate, is_template: Number(isTemplate) });
         maps[col].set(original.id, target);
         for (const child of children) {
           for (const row of db.prepare(`SELECT * FROM ${child} WHERE intent_id = ? ORDER BY id`).all(original.id) as Row[]) {

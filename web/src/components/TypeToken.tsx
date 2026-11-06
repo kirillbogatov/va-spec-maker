@@ -25,10 +25,10 @@ export const KIND_LABEL: Record<ObjectKind, string> = {
 export function TypeToken({ kind, children, className, title, required }: { kind: ObjectKind; children: ReactNode; className?: string; title?: string; required?: boolean }) {
   return (
     <span
-      title={required ? (title ?? 'Обязательная сущность') : title}
-      className={cn('inline-flex max-w-full items-center rounded-[5px] px-2 py-0.5 font-mono text-xs font-medium', TONE[kind], required && 'bg-destructive-bg text-destructive', className)}
+      title={title ?? (typeof children === 'string' ? children : required ? 'Обязательная сущность' : undefined)}
+      className={cn('inline-flex min-w-0 max-w-full items-center rounded-[5px] px-2 py-0.5 font-mono text-xs font-medium', TONE[kind], required && 'bg-destructive-bg text-destructive', className)}
     >
-      <span className="truncate">{children}</span>
+      <span className="min-w-0 truncate">{children}</span>
       {required && <span aria-hidden className="ml-0.5 self-start text-[1.1em] leading-none">*</span>}
     </span>
   );

@@ -1,3 +1,4 @@
+import { markLegacyTemplateObjects } from './template-objects';
 import { readPreconditions, restoreImportedPreconditions } from './part-preconditions';
 import { backfillDependencyLinks } from './dependency-links';
 import { badRequest, notFound } from './errors';
@@ -52,6 +53,7 @@ function upgradeDump(tables: ProjectDump['tables']): ProjectDump['tables'] {
 
 /** Порядок важен: родители раньше детей. fk — столбцы-ссылки на id других таблиц дампа. */
 const TABLES: { name: string; where: string; fk: Record<string, string> }[] = [
+  { name: 'dictionary_history', where: IN_PROJECT, fk: {} },
   { name: 'entities', where: IN_PROJECT, fk: {} },
   { name: 'entity_values', where: VIA_ENTITY, fk: { entity_id: 'entities' } },
   { name: 'dependency_dictionary', where: IN_PROJECT, fk: {} },
@@ -95,6 +97,7 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
     );
     const maps: Record<string, Map<number, number>> = {};
     const importedParts: number[] = [];
+    const legacyTemplateObjects = { intents: [] as number[], prompts: [] as number[] };
     for (const t of TABLES) {
       const cols = new Set((db.prepare(`PRAGMA table_info(${t.name})`).all() as { name: string }[]).map((c) => c.name));
       const map = (maps[t.name] = new Map());
@@ -137,11 +140,13 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
         const q = keys.map((k) => `"${k}"`).join(', ');
         const info = db.prepare(`INSERT INTO ${t.name}(${q}) VALUES (${keys.map(() => '?').join(', ')})`).run(...values);
         if (t.name === 'scenario_parts') importedParts.push(Number(info.lastInsertRowid));
+        if ((t.name === 'intents' || t.name === 'prompts') && row.is_template === undefined) legacyTemplateObjects[t.name].push(Number(info.lastInsertRowid));
         if (typeof row.id === 'number') map.set(row.id, Number(info.lastInsertRowid));
       }
     }
     restoreImportedPreconditions(db, pid, maps, importedParts);
     backfillDependencyLinks(db, pid);
+    for (const table of ['intents', 'prompts'] as const) markLegacyTemplateObjects(db, table, legacyTemplateObjects[table]);
     return pid;
   })();
 }

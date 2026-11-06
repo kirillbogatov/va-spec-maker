@@ -85,7 +85,7 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
       <span className="col-start-1 row-start-1 min-w-0">
         <TypeToken kind="prompt" className="text-[12.5px]">{draft.name}</TypeToken>
       </span>
-      <span className="col-span-1 row-start-2 flex min-w-0 text-sm text-muted-foreground md:col-span-1 md:col-start-2 md:row-start-1">
+      <span className="col-span-1 row-start-2 flex min-w-0 overflow-hidden text-sm text-muted-foreground md:col-span-1 md:col-start-2 md:row-start-1">
         {filled.length === 0 ? (
           <span className="text-warning">Нет ответа</span>
         ) : (
@@ -95,7 +95,7 @@ function PromptRow({ prompt, link, startRenaming, onDisconnect, onRemove }: { pr
           </>
         )}
       </span>
-      <span className="col-span-1 row-start-3 flex min-w-0 text-sm text-muted-foreground md:col-start-3 md:row-start-1">
+      <span className="col-span-1 row-start-3 flex min-w-0 overflow-hidden text-sm text-muted-foreground md:col-start-3 md:row-start-1">
         {shortFilled.length === 0 ? (
           <span className="truncate text-faint">как полный</span>
         ) : (

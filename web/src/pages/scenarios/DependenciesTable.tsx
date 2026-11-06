@@ -78,9 +78,9 @@ export function DependenciesTable({ dependencies, entities, onChange, onDictiona
           onClick={(e) => { if (!(e.target as HTMLElement).closest('button')) void open(d); }}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); void open(d); } }}
           className={cn(ROW, COLS, 'cursor-pointer outline-none hover:bg-muted/60 focus-visible:bg-muted/60')}>
-          <span className="min-w-0 break-words text-sm">{nameOf(d) || 'Без названия'}</span>
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">{valuesOf(d).length ? valuesOf(d).map((value) => <span key={value} className="rounded-md bg-secondary px-2 py-1 text-[13px] text-secondary-foreground">{value}</span>) : <span className="text-sm text-muted-foreground">Нет значений</span>}</div>
-          <p className={cn('min-w-0 whitespace-pre-wrap break-words text-sm', !descriptionOf(d).trim() && 'text-muted-foreground')}>{descriptionOf(d) || 'Нет описания'}</p>
+          <span className="min-w-0 break-words [overflow-wrap:anywhere] text-sm">{nameOf(d) || 'Без названия'}</span>
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">{valuesOf(d).length ? valuesOf(d).map((value) => <span key={value} className="min-w-0 max-w-full break-words [overflow-wrap:anywhere] rounded-md bg-secondary px-2 py-1 text-[13px] text-secondary-foreground">{value}</span>) : <span className="text-sm text-muted-foreground">Нет значений</span>}</div>
+          <p className={cn('min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm', !descriptionOf(d).trim() && 'text-muted-foreground')}>{descriptionOf(d) || 'Нет описания'}</p>
           <Button variant="ghost" size="icon" className="max-md:size-10 max-md:justify-self-end" aria-label="Удалить зависимость" onClick={() => onChange((deps) => deps.filter((x) => x.ref !== d.ref))}><X className="size-4" /></Button>
         </div>)}
         {!dependencies.length && <p className="border-t px-4 py-4 text-sm text-muted-foreground">Внешних зависимостей нет</p>}

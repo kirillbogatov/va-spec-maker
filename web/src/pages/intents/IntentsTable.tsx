@@ -345,10 +345,10 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
           if (!(e.target as HTMLElement).closest('button,input,[role=switch],label')) setOpen(true);
         }}
       >
-        <span className={cn('col-start-1 row-start-1 min-w-0 justify-self-start xl:col-start-1', !draft.enabled && 'opacity-60')}>
+        <span className={cn('col-start-1 row-start-1 min-w-0 max-w-full justify-self-start xl:col-start-1', !draft.enabled && 'opacity-60')}>
           <TypeToken kind="intent" className="text-[12.5px]">{draft.name}</TypeToken>
         </span>
-        <span className={cn('col-span-2 row-start-2 flex min-w-0 font-mono text-[12.5px] text-muted-foreground xl:col-span-1 xl:col-start-2 xl:row-start-1', !draft.enabled && 'opacity-60')}>
+        <span className={cn('col-span-2 row-start-2 flex min-w-0 overflow-hidden font-mono text-[12.5px] text-muted-foreground xl:col-span-1 xl:col-start-2 xl:row-start-1', !draft.enabled && 'opacity-60')}>
           {shownValues.length === 0 ? (
             <span className="font-sans text-sm text-warning">{MODE_EMPTY[mode][0].toUpperCase() + MODE_EMPTY[mode].slice(1)}</span>
           ) : (

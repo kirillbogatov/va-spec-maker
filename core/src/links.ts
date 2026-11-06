@@ -11,6 +11,7 @@ const LINK = {
 /** Подключает объект проекта к сценарию; уже подключённый не меняется (флаг is_global сохраняется). */
 export function connect(db: Db, kind: LinkKind, scenarioId: number, id: number): void {
   const l = LINK[kind];
+  assertSameProject(db, kind, scenarioId, id);
   const next = (db.prepare(`SELECT COALESCE(MAX(position), -1) + 1 AS n FROM ${l.table} WHERE scenario_id = ?`).get(scenarioId) as { n: number }).n;
   kind === 'intent' ? db.prepare('INSERT OR IGNORE INTO scenario_intents(scenario_id, intent_id, position, is_global) VALUES (?, ?, ?, 1)').run(scenarioId, id, next) : db.prepare(`INSERT OR IGNORE INTO ${l.table}(scenario_id, ${l.col}, position) VALUES (?, ?, ?)`).run(scenarioId, id, next);
 }
@@ -18,10 +19,10 @@ export function connect(db: Db, kind: LinkKind, scenarioId: number, id: number):
 /** Сценарий и объект должны существовать и быть из одного проекта; чужой объект считается ненайденным. */
 export function assertSameProject(db: Db, kind: LinkKind, scenarioId: number, id: number): void {
   const l = LINK[kind];
-  const s = db.prepare('SELECT project_id FROM scenarios WHERE id = ?').get(scenarioId) as { project_id: number } | undefined;
+  const s = db.prepare('SELECT project_id, is_template FROM scenarios WHERE id = ?').get(scenarioId) as { project_id: number; is_template: number } | undefined;
   if (!s) throw notFound('Сценарий');
-  const o = db.prepare(`SELECT project_id FROM ${l.of} WHERE id = ?`).get(id) as { project_id: number } | undefined;
-  if (!o || o.project_id !== s.project_id) throw notFound(l.what);
+  const o = db.prepare(`SELECT project_id, is_template FROM ${l.of} WHERE id = ?`).get(id) as { project_id: number; is_template: number } | undefined;
+  if (!o || o.project_id !== s.project_id || (o.is_template && !s.is_template)) throw notFound(l.what);
 }
 
 /** Сколько строк и состояний сценария ссылаются на объект. */

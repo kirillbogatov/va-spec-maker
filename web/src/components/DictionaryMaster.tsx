@@ -1,3 +1,4 @@
+import { DictionaryHistory, DictionaryHistoryActions, DictionaryHistoryContext } from './DictionaryHistory';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MoreHorizontal, Plus, X } from 'lucide-react';
@@ -120,6 +121,8 @@ const isDesktop = () => typeof window !== 'undefined' && window.matchMedia('(min
 /** Справочник по схеме «мастер — деталь»: слева сгруппированный список, справа форма выбранного с автосохранением. */
 export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
   const { itemId } = useParams();
+  const history = itemId === 'history';
+  const listActions = <DictionaryHistoryContext.Provider value={p.base}>{p.listActions ?? <DictionaryHistoryActions />}</DictionaryHistoryContext.Provider>;
   const navigate = useNavigate();
   const path = usePath();
   const [creating, setCreating] = useState(false);
@@ -145,16 +148,16 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
 
   // На десктопе без выбора открываем первый элемент, на мобильном остаёмся в списке
   useEffect(() => {
-    if (!p.loading && !selected && first && isDesktop()) navigate(path(`${p.base}/${first.id}`), { replace: true });
-  }, [selected, first?.id, p.loading]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!history && !p.loading && !selected && first && isDesktop()) navigate(path(`${p.base}/${first.id}`), { replace: true });
+  }, [history, selected, first?.id, p.loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <MasterDetail
-      selected={!!selected}
+      selected={history || !!selected}
       onBack={() => navigate(path(p.base))}
       list={
         <>
-          {p.onCreate && <ListHeader onCreate={() => setCreating(true)} label={p.createTitle} extra={p.listActions} />}
+          {p.onCreate && <ListHeader onCreate={() => setCreating(true)} label={p.createTitle} extra={listActions} />}
           {search}
           <ul className="flex-1 overflow-y-auto pb-2">
             {groups.map((g) => (
@@ -192,7 +195,7 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
         </>
       }
     >
-      {selected ? (
+      {history ? <DictionaryHistory base={p.base} /> : selected ? (
         <DictEditor key={selected.id} item={selected} p={p} onRemoved={() => navigate(path(p.base))} />
       ) : p.loading ? null : p.items.length === 0 ? (
         <div className="mx-auto mt-10 max-w-sm text-center">

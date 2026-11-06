@@ -17,9 +17,9 @@ export function projectsRouter(db: Db): RouterT {
         .prepare(
           `SELECT p.id, p.name, p.description, p.created_at,
                   (SELECT COUNT(*) FROM scenarios s WHERE s.project_id = p.id AND s.is_template = 0) AS scenario_count,
-                  (SELECT COUNT(*) FROM intents i WHERE i.project_id = p.id) AS intent_count,
+                  (SELECT COUNT(*) FROM intents i WHERE i.project_id = p.id AND i.is_template = 0) AS intent_count,
                   (SELECT COUNT(*) FROM entities e WHERE e.project_id = p.id) AS entity_count,
-                  (SELECT COUNT(*) FROM prompts pr WHERE pr.project_id = p.id) AS prompt_count,
+                  (SELECT COUNT(*) FROM prompts pr WHERE pr.project_id = p.id AND pr.is_template = 0) AS prompt_count,
                   -- упрощённая готовность: описание, интенты с фразами или паттернами, ответы промптов, зависимости со значениями и хотя бы один переход
                   (SELECT COUNT(*) FROM scenarios s WHERE s.project_id = p.id AND s.is_template = 0
                      AND TRIM(s.description) <> ''
