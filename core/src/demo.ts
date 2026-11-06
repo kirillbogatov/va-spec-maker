@@ -13,7 +13,6 @@ const step = (state: string, next: string, intent_id: number | null, conditions:
   kind: 'transition', state, intent_id, next_states: next, ...base, conditions,
 });
 const dep = (ref: string, name: string, type: 'string' | 'enum' | 'bool', options: string[] = []) => ({ ref, entity_id: null, name, type, options });
-const entityDep = (ref: string, entity_id: number) => ({ ref, entity_id, name: '', type: 'string', options: [] });
 const node = (x: number, y: number, description: string, prompt_id: number | null = null, system_action = '') =>
   ({ x, y, description, prompt_id, system_action });
 
@@ -121,7 +120,7 @@ export async function seedDemo(app: App): Promise<number> {
     description: 'Пользователь просит включить или выключить свет; если комната не названа, ассистент уточняет.',
     entities: [{ entity_id: room, followup_prompt: 'В какой комнате?', required: true, is_array: false }],
     // Зависимости: данные «снаружи» диалога, от которых зависят переходы.
-    dependencies: [dep('home_mode', 'DEP_HOME_MODE', 'enum', ['home', 'away', 'night']), dep('lamp_online', 'DEP_LAMP_ONLINE', 'bool'), entityDep('room_dep', room)],
+    dependencies: [dep('home_mode', 'DEP_HOME_MODE', 'enum', ['home', 'away', 'night']), dep('lamp_online', 'DEP_LAMP_ONLINE', 'bool')],
     parts: [{
       name: 'Управление светом', description: '',
       steps: [
@@ -154,8 +153,9 @@ export async function seedDemo(app: App): Promise<number> {
   await useShared(climate);
   await fill(climate, {
     description: 'Пользователь задаёт температуру в комнате или просит сделать теплее/холоднее.',
-    dependencies: [dep('home_mode', 'DEP_HOME_MODE', 'enum', ['home', 'away', 'night']), entityDep('temp_dep', temp)],
+    dependencies: [dep('home_mode', 'DEP_HOME_MODE', 'enum', ['home', 'away', 'night'])],
     entities: [
+      { entity_id: room, followup_prompt: 'В какой комнате?', required: false, is_array: false },
       { entity_id: mode, followup_prompt: 'Теплее или холоднее?', required: false, is_array: false },
       { entity_id: temp, followup_prompt: 'Какую температуру установить?', required: false, is_array: false },
     ],
