@@ -46,11 +46,18 @@ export function intentsTable(spec: ProjectSpec, lang: SpecLang = 'ru'): TableDef
       widths: [18, 20, 40, 22],
       rows: spec.intents.map((i): Row => {
         // Фразы без распознанных ключевых слов в документ не попадают
-        const recognized = i.phrases.flatMap((p, n) => (i.keywords?.[n]?.length ? [{ phrase: p, keywords: i.keywords[n].join(', ') }] : []));
+        const recognized = i.phrases.flatMap((p, n) => (i.keywords?.[n]?.length ? [{ phrase: p, keywords: i.keywords[n] }] : []));
+        const seen = new Set<string>();
+        const uniqueKeywords = recognized.filter(({ keywords }) => {
+          const key = JSON.stringify([...new Set(keywords)].sort());
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        }).map(({ keywords }) => keywords.join(', '));
         return {
           cells: [
             text(i.name),
-            list(recognized.map((r) => r.keywords)),
+            list(uniqueKeywords),
             list(recognized.map((r) => r.phrase)),
             list(i.entities.map((e) => ref(e.name) + (e.required ? ` (${STRINGS[lang].required})` : ''))),
           ],

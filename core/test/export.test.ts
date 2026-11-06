@@ -275,6 +275,30 @@ describe('spec language', () => {
 
 describe('intents table in keywords mode', () => {
   const base = spec.intents[0];
+  it('deduplicates keyword sets per intent regardless of order and preserves every example phrase', async () => {
+    const phrases = ['включи свет', 'зажги свет', 'свет включи', 'включи свет в комнате'];
+    const keywords = [['ON', 'LIGHT'], ['ON', 'LIGHT'], ['LIGHT', 'ON'], ['ON', 'LIGHT', 'ROOM']];
+    const s: ProjectSpec = { ...spec, intentMode: 'keywords', intents: [
+      { ...base, phrases, keywords },
+      { ...base, name: 'INT_OTHER', phrases: ['включи'], keywords: [['ON', 'LIGHT']] },
+    ] };
+    const original = structuredClone(s);
+    for (const lang of ['ru', 'en'] as const) {
+      const table = intentsTable(s, lang);
+      expect(table.rows[0].cells[1]).toEqual({ list: ['ON, LIGHT', 'ON, LIGHT, ROOM'] });
+      expect(table.rows[0].cells[2]).toEqual({ list: phrases });
+      expect(table.rows[1].cells[1]).toEqual({ list: ['ON, LIGHT'] });
+      const md = renderMarkdown(s, '2026-11-06', lang);
+      expect(md).toContain('1. ON, LIGHT<br>2. ON, LIGHT, ROOM');
+      for (const phrase of phrases) expect(md).toContain(phrase);
+      const zip = await JSZip.loadAsync(await renderDocx(s, '2026-11-06', lang));
+      const xml = await zip.file('word/document.xml')!.async('string');
+      const row = xml.split('</w:tr>').find((part) => part.includes(base.name))!;
+      expect(row.split('</w:tc>')[1].match(/<w:t[ >]/g)).toHaveLength(2);
+      for (const phrase of phrases) expect(row).toContain(phrase);
+    }
+    expect(s).toEqual(original);
+  });
   it('выводит колонки Intent | Keywords | Example phrases | Entities с общей нумерацией; фразы без ключевых слов пропускает', () => {
     const s: ProjectSpec = { ...spec, intentMode: 'keywords', intents: [{ ...base, phrases: ['включи обогрев', 'привет'], patterns: ['* x *'], keywords: [['SET', 'HEATING'], []] }] };
     const t = intentsTable(s, 'en');
@@ -286,13 +310,23 @@ describe('intents table in keywords mode', () => {
   it('через API: preview считает ключевые слова из справочника', async () => {
     const { app, db } = await makeApp();
     const pid = createProject(db);
-    await request(app).post(`/api/projects/${pid}/keywords/import`).send({ text: 'OFF: выключить\nSOUND: звук\n' });
+    await request(app).post(`/api/projects/${pid}/keywords/import`).send({ text: 'OFF: выключить, отключить\nSOUND: звук\n' });
     const sc = await request(app).post(`/api/projects/${pid}/scenarios`).send({ name: 'Громкость' });
     const it = await request(app).post(`/api/scenarios/${sc.body.id}/intents`).send({ name: 'MUTE' });
-    await request(app).put(`/api/intents/${it.body.id}`).send({ name: 'MUTE', comment: '', enabled: true, values: [{ text: 'выключи звук', kind: 'phrase' }], entities: [] });
-    const md = await request(app).get(`/api/scenarios/${sc.body.id}/preview?lang=en&intentMode=keywords`);
-    expect(md.text).toContain('Keywords');
-    expect(md.text).toContain('OFF, SOUND');
+    const phrases = ['выключи звук', 'звук выключи', 'отключи звук'];
+    await request(app).put(`/api/intents/${it.body.id}`).send({ name: 'MUTE', comment: '', enabled: true, values: phrases.map((text) => ({ text, kind: 'phrase' })), entities: [] });
+    for (const url of [
+      `/api/scenarios/${sc.body.id}/preview?lang=en&intentMode=keywords`,
+      `/api/scenarios/${sc.body.id}/export?format=md&lang=en&intentMode=keywords`,
+      `/api/projects/${pid}/export?format=md&lang=en&intentMode=keywords`,
+    ]) {
+      const md = await request(app).get(url);
+      expect(md.status).toBe(200);
+      expect(md.text).toContain('Keywords');
+      const row = md.text.split('\n').find((line: string) => line.startsWith('| MUTE |'))!;
+      expect(row.split('|')[2].trim()).toBe('1. OFF, SOUND');
+      for (const phrase of phrases) expect(row).toContain(phrase);
+    }
   });
 });
 
