@@ -63,14 +63,14 @@ describe('renderMarkdown', () => {
   it('shows phrase and pattern columns only for data present in the project', () => {
     const withIntent = (phrases: string[], patterns: string[]) =>
       renderMarkdown({ ...spec, intents: [{ ...spec.intents[0], phrases, patterns }] }, '2026-10-17');
-    expect(withIntent(['a'], [])).toContain('| Интент | Фразы для обучения | Сущности |');
+    expect(withIntent(['a'], [])).toContain('| Интент | Тренировочные фразы | Сущности |');
     expect(withIntent([], ['* a *'])).toContain('| Интент | Паттерны | Сущности |');
-    expect(withIntent(['a'], ['* a *'])).toContain('| Интент | Фразы для обучения | Паттерны | Сущности |');
-    expect(withIntent([], [])).toContain('| Интент | Фразы для обучения | Сущности |');
+    expect(withIntent(['a'], ['* a *'])).toContain('| Интент | Тренировочные фразы | Паттерны | Сущности |');
+    expect(withIntent([], [])).toContain('| Интент | Тренировочные фразы | Сущности |');
   });
 
   it('renders intents with numbered lists and required entities', () => {
-    expect(md).toContain('| Интент | Фразы для обучения | Паттерны | Сущности |');
+    expect(md).toContain('| Интент | Тренировочные фразы | Паттерны | Сущности |');
     expect(md).toContain('| INT_SEAT_HEATING_SET | 1. Обогрев сиденья на 3<br>2. Включи обогрев | * (включи/включить) обогрев * | 1. [seat_position]<br>2. [heating_level] (обязательно) |');
     expect(md).toContain('| Из состояния | В состояние | Запрос пользователя | Условия | Действие системы | Ответ ассистента |');
     expect(md).not.toMatch(/Result code|Relative adjustment|\(required\)/);
@@ -303,6 +303,8 @@ describe('intents table in keywords mode', () => {
     const s: ProjectSpec = { ...spec, intentMode: 'keywords', intents: [{ ...base, phrases: ['включи обогрев', 'привет'], patterns: ['* x *'], keywords: [['SET', 'HEATING'], []] }] };
     const t = intentsTable(s, 'en');
     expect(t.head).toEqual(['Intent', 'Keywords', 'Example phrases', 'Entities']);
+    expect(intentsTable(s, 'ru').head).toEqual(['Интент', 'Ключевые слова', 'Примеры запросов', 'Сущности']);
+    expect(renderMarkdown(s, '2026-11-06', 'ru')).toContain('| Интент | Ключевые слова | Примеры запросов | Сущности |');
     expect(t.rows[0].cells[1]).toEqual({ list: ['SET, HEATING'] });
     expect(t.rows[0].cells[2]).toEqual({ list: ['включи обогрев'] });
     expect(t.widths.reduce((a, b) => a + b, 0)).toBe(100);
