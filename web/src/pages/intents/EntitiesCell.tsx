@@ -1,20 +1,15 @@
 import { entityHint } from '@/lib/optionHints';
 import { entityTypeLabel, rangeSummary } from '@/lib/entityTypes';
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { DictCard } from '@/components/DictionaryMaster';
-import { CreateDialog } from '@/components/CreateDialog';
+import { EntityEditor } from '@/components/EntityEditor';
 import { SearchSelect } from '@/components/SearchSelect';
 import { ResizableColumns } from '@/components/ResizableColumns';
 import { SortHeader, useColumnSort } from '@/components/ColumnSort';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { TypeToken } from '@/components/TypeToken';
-import { useProjectId } from '@/hooks/project';
-import { api } from '@/lib/api';
-import { usePrefixes } from '@/lib/prefixes';
 import type { EntityListItem, IntentEntity } from '@/lib/types';
 
 interface Props {
@@ -24,7 +19,6 @@ interface Props {
   onChange: (value: IntentEntity[]) => void;
 }
 
-const NEW_ENTITY = '__new__';
 const ROW = 'grid grid-cols-[var(--resizable-columns)] items-center gap-x-3 px-4';
 
 function valuesOf(entity: EntityListItem | undefined): string[] {
@@ -36,10 +30,7 @@ function valuesOf(entity: EntityListItem | undefined): string[] {
 
 /** Сущности интента: справочные значения и отдельный переключатель обязательности. */
 export function EntitiesCell({ title = 'Сущности в интенте', value, entities, onChange }: Props) {
-  const projectId = useProjectId();
-  const prefixes = usePrefixes(projectId);
-  const qc = useQueryClient();
-  const [creating, setCreating] = useState(false);
+  const [editor, setEditor] = useState<{ entity: EntityListItem | null } | null>(null);
   const sort = useColumnSort();
   const entityOf = (id: number) => entities.find((e) => e.id === id);
   const name = (id: number) => entityOf(id)?.name ?? `#${id}`;
@@ -49,12 +40,11 @@ export function EntitiesCell({ title = 'Сущности в интенте', val
   return <>
     <DictCard title={title} action={
       <SearchSelect label="Добавить сущность" placeholder="Добавить" value={null}
-        options={[...options, { value: NEW_ENTITY, label: 'Новая сущность…' }]}
+        options={options} createLabel="Новая сущность…" onCreate={() => setEditor({ entity: null })}
         className={buttonVariants({ variant: 'outline', size: 'action', className: 'w-auto' })}
         icon={<Plus className="size-3.5" />} showChevron={false} mutedPlaceholder={false}
         onChange={(id) => {
-          if (id === NEW_ENTITY) setCreating(true);
-          else if (id !== null) onChange([{ entity_id: Number(id), required: false }, ...value]);
+          if (id !== null) onChange([{ entity_id: Number(id), required: false }, ...value]);
         }} />
     }>
       {value.length === 0 ? <p className="text-sm text-muted-foreground">Сущности не добавлены.</p> : (
@@ -74,7 +64,11 @@ export function EntitiesCell({ title = 'Сущности в интенте', val
                   const values = valuesOf(entity);
                   return <div role="row" key={e.entity_id} className={`${ROW} group py-2.5`}>
                     <div role="cell" className="min-w-0">
-                      <TypeToken kind="entity" className="max-w-full [&>span]:break-all">{name(e.entity_id)}</TypeToken>
+                      <button type="button" aria-label={`Редактировать сущность ${name(e.entity_id)}`} title="Нажмите, чтобы изменить сущность"
+                        className="max-w-full rounded-md text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                        disabled={!entity} onClick={() => entity && setEditor({ entity })}>
+                        <TypeToken kind="entity" className="max-w-full [&>span]:break-all">{name(e.entity_id)}</TypeToken>
+                      </button>
                     </div>
                     <div role="cell" className="flex min-w-0 flex-wrap gap-1.5">
                       {values.length ? values.map((v, i) => <span key={`${v}-${i}`}
@@ -102,13 +96,8 @@ export function EntitiesCell({ title = 'Сущности в интенте', val
         </div>
       )}
     </DictCard>
-    <CreateDialog open={creating} onOpenChange={setCreating} title="Добавить сущность" prefix={prefixes.entity}
-      withType existingNames={entities.map((e) => e.name)}
-      onCreate={(entityName, kind) => {
-        api.entities.create(projectId, entityName, kind).then(async (created) => {
-          await qc.invalidateQueries({ queryKey: ['entities'] });
-          onChange([{ entity_id: created.id, required: false }, ...value]);
-        }).catch((error: Error) => toast.error(error.message));
-      }} />
+    {editor && <EntityEditor entity={editor.entity} entities={entities} onClose={() => setEditor(null)}
+      onSaved={(saved) => { if (!editor.entity) onChange([{ entity_id: saved.id, required: false }, ...value]); }} />}
+
   </>;
 }

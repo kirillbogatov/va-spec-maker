@@ -1,5 +1,5 @@
 import { OptionHint } from './OptionHint';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Combobox } from '@base-ui/react/combobox';
 import { CheckIcon, ChevronDownIcon, SearchIcon } from 'lucide-react';
 import { SELECT_TRIGGER } from '@/components/ui/select';
@@ -22,7 +22,7 @@ interface Props {
   /** Значок слева в кнопке. */
   icon?: ReactNode;
   showChevron?: boolean;
-  /** Последний пункт списка «+ …», он всегда виден при поиске и вызывает onCreate вместо onChange. */
+  /** Первый пункт списка «+ …», он всегда виден при поиске и вызывает onCreate вместо onChange. */
   createLabel?: string;
   onCreate?: () => void;
 }
@@ -32,7 +32,7 @@ const CREATE_VALUE = '\u0000create';
 /** Выпадающий список с автофильтром по названию и описанию по мере ввода. */
 export function SearchSelect({ options, value, onChange, label, className, renderValue, placeholder, mutedPlaceholder = true, icon, createLabel, onCreate, showChevron = true }: Props) {
   const selected = options.find((o) => o.value === value) ?? null;
-  const items = createLabel && onCreate ? [...options, { value: CREATE_VALUE, label: `+ ${createLabel}` }] : options;
+  const items = createLabel && onCreate ? [{ value: CREATE_VALUE, label: `+ ${createLabel}` }, ...options] : options;
   return (
     <Combobox.Root
       items={items}
@@ -59,6 +59,7 @@ export function SearchSelect({ options, value, onChange, label, className, rende
             <Combobox.Empty className="px-3 py-2 text-sm text-muted-foreground empty:hidden">Ничего не найдено</Combobox.Empty>
             <Combobox.List className="max-h-72 overflow-y-auto p-1">
               {(o: SearchOption) => (
+                <Fragment key={o.value}>
                 <Combobox.Item
                   key={o.value}
                   value={o}
@@ -75,6 +76,8 @@ export function SearchSelect({ options, value, onChange, label, className, rende
                     <CheckIcon className="size-4" />
                   </Combobox.ItemIndicator>
                 </Combobox.Item>
+                {o.value === CREATE_VALUE && options.length > 0 && <Combobox.Separator data-slot="create-option-separator" className="my-1 h-px bg-border" />}
+                </Fragment>
               )}
             </Combobox.List>
           </Combobox.Popup>

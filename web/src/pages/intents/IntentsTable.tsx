@@ -20,8 +20,8 @@ import { TypeToken } from '@/components/TypeToken';
 import { KeywordChips, KeywordsHint } from '@/components/KeywordChips';
 import { useKeywordMatcher } from '@/lib/keywords';
 import { Slotted } from './PhrasesCell';
-import { CreateDialog } from '@/components/CreateDialog';
-import { numberSlots, type EntityKind, type NumberSlot } from '@/lib/entityTypes';
+import { EntityEditor } from '@/components/EntityEditor';
+import { numberSlots, type NumberSlot } from '@/lib/entityTypes';
 import { usePrefixes } from '@/lib/prefixes';
 import { useProjectId } from '@/hooks/project';
 import { useAutosave } from '@/hooks/useAutosave';
@@ -67,19 +67,7 @@ const PHRASE_BOX = 'h-9 w-full min-w-0 rounded-none border-0 bg-transparent px-2
 function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; entities: EntityListItem[]; onChange: (v: IntentEntity[]) => void }) {
   const find = (id: number) => entities.find((e) => e.id === id);
   const options = entities.filter((e) => !value.some((v) => v.entity_id === e.id)).map((e) => ({ value: String(e.id), label: e.name, hint: entityHint(e) }));
-  const projectId = useProjectId();
-  const prefixes = usePrefixes(projectId);
-  const qc = useQueryClient();
-  const [creating, setCreating] = useState(false);
-  // Созданная сущность сразу добавляется в интент
-  const create = useMutation({
-    mutationFn: ({ name, kind }: { name: string; kind?: EntityKind }) => api.entities.create(projectId, name, kind),
-    onSuccess: (c) => {
-      qc.invalidateQueries({ queryKey: ['entities'] });
-      onChange([...value, { entity_id: c.id, required: false }]);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const [editor, setEditor] = useState<{ entity: EntityListItem | null } | null>(null);
   return (
     <div className="grid content-start gap-1.5">
       {value.length > 0 && (
@@ -89,7 +77,9 @@ function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; 
               const ent = find(e.entity_id);
               return (
                 <tr key={e.entity_id} className="h-10">
-                  <td className="whitespace-nowrap py-1 pr-3 pl-0 align-middle"><TypeToken kind="entity" required={e.required}>{ent?.name ?? `#${e.entity_id}`}</TypeToken></td>
+                  <td className="whitespace-nowrap py-1 pr-3 pl-0 align-middle"><button type="button" aria-label={`Редактировать сущность ${ent?.name ?? e.entity_id}`} disabled={!ent}
+                    className="rounded-md text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => ent && setEditor({ entity: ent })}>
+                    <TypeToken kind="entity" required={e.required}>{ent?.name ?? `#${e.entity_id}`}</TypeToken></button></td>
                   <td className="w-full max-w-0 truncate py-1 pr-3 align-middle text-xs text-muted-foreground" title={ent?.description}>{ent?.description?.trim() || '—'}</td>
                   <td className="py-1 pr-1 align-middle">
                     <label className="flex w-36 cursor-pointer items-center gap-2 text-xs font-medium max-md:min-h-10">
@@ -121,17 +111,11 @@ function EntitiesEditor({ value, entities, onChange }: { value: IntentEntity[]; 
         icon={<Plus className="size-3.5 shrink-0" />}
         placeholder="сущность"
         createLabel="Новая сущность…"
-        onCreate={() => setCreating(true)}
+        onCreate={() => setEditor({ entity: null })}
       />
-      <CreateDialog
-        open={creating}
-        onOpenChange={setCreating}
-        title="Добавить сущность"
-        prefix={prefixes.entity}
-        existingNames={entities.map((e) => e.name)}
-        withType
-        onCreate={(name, kind) => create.mutate({ name, kind })}
-      />
+      {editor && <EntityEditor entity={editor.entity} entities={entities} onClose={() => setEditor(null)}
+        onSaved={(saved) => { if (!editor.entity) onChange([{ entity_id: saved.id, required: false }, ...value]); }} />}
+
     </div>
   );
 }

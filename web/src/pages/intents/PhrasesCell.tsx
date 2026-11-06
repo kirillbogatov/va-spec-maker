@@ -57,9 +57,33 @@ export function Slotted({ text, words, numbers = [], owners }: { text: string; w
   return <>{parts}</>;
 }
 
+/** Отдельный редактор защищает отмену Escape от последующего blur. */
+function PhraseEditor({ value, label, onChange, onDone }: {
+  value: string; label: string; onChange: (text: string) => void; onDone: (text: string | null) => void;
+}) {
+  const done = useRef(false);
+  const [invalid, setInvalid] = useState(false);
+  const finish = (next: string | null) => {
+    if (done.current) return;
+    if (next !== null && !next.trim()) { setInvalid(true); return; }
+    done.current = true;
+    onDone(next?.trim() ?? null);
+  };
+  return <span className="min-w-0 flex-1">
+    <Input autoFocus aria-label={label} aria-invalid={invalid} className="h-8 bg-card font-mono text-[13px] md:text-[13px] dark:bg-card"
+      value={value} onChange={(e) => { setInvalid(false); onChange(e.target.value); }} onBlur={() => finish(value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); finish(value); }
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(null); }
+      }} />
+    {invalid && <span role="alert" className="block pt-1 font-sans text-xs text-destructive">Введите текст</span>}
+  </span>;
+}
+
 /** Ввод новой строки сверху, ключевые слова остаются вычисляемыми из фразы. */
 export function PhrasesCell({ title, titleHint, value, onChange, mode, highlight = [], numbers = [], owners }: Props) {
   const [text, setText] = useState('');
+  const [editing, setEditing] = useState<{ index: number; text: string } | null>(null);
   const [adding, setAdding] = useState(!title);
   const input = useRef<HTMLInputElement>(null);
   const [pickedKind, setAddKind] = useState<ValueKind>('phrase');
@@ -119,12 +143,25 @@ export function PhrasesCell({ title, titleHint, value, onChange, mode, highlight
       )}
       {title && !adding && !bulk && !shown.length && <p className="text-sm text-muted-foreground">Значений пока нет.</p>}
       {shown.length > 0 && <ul className={cn('divide-y divide-border', !title && 'rounded-md border')}>
-        {shown.map(({ v, index }) => <li key={index} className={cn(cols, 'group min-h-11 py-2 md:min-h-10')}>
+        {shown.map(({ v, index }) => <li key={index} className={cn(cols, 'group min-h-11 cursor-text py-2 md:min-h-10')}
+          onClick={(e) => {
+            if (!(e.target as HTMLElement).closest('button, input, textarea') && editing?.index !== index) setEditing({ index, text: v.text });
+          }}>
           <span className="flex min-w-0 items-center gap-2 font-mono text-[13px]">
             {both && <KindToggle kind={v.kind} onChange={(kind) => onChange(value.map((x, j) => j === index ? { ...x, kind } : x))} />}
-            <span className="min-w-0 break-words">{v.kind === 'phrase' ? <Slotted text={v.text} words={words} numbers={numbers} owners={owners} /> : v.text}</span>
+            {editing?.index === index ? <PhraseEditor value={editing.text}
+              label={v.kind === 'phrase' ? 'Изменить фразу' : 'Изменить паттерн'}
+              onChange={(next) => setEditing({ index, text: next })}
+              onDone={(next) => {
+                setEditing(null);
+                if (next !== null && next !== v.text) onChange(value.map((item, j) => j === index ? { ...item, text: next } : item));
+              }} /> : <button type="button" aria-label={`Редактировать ${v.kind === 'phrase' ? 'фразу' : 'паттерн'} ${v.text}`}
+              title="Нажмите, чтобы изменить" className="min-h-8 min-w-0 flex-1 cursor-text rounded-md text-left break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => setEditing({ index, text: v.text })}>
+              {v.kind === 'phrase' ? <Slotted text={v.text} words={words} numbers={numbers} owners={owners} /> : v.text}
+            </button>}
           </span>
-          {kw && <span className="min-w-0"><KeywordChips names={matchKw(v.text)} text={v.text} /></span>}
+          {kw && <span className="min-w-0"><KeywordChips names={matchKw(editing?.index === index ? editing.text : v.text)} text={editing?.index === index ? editing.text : v.text} /></span>}
           <Button variant="ghost" size="icon" aria-label="Удалить" className="text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
             onClick={() => onChange(value.filter((_, j) => j !== index))}><X className="size-3.5" /></Button>
         </li>)}

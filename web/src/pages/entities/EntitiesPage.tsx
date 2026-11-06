@@ -13,7 +13,7 @@ import { entityTypeLabel, type EntityKind } from '@/lib/entityTypes';
 import type { EntityListItem } from '@/lib/types';
 import { EntityValues } from './EntityValues';
 
-function EntityBody({ d, patch }: { d: EntityListItem; patch: (p: Partial<EntityListItem>) => void }) {
+export function EntityBody({ d, patch }: { d: EntityListItem; patch: (p: Partial<EntityListItem>) => void }) {
   const [pending, setPending] = useState<EntityKind | null>(null);
   const kind: EntityKind = { type: d.type, range_min: d.range_min, range_max: d.range_max };
   const hasData = d.values.length > 0 || !!d.range_min || !!d.range_max;
