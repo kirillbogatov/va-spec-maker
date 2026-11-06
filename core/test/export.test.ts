@@ -71,7 +71,7 @@ describe('renderMarkdown', () => {
 
   it('renders intents with numbered lists and required entities', () => {
     expect(md).toContain('| Интент | Фразы для обучения | Паттерны | Сущности |');
-    expect(md).toContain('| INT_SEAT_HEATING_SET | 1. Обогрев сиденья на 3<br>2. Включи обогрев | 1. * (включи/включить) обогрев * | 1. [seat_position]<br>2. [heating_level] (обязательно) |');
+    expect(md).toContain('| INT_SEAT_HEATING_SET | 1. Обогрев сиденья на 3<br>2. Включи обогрев | * (включи/включить) обогрев * | 1. [seat_position]<br>2. [heating_level] (обязательно) |');
     expect(md).toContain('| Из состояния | В состояние | Запрос пользователя | Условия | Действие системы | Ответ ассистента |');
     expect(md).not.toMatch(/Result code|Relative adjustment|\(required\)/);
   });
@@ -81,8 +81,8 @@ describe('renderMarkdown', () => {
     expect(md).toContain('| heating_level | Число<br>от 1 до 3 | - | нет |');
     expect(md).not.toContain('Уточняющий вопрос');
     expect(md).not.toContain('## Scenario entities');
-    expect(md).toContain('| PRM_TEMPERATURE_SET | 1. Устанавливаю |');
-    expect(md).toContain('| ST_SEAT_HEATING | - | INT_SEAT_HEATING | 1. Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
+    expect(md).toContain('| PRM_TEMPERATURE_SET | Устанавливаю |');
+    expect(md).toContain('| ST_SEAT_HEATING | - | INT_SEAT_HEATING | Обогрев сидений выключен | Включить обогрев | PRM_SEAT_HEATING_ON |');
     expect(md).not.toContain('DRIVER_ONLY');
   });
 
@@ -176,7 +176,7 @@ describe('export route', () => {
       }],
     });
     const res = await request(app).get(`/api/scenarios/${sid}/export?format=md`);
-    expect(res.text).toContain('| INT_PLAY | 1. INT_PLAY |  |');
+    expect(res.text).toContain('| INT_PLAY | INT_PLAY |  |');
     expect(res.text).toContain('| ST_IDLE | ST_PLAY | INT_PLAY | - | Играть | PRM_OK |');
     expect(res.text).not.toContain('INT_OTHER');
     expect(res.text).not.toContain('PRM_OTHER');
@@ -324,7 +324,7 @@ describe('intents table in keywords mode', () => {
       expect(md.status).toBe(200);
       expect(md.text).toContain('Keywords');
       const row = md.text.split('\n').find((line: string) => line.startsWith('| MUTE |'))!;
-      expect(row.split('|')[2].trim()).toBe('1. OFF, SOUND');
+      expect(row.split('|')[2].trim()).toBe('OFF, SOUND');
       for (const phrase of phrases) expect(row).toContain(phrase);
     }
   });

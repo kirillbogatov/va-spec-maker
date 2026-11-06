@@ -43,6 +43,7 @@ function cellParagraphs(c: Cell | null, bold = false): Paragraph[] {
   if ('text' in c) return c.text.length ? c.text.map((s) => new Paragraph({ children: t(s) })) : [new Paragraph({ children: [] })];
   if ('list' in c) {
     if (!c.list.length) return [new Paragraph({ children: [] })];
+    if (c.list.length === 1) return cellParagraphs({ text: [...(c.lead ? [c.lead] : []), ...c.list] }, bold);
     if (c.numbered) {
       const instance = ++conditionListInstance;
       return [
@@ -68,7 +69,7 @@ function cellParagraphs(c: Cell | null, bold = false): Paragraph[] {
     (b) =>
       new Paragraph({
         children: [...run(b.bold, { bold: true, size: CELL }), ...(b.text ? run(` ${b.text}`, { size: CELL }) : [])],
-        ...(c.numbered ? { numbering: { reference: 'conditions', level: 0, instance } } : { bullet: { level: 0 } }),
+        ...(c.bullets.length > 1 ? (c.numbered ? { numbering: { reference: 'conditions', level: 0, instance } } : { bullet: { level: 0 } }) : {}),
       }),
   );
 }

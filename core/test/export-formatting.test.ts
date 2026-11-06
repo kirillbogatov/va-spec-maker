@@ -35,6 +35,11 @@ it.each([1, 2])('exports %i source conditions as one item without an OR introduc
   for (const lang of ['ru', 'en']) for (const scope of [`scenarios/${sid}`, `projects/${pid}`]) {
     const md = await call('GET', `/api/${scope}/export?format=md&lang=${lang}`);
     expect(md.split(expectedCondition)).toHaveLength(3);
+    expect(md).toContain(`| ${expectedCondition} |`);
+    expect(md).toContain(`#### ${lang === 'ru' ? 'Предусловия' : 'Preconditions'}\n\n${expectedCondition}\n`);
+    if (scope.startsWith('scenarios/')) {
+      expect(await call('GET', `/api/${scope}/preview?lang=${lang}`)).toBe(md);
+    }
     expect(md).not.toMatch(/Any condition \(OR\)|Любое условие \(ИЛИ\)|Any of:|Любое из:/);
     expect(md).toContain('| ENT_POSITION |');
     expect(md).toContain('1. **driver:** "водитель"<br>2. **front_passenger**');

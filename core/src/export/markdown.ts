@@ -10,8 +10,8 @@ const esc = (s: string) => s.replace(/\|/g, '\\|');
 function cell(c: Cell | null): string {
   if (!c) return '';
   if ('text' in c) return c.text.map(esc).join('<br>');
-  if ('list' in c) return [...(c.lead ? [esc(c.lead)] : []), ...c.list.map((t, i) => `${i + 1}. ${esc(t)}`)].join('<br>');
-  return c.bullets.map((b, i) => `${c.numbered ? `${i + 1}.` : '•'} **${esc(b.bold)}**${b.text ? ` ${esc(b.text)}` : ''}`).join('<br>');
+  if ('list' in c) return [...(c.lead ? [esc(c.lead)] : []), ...c.list.map((t, i) => `${c.list.length > 1 ? `${i + 1}. ` : ''}${esc(t)}`)].join('<br>');
+  return c.bullets.map((b, i) => `${c.bullets.length > 1 ? `${c.numbered ? `${i + 1}.` : '•'} ` : ''}**${esc(b.bold)}**${b.text ? ` ${esc(b.text)}` : ''}`).join('<br>');
 }
 
 function table({ head, rows }: TableDef): string {
@@ -47,7 +47,7 @@ function section(spec: ProjectSpec, _date: string | null, lang: SpecLang, parts?
       const conditions = [...(p.preconditions ?? []), ...(p.precondition ?? '').split(/\r?\n/)].filter((line) => line.trim());
       if (conditions.length) {
         out.push(`#### ${t.preconditions}`, ...(p.precond_mode === 'any' && conditions.length > 1 ? [t.anyPreconditions] : []),
-          conditions.map((line, index) => `${index + 1}. ${esc(line)}`).join('\n'));
+          conditions.map((line, index) => `${conditions.length > 1 ? `${index + 1}. ` : ''}${esc(line)}`).join('\n'));
       }
       out.push(table(transitionsTable(p.transitions, lang)));
     }
