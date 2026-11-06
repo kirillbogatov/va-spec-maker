@@ -28,7 +28,7 @@ test('response templates prefill editable answers with an empty prompt name', as
   await expect(page.getByLabel('Короткий ответ, вариант 1', { exact: true })).toHaveValue('Короткий ответ шаблона');
   await gotoSection(page, pid, 'scenarios');
   await page.getByRole('tab', { name: /^Промпты/ }).click();
-  await page.getByRole('combobox', { name: 'Взять из шаблона', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Создать из шаблона', exact: true }).click();
   await page.getByRole('option', { name: /PRM_TEMPLATE/ }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Промпт', { exact: true })).toHaveValue('');

@@ -17,6 +17,8 @@ interface Props {
   /** Содержимое кнопки; по умолчанию название выбранного или placeholder. */
   renderValue?: (o: SearchOption | null) => ReactNode;
   placeholder?: string;
+  /** Приглушать подсказку обычного поля; для кнопок действий отключается. */
+  mutedPlaceholder?: boolean;
   /** Значок слева в кнопке. */
   icon?: ReactNode;
   showChevron?: boolean;
@@ -28,7 +30,7 @@ interface Props {
 const CREATE_VALUE = '\u0000create';
 
 /** Выпадающий список с автофильтром по названию и описанию по мере ввода. */
-export function SearchSelect({ options, value, onChange, label, className, renderValue, placeholder, icon, createLabel, onCreate, showChevron = true }: Props) {
+export function SearchSelect({ options, value, onChange, label, className, renderValue, placeholder, mutedPlaceholder = true, icon, createLabel, onCreate, showChevron = true }: Props) {
   const selected = options.find((o) => o.value === value) ?? null;
   const items = createLabel && onCreate ? [...options, { value: CREATE_VALUE, label: `+ ${createLabel}` }] : options;
   return (
@@ -40,9 +42,9 @@ export function SearchSelect({ options, value, onChange, label, className, rende
       isItemEqualToValue={(a: SearchOption, b: SearchOption) => a.value === b.value}
       filter={(o: SearchOption, q: string) => o.value === CREATE_VALUE || `${o.label} ${o.hint ?? ''}`.toLowerCase().includes(q.trim().toLowerCase())}
     >
-      <Combobox.Trigger data-slot="select-trigger" className={cn(SELECT_TRIGGER, 'data-[size=default]:min-h-8', className)} data-size="default" aria-label={label}>
+      <Combobox.Trigger data-slot="select-trigger" className={cn(SELECT_TRIGGER, 'data-[size=default]:min-h-8', !mutedPlaceholder && 'data-placeholder:text-foreground', className)} data-size="default" aria-label={label}>
         {icon}
-        <span className={cn('flex min-w-0 flex-1 text-left', !selected && placeholder && 'text-muted-foreground')}>
+        <span className={cn('flex min-w-0 flex-1 text-left', !selected && placeholder && mutedPlaceholder && 'text-muted-foreground')}>
           {renderValue ? renderValue(selected) : selected?.label ?? placeholder}
         </span>
         {showChevron && <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />}

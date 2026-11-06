@@ -250,8 +250,8 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
         connectLabel="Добавить из справочника"
       />
       <SearchSelect options={templates.map(t => ({ value: String(t.id), label: t.name, hint: t.hint }))}
-        value={null} onChange={v => v != null && setTemplateId(Number(v))} label="Взять из шаблона" placeholder="Взять из шаблона"
-        className="h-10 rounded-lg border-border bg-background px-2.5 text-[13px] font-medium hover:bg-muted md:h-8" />
+        value={null} onChange={v => v != null && setTemplateId(Number(v))} label="Создать из шаблона" placeholder="Создать из шаблона" mutedPlaceholder={false}
+        className="h-10 rounded-lg border-border bg-background px-2.5 text-[13px] text-foreground font-medium hover:bg-muted md:h-8" />
       </div>
       {templateId != null && <PromptFromTemplate key={templateId} templateId={templateId} scenarioId={scenarioId} existingNames={all.map(p => p.name)}
         onClose={() => setTemplateId(null)} onCreated={() => { setTemplateId(null); refresh(); }} />}
