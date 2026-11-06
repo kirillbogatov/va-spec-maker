@@ -1,3 +1,4 @@
+import { usePrefixes } from '@/lib/prefixes';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ const COLS = 'md:[grid-template-columns:var(--resizable-columns)]';
 
 export function DependenciesTable({ dependencies, entities, onChange, onDictionarySaved }: Props) {
   const projectId = useProjectId();
+  const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();
   const sort = useColumnSort();
   const [loading, setLoading] = useState(false);
@@ -69,7 +71,7 @@ export function DependenciesTable({ dependencies, entities, onChange, onDictiona
   const free = dictionary.filter((r) => !dependencies.some((d) => d.dictionary_id === r.id || d.name === r.name));
   return <>
     <ResizableColumns storageKey="scenario-dependencies" columns={['name', 'values', 'description']} initial="minmax(0,220px) minmax(0,1fr) minmax(0,1fr) 32px" trailing="32px">
-      <Card flush title="Внешние зависимости" action={<AddBar compact createLabel="Зависимость" creating={loading} onCreate={() => setEditor({ ref: null, record: null, initial: { name: '', description: '', values: [] } })}
+      <Card flush title="Внешние зависимости" action={<AddBar compact createLabel="Зависимость" creating={loading} onCreate={() => setEditor({ ref: null, record: null, initial: { name: prefixes.dependency, description: '', values: [] } })}
         options={free.map((r) => ({ value: String(r.id), label: r.name, hint: dictionaryDependencyHint(r) }))} connectPlaceholder="Добавить из справочника" connectLabel="Добавить из справочника" onConnect={(id) => { const record = free.find((r) => r.id === id); if (record) connect(record); }} />}>
         <div className={cn(ROW, COLS, 'flex flex-wrap items-center border-t-0 py-1 text-xs font-medium text-muted-foreground md:grid')}>
           <SortHeader column="name" sort={sort}>Зависимость</SortHeader><SortHeader column="values" sort={sort}>Значения</SortHeader><SortHeader column="description" sort={sort}>Описание</SortHeader><span />

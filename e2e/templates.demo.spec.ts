@@ -11,7 +11,7 @@ async function gotoSection(page: Page, projectId: number, section: string) {
   await page.goto(`/#/p/${projectId}/${section}`);
 }
 
-test('response templates prefill editable answers with an empty prompt name', async ({ page }) => {
+test('response templates prefill editable answers with the configured prompt prefix', async ({ page }) => {
   const pid = await openDemoProject(page);
   await page.locator('aside').first().getByRole('button', { name: 'Шаблоны', exact: true }).click();
   await page.getByRole('link', { name: 'Шаблоны ответов', exact: true }).click();
@@ -31,7 +31,7 @@ test('response templates prefill editable answers with an empty prompt name', as
   await page.getByRole('combobox', { name: 'Создать из шаблона', exact: true }).click();
   await page.getByRole('option', { name: /PRM_TEMPLATE/ }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByLabel('Промпт', { exact: true })).toHaveValue('');
+  await expect(dialog.getByLabel('Промпт', { exact: true })).toHaveValue('PRM_');
   await expect(dialog.getByLabel('Полный ответ', { exact: true })).toHaveValue('Полный ответ шаблона');
   await expect(dialog.getByLabel('Короткий ответ', { exact: true })).toHaveValue('Короткий ответ шаблона');
   await page.screenshot({ path: 'test-results/templates-review/response-dialog-desktop.png', fullPage: true });

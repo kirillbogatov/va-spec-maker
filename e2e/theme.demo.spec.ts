@@ -12,7 +12,7 @@ test('тема сохраняется после перезагрузки, де�
   const group = page.getByRole('radiogroup', { name: 'Тема интерфейса', exact: true });
   const light = group.getByRole('radio', { name: 'Светлая', exact: true });
   const dark = group.getByRole('radio', { name: 'Темная', exact: true });
-  await expect(light).toBeChecked();
+  await expect(group.getByRole('radio', { name: 'Системная', exact: true })).toBeChecked();
   await expect(group.getByRole('radio')).toHaveCount(3);
   await expect(page.getByText('Тема интерфейса для всех проектов.', { exact: true })).toHaveCount(0);
   await dark.locator('..').click();

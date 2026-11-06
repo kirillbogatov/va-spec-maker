@@ -1,3 +1,4 @@
+import { usePrefixes } from '@/lib/prefixes';
 import { ResizableColumns } from '@/components/ResizableColumns';
 import { useState } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -187,7 +188,8 @@ function PromptFromTemplate({ templateId, scenarioId, existingNames, onClose, on
 function PromptTemplateDraft({ template, scenarioId, existingNames, onCreated }: {
   template: Prompt; scenarioId: number; existingNames: string[]; onCreated: () => void;
 }) {
-  const [name, setName] = useState('');
+  const prefix = usePrefixes(useProjectId()).prompt;
+  const [name, setName] = useState(prefix);
   const [full, setFull] = useState([...template.full_answers]);
   const [short, setShort] = useState([...template.short_answers]);
   const create = useMutation({
@@ -195,7 +197,7 @@ function PromptTemplateDraft({ template, scenarioId, existingNames, onCreated }:
     onSuccess: onCreated,
   });
   const duplicate = existingNames.some(n => n.trim().toLowerCase() === name.trim().toLowerCase());
-  return <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={e => { e.preventDefault(); if (name.trim() && !duplicate && !create.isPending) create.mutate(); }}>
+  return <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={e => { e.preventDefault(); if (name.trim() && name.trim() !== prefix.trim() && !duplicate && !create.isPending) create.mutate(); }}>
     <div className="min-h-0 space-y-4 overflow-y-auto px-1">
       <label className="grid gap-1 text-xs text-muted-foreground">Промпт
         <Input autoFocus aria-label="Промпт" value={name} onChange={e => setName(e.target.value)} aria-invalid={duplicate} />
@@ -205,13 +207,14 @@ function PromptTemplateDraft({ template, scenarioId, existingNames, onCreated }:
       <AnswerList label="Короткий ответ" items={short} onChange={setShort} note="Если короткий ответ не задан, используется полный ответ." />
       {create.error && <p role="alert" className="text-sm text-destructive">{create.error.message}</p>}
     </div>
-    <DialogFooter><Button type="submit" disabled={!name.trim() || duplicate || create.isPending}>{create.isPending ? 'Создание…' : 'Создать'}</Button></DialogFooter>
+    <DialogFooter><Button type="submit" disabled={!name.trim() || name.trim() === prefix.trim() || duplicate || create.isPending}>{create.isPending ? 'Создание…' : 'Создать'}</Button></DialogFooter>
   </form>;
 }
 
 export function PromptsTable({ scenarioId }: { scenarioId: number }) {
   const sort = useColumnSort();
   const projectId = useProjectId();
+  const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();
   // Только что созданный промпт: его название редактируется сразу
   const [fresh, setFresh] = useState<number | null>(null);
@@ -243,7 +246,7 @@ export function PromptsTable({ scenarioId }: { scenarioId: number }) {
       <div className="flex flex-wrap items-center gap-2">
       <AddBar
         createLabel="Промпт"
-        onCreate={() => create.mutate(uniqueName('Новый промпт', all.map((p) => p.name)))}
+        onCreate={() => create.mutate(uniqueName(`${prefixes.prompt}Новый промпт`, all.map((p) => p.name)))}
         creating={create.isPending}
         options={free}
         onConnect={(id) => connect.mutate(id)}

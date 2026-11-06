@@ -60,6 +60,7 @@ test.describe('UJ-1 Описать словарь проекта: правка �
 test.describe('UJ-1 Ключевые слова', () => {
   test.beforeEach(async ({ page }) => {
     await openDemo(page, 'settings');
+  await page.getByRole('tab', { name: 'Интенты и NLU', exact: true }).click();
     await page.getByRole('radio', { name: /Ключевые слова/ }).check();
     await page.getByRole('link', { name: 'Ключевые слова' }).click();
   });

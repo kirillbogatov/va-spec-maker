@@ -449,6 +449,7 @@ export function IntentsTable({ scenarioId }: { scenarioId: number }) {
   const sort = useColumnSort();
   const mode = useIntentMode(useProjectId());
   const projectId = useProjectId();
+  const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();
   const matchKeywordsForSort = useKeywordMatcher(projectId);
   const [created, setCreated] = useState<number | null>(null);
@@ -497,7 +498,7 @@ export function IntentsTable({ scenarioId }: { scenarioId: number }) {
     <div className="grid gap-4">
       <AddBar
         createLabel="Интент"
-        onCreate={() => create.mutate(uniqueName('Новый интент', all.map((i) => i.name)))}
+        onCreate={() => create.mutate(uniqueName(`${prefixes.intent}Новый интент`, all.map((i) => i.name)))}
         creating={create.isPending}
         options={free}
         onConnect={(id) => connect.mutate({ id })}

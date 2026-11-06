@@ -6,15 +6,15 @@ interface ThemeState { theme: Theme; resolvedTheme: ResolvedTheme }
 const STORAGE_KEY = 'specmaker.theme';
 const SYSTEM_QUERY = '(prefers-color-scheme: dark)';
 const listeners = new Set<() => void>();
-const INITIAL_STATE: ThemeState = { theme: 'light', resolvedTheme: 'light' };
+const INITIAL_STATE: ThemeState = { theme: 'system', resolvedTheme: 'light' };
 let current = INITIAL_STATE;
 
 function readTheme(): Theme {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'dark' || stored === 'system' ? stored : 'light';
+    return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
   }
-  catch { return 'light'; }
+  catch { return 'system'; }
 }
 
 function applyTheme(theme: Theme) {
