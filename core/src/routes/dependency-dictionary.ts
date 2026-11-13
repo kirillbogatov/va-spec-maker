@@ -3,6 +3,7 @@ import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
 import { optString, parseId, requireString } from '../validate';
 import { renameDependencyValues, updateDependencyCopies } from '../dependency-links';
+import { affectedScenarioIds, recordScenarioChanges } from '../scenario-changes';
 
 interface Row { id: number; project_id: number; name: string; description: string; values: string }
 
@@ -62,6 +63,14 @@ export function dependencyDictionaryRouter(db: Db): RouterT {
       from: requireString(r?.from, 'Исходное значение'),
       to: requireString(r?.to, 'Новое значение'),
     }));
+    const affected = affectedScenarioIds(db, 'dependency', id, current.project_id, current.name);
+    const added = values.filter((value) => !current.values.includes(value));
+    const removed = current.values.filter((value) => !values.includes(value));
+    const details = [
+      name !== current.name ? `переименована в «${name}»` : '',
+      added.length ? `добавлены значения: ${added.join(', ')}` : '',
+      removed.length ? `удалены значения: ${removed.join(', ')}` : '',
+    ].filter(Boolean).join('; ') || 'изменены параметры';
     db.transaction(() => {
       // Подключаем старые записи, которые ещё связаны со справочником только именем.
       db.prepare(`UPDATE scenario_dependencies SET dictionary_id = ?, editable = 0 WHERE dictionary_id IS NULL AND entity_id IS NULL AND name = ?
@@ -70,6 +79,7 @@ export function dependencyDictionaryRouter(db: Db): RouterT {
       db.prepare('UPDATE dependency_dictionary SET name = ?, description = ?, "values" = ? WHERE id = ?').run(name, description, JSON.stringify(values), id);
       updateDependencyCopies(db, id, name, values, description);
     })();
+    recordScenarioChanges(db, affected, 'dependency', id, name, `Зависимость «${current.name}»: ${details}`);
     res.json(load(id));
   });
 

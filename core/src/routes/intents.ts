@@ -4,6 +4,7 @@ import { badRequest, notFound } from '../errors';
 import { assertSameProject, connect, disconnect, setGlobal } from '../links';
 import { assertUniqueName } from '../unique';
 import { cleanStrings, optString, parseId, requireString } from '../validate';
+import { affectedScenarioIds, recordScenarioChanges } from '../scenario-changes';
 
 interface IntentRow {
   id: number; project_id: number; name: string; enabled: number; comment: string;
@@ -152,6 +153,7 @@ export function intentsRouter(db: Db): RouterT {
           ...cleanStrings(b.phrases).map((text) => ({ text, kind: 'phrase' as const })),
           ...cleanStrings(b.patterns).map((text) => ({ text, kind: 'pattern' as const })),
         ];
+    const affected = affectedScenarioIds(db, 'intent', id, cur.project_id, cur.name);
 
     db.transaction(() => {
       db.prepare('UPDATE intents SET name = ?, enabled = ?, comment = ? WHERE id = ?').run(
@@ -166,6 +168,7 @@ export function intentsRouter(db: Db): RouterT {
       values.forEach((v, i) => (v.kind === 'pattern' ? insPattern : insPhrase).run(id, v.text, i));
       entities.forEach((e: { entity_id: number; required: boolean }, i: number) => insEntity.run(id, e.entity_id, e.required ? 1 : 0, i));
     })();
+    recordScenarioChanges(db, affected, 'intent', id, name, `Интент «${cur.name}»: изменены фразы, паттерны или сущности`);
     res.json(load(id));
   });
 

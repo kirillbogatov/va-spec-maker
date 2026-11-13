@@ -65,6 +65,7 @@ export interface SpecPart {
 export interface ScenarioDoc {
   spec: ProjectSpec;
   parts: SpecPart[];
+  custom_sections: { title: string; content: string }[];
   /** Журнал изменений, который ведут вручную; выводится вверху документа после описания. */
   changelog: { date?: string; task: string; author: string; description: string }[];
 }
@@ -74,8 +75,8 @@ export interface ScenarioDoc {
  * разбиение по вкладкам и их предусловия выводятся перед таблицами переходов.
  */
 export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru'): ScenarioDoc {
-  const scenario = db.prepare('SELECT id, project_id, name, description FROM scenarios WHERE id = ?').get(scenarioId) as
-    | { id: number; project_id: number; name: string; description: string }
+  const scenario = db.prepare('SELECT id, project_id, name, description, custom_sections FROM scenarios WHERE id = ?').get(scenarioId) as
+    | { id: number; project_id: number; name: string; description: string; custom_sections: string }
     | undefined;
   if (!scenario) throw notFound('Сценарий');
   const projectId = scenario.project_id;
@@ -112,9 +113,12 @@ export function loadScenarioDoc(db: Db, scenarioId: number, lang: SpecLang = 'ru
   }
   const spec = buildSpec(db, projectId, { ...project, name: scenario.name, description: scenario.description }, lang, { scenarioId, partId: null, intentIds, promptIds, entityIds });
   const changelog = db.prepare('SELECT date, task, author, description FROM scenario_changelog WHERE scenario_id = ? ORDER BY position, id').all(scenarioId) as ScenarioDoc['changelog'];
+  let custom_sections: { title: string; content: string }[] = [];
+  try { const value = JSON.parse(scenario.custom_sections); if (Array.isArray(value)) custom_sections = value.filter((item) => item && typeof item.title === 'string' && typeof item.content === 'string' && item.title.trim()); } catch { /* Старые данные не должны ломать экспорт. */ }
   return {
     spec: { ...spec, transitions: [] },
     changelog,
+    custom_sections,
     parts: parts.map((part) => {
       const ps = buildSpec(db, projectId, project, lang, { scenarioId, partId: part.id, intentIds, promptIds, entityIds });
       return { title: part.name, description: part.description,

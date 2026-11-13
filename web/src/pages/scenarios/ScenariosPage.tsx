@@ -3,7 +3,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MoreHorizontal, Upload, Plus } from 'lucide-react';
+import { MoreHorizontal, Upload, Plus, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateScenarioDialog } from './CreateScenarioDialog';
 import { EmptyDetail, ListHeader, ListItem, MasterDetail, listEmpty, useListFilter } from '@/components/MasterDetail';
@@ -89,7 +89,10 @@ export function ScenariosPage({ templates = false }: { templates?: boolean }) {
               {filtered.map((s) => (
                 <li key={s.id}>
                   <ListItem to={path(`${base}/${s.id}`)}>
-                    <span className="block truncate">{s.name}</span>
+                    <span className="flex min-w-0 items-center gap-1.5 truncate">
+                      {s.pending_change_count ? <TriangleAlert className="size-3.5 shrink-0 text-amber-600" aria-label="Требует повторного экспорта" /> : null}
+                      <span className="truncate">{s.name}</span>
+                    </span>
                     {s.description?.trim() && <span className="block truncate text-xs font-normal text-muted-foreground">{s.description.trim().replace(/\s+/g, ' ')}</span>}
                   </ListItem>
                 </li>

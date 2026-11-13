@@ -50,7 +50,9 @@ export interface Prompt {
 /** Строка журнала изменений, который ведут вручную. */
 export interface ChangelogRow { date?: string; task: string; author: string; description: string }
 
-export interface ScenarioListItem { id: number; name: string; description: string; step_count: number }
+export interface ScenarioListItem { id: number; name: string; description: string; step_count: number; pending_change_count?: number }
+export interface ScenarioChange { id: number; source_type: 'entity' | 'dependency' | 'intent' | 'prompt' | 'result_code'; source_id: number; source_name: string; summary: string; created_at: string; reviewed_at: string | null }
+export interface ScenarioChanges { needs_export: boolean; changes: ScenarioChange[] }
 export type DependencyType = 'string' | 'enum' | 'bool';
 /** Параметр или проверка, от которой зависит запуск сценария. entity_id задан: имя берётся из сущности. */
 export interface Dependency {
@@ -105,5 +107,7 @@ export interface ScenarioPart {
 export interface Scenario {
   is_template?: boolean;
   id: number; project_id: number; name: string; description: string;
+  custom_sections: CustomSection[];
   entities: ScenarioEntity[]; dependencies: Dependency[]; parts: ScenarioPart[];
 }
+export interface CustomSection { key?: string; title: string; content: string }

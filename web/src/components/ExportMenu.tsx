@@ -7,12 +7,12 @@ import { useIntentMode } from '@/lib/intentMode';
 import { useSpecLang } from '@/lib/specLang';
 
 /** Главная кнопка «Экспорт .docx» и меню с остальными форматами. */
-export function ExportMenu({ scenarioId }: { scenarioId: number }) {
+export function ExportMenu({ scenarioId, onExported }: { scenarioId: number; onExported?: () => void }) {
   const projectId = useProjectId();
   const lang = useSpecLang(projectId);
   const mode = useIntentMode(projectId);
-  const scenario = (format: 'md' | 'docx') => api.exportFile(`/api/scenarios/${scenarioId}/export?format=${format}&lang=${lang}&intentMode=${mode}`, `scenario.${format}`);
-  const project = (format: 'md' | 'docx') => api.exportFile(`/api/projects/${projectId}/export?format=${format}&lang=${lang}&intentMode=${mode}`, `project.${format}`);
+  const scenario = (format: 'md' | 'docx') => api.exportFile(`/api/scenarios/${scenarioId}/export?format=${format}&lang=${lang}&intentMode=${mode}`, `scenario.${format}`).then(() => onExported?.());
+  const project = (format: 'md' | 'docx') => api.exportFile(`/api/projects/${projectId}/export?format=${format}&lang=${lang}&intentMode=${mode}`, `project.${format}`).then(() => onExported?.());
   return (
     <div className="flex">
       <Button className="rounded-r-none max-md:h-10" onClick={() => scenario('docx')}>

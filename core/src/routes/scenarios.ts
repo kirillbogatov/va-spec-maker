@@ -8,6 +8,7 @@ import { connect } from '../links';
 import { copyScenario } from '../scenario-copy';
 import { normalizeTaskLinks } from '../text-links';
 import { optString, parseId, requireString } from '../validate';
+import { reviewScenarioChanges, scenarioChanges } from '../scenario-changes';
 
 const matchAnyIntent = (value: unknown): boolean => {
   if (value !== undefined && typeof value !== 'boolean') throw badRequest('Поле match_any_intent должно быть логическим значением');
@@ -75,8 +76,8 @@ export function scenariosRouter(db: Db): RouterT {
   };
 
   const load = (id: number) => {
-    const head = db.prepare('SELECT id, project_id, name, description, is_template FROM scenarios WHERE id = ?').get(id) as
-      | { id: number; project_id: number; name: string; description: string; is_template: number }
+    const head = db.prepare('SELECT id, project_id, name, description, custom_sections, is_template FROM scenarios WHERE id = ?').get(id) as
+      | { id: number; project_id: number; name: string; description: string; custom_sections: string; is_template: number }
       | undefined;
     if (!head) throw notFound('Сценарий');
     let partRows = db.prepare('SELECT id, name, description, layout, preconditions, precondition, precond_mode FROM scenario_parts WHERE scenario_id = ? ORDER BY position, id').all(id) as { id: number; name: string; description: string; layout: string; preconditions: string; precondition: string; precond_mode: string }[];
@@ -92,7 +93,9 @@ export function scenariosRouter(db: Db): RouterT {
     const entities = (db
       .prepare('SELECT entity_id, followup_prompt, required, is_array FROM scenario_entities WHERE scenario_id = ? ORDER BY position, id')
       .all(id) as { entity_id: number; followup_prompt: string; required: number; is_array: number }[]).map((e) => ({ ...e, required: !!e.required, is_array: !!e.is_array }));
-    return { ...head, is_template: !!head.is_template, entities, dependencies, parts: partRows.map(loadPart) };
+    let custom_sections: { title: string; content: string }[] = [];
+    try { const value = JSON.parse(head.custom_sections); if (Array.isArray(value)) custom_sections = value.filter((item) => item && typeof item.title === 'string' && typeof item.content === 'string' && item.title.trim()); } catch { /* Старые данные не должны ломать загрузку сценария. */ }
+    return { ...head, is_template: !!head.is_template, custom_sections, pending_change_count: scenarioChanges(db, id).length, entities, dependencies, parts: partRows.map(loadPart) };
   };
 
   r.get('/projects/:pid/scenarios', (req, res) => {
@@ -101,7 +104,8 @@ export function scenariosRouter(db: Db): RouterT {
       db
         .prepare(
           `SELECT s.id, s.name, s.description,
-                  (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id AND t.kind <> 'error') AS step_count
+                  (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id AND t.kind <> 'error') AS step_count,
+                  (SELECT COUNT(*) FROM scenario_change_events c WHERE c.scenario_id = s.id AND c.resolved_at IS NULL) AS pending_change_count
            FROM scenarios s WHERE s.project_id = ? AND s.is_template = 0 ORDER BY s.id`,
         )
         .all(pid),
@@ -133,7 +137,8 @@ export function scenariosRouter(db: Db): RouterT {
 
   r.get('/projects/:pid/scenario-templates', (req, res) => {
     res.json(db.prepare(`SELECT s.id, s.name, s.description,
-      (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id AND t.kind <> 'error') AS step_count
+      (SELECT COUNT(*) FROM scenario_steps t WHERE t.scenario_id = s.id AND t.kind <> 'error') AS step_count,
+      (SELECT COUNT(*) FROM scenario_change_events c WHERE c.scenario_id = s.id AND c.resolved_at IS NULL) AS pending_change_count
       FROM scenarios s WHERE project_id = ? AND is_template = 1 ORDER BY id`).all(parseId(req.params.pid)));
   });
 
@@ -158,6 +163,7 @@ export function scenariosRouter(db: Db): RouterT {
     const cur = load(id);
     const b = (req.body ?? {}) as Record<string, any>;
     const name = requireString(b.name, 'Название');
+    const customSections = (Array.isArray(b.custom_sections) ? b.custom_sections : cur.custom_sections).map((s: any) => ({ title: optString(s?.title).trim(), content: optString(s?.content) })).filter((s: { title: string; content: string }) => s.title);
     const dependencies = (Array.isArray(b.dependencies) ? b.dependencies : []).map((d: any) => ({
       ref: requireString(d?.ref, 'Идентификатор зависимости'),
       entity_id: d?.entity_id == null ? null : parseId(d.entity_id),
@@ -253,7 +259,7 @@ export function scenariosRouter(db: Db): RouterT {
     if (parts.length === 0) throw badRequest('В сценарии должна быть хотя бы одна вкладка');
     db.transaction(() => {
       syncScenarioDependencies(db, cur.project_id, dependencies, cur.dependencies as unknown as Parameters<typeof syncScenarioDependencies>[3]);
-      db.prepare('UPDATE scenarios SET name = ?, description = ? WHERE id = ?').run(name, optString(b.description), id);
+      db.prepare('UPDATE scenarios SET name = ?, description = ?, custom_sections = ? WHERE id = ?').run(name, optString(b.description), JSON.stringify(customSections), id);
       db.prepare('DELETE FROM scenario_parts WHERE scenario_id = ?').run(id);
       db.prepare('DELETE FROM scenario_states WHERE scenario_id = ?').run(id);
       db.prepare('DELETE FROM scenario_steps WHERE scenario_id = ?').run(id);
@@ -303,6 +309,22 @@ export function scenariosRouter(db: Db): RouterT {
     const id = parseId(req.params.id);
     load(id);
     res.json(changelog(id));
+  });
+
+  r.get('/scenarios/:id/changes', (req, res) => {
+    const id = parseId(req.params.id);
+    load(id);
+    const changes = scenarioChanges(db, id);
+    res.json({ needs_export: changes.length > 0, changes });
+  });
+
+  r.put('/scenarios/:id/changes', (req, res) => {
+    const id = parseId(req.params.id);
+    load(id);
+    if (!Array.isArray(req.body?.change_ids) || typeof req.body?.reviewed !== 'boolean') throw badRequest('Некорректная отметка изменений');
+    reviewScenarioChanges(db, id, req.body.change_ids.map((value: unknown) => parseId(value)), req.body.reviewed);
+    const changes = scenarioChanges(db, id);
+    res.json({ needs_export: changes.length > 0, changes });
   });
 
   r.put('/scenarios/:id/changelog', (req, res) => {

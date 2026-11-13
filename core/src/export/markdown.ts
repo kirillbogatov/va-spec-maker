@@ -61,5 +61,8 @@ export function renderMarkdown(spec: ProjectSpec, date: string, lang: SpecLang =
 
 /** Общие таблицы сценария один раз; вкладки — только подразделы State transitions. */
 export function renderMarkdownScenario(doc: ScenarioDoc, date: string, lang: SpecLang = 'ru'): string {
-  return section(doc.spec, date, lang, doc.parts, doc.changelog).join('\n\n') + '\n';
+  const blocks = section(doc.spec, date, lang, doc.parts, doc.changelog);
+  const insertAt = blocks.findIndex((block) => block === `## ${STRINGS[lang].intents}`);
+  if (doc.custom_sections.length && insertAt >= 0) blocks.splice(insertAt, 0, ...doc.custom_sections.flatMap((custom) => [`## ${custom.title}`, custom.content]));
+  return blocks.join('\n\n') + '\n';
 }

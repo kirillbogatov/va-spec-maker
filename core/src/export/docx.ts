@@ -146,7 +146,9 @@ export const renderDocx = (spec: ProjectSpec, _date: string, lang: SpecLang = 'r
 /** Общие таблицы сценария один раз; вкладки — только подразделы State transitions. */
 export function renderDocxScenario(doc: ScenarioDoc, name: string, lang: SpecLang = 'ru'): Promise<Blob> {
   const description = doc.spec.project.description.trim();
-  return pack([...(description ? [new Paragraph({ children: run(description), spacing: { after: 120 } })] : []), ...sectionBlocks(doc.spec, lang, doc.parts, doc.changelog)], name);
+  const blocks = sectionBlocks(doc.spec, lang, doc.parts, doc.changelog);
+  const custom = doc.custom_sections.flatMap((section) => [heading(section.title), new Paragraph({ children: run(section.content), spacing: { after: 120 } })]);
+  return pack([...(description ? [new Paragraph({ children: run(description), spacing: { after: 120 } })] : []), ...custom, ...blocks], name);
 }
 
 /** Одна таблица с заголовком: выгрузка справочника. */

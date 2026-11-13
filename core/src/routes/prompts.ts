@@ -5,6 +5,7 @@ import { notFound } from '../errors';
 import { assertSameProject, connect, disconnect } from '../links';
 import { assertUniqueName } from '../unique';
 import { cleanStrings, parseId, requireString } from '../validate';
+import { affectedScenarioIds, recordScenarioChanges } from '../scenario-changes';
 
 interface PromptRow { id: number; project_id: number; name: string; full_answers: string; short_answers: string }
 
@@ -122,7 +123,9 @@ export function promptsRouter(db: Db): RouterT {
     let full = cleanStrings(b.full_answers);
     let short = b.short_answers === undefined ? cur.short_answers : cleanStrings(b.short_answers);
     ({ full_answers: full, short_answers: short } = normalizePromptAnswers(db, cur.project_id, full, short));
+    const affected = affectedScenarioIds(db, 'prompt', id, cur.project_id, cur.name);
     db.prepare('UPDATE prompts SET name = ?, full_answers = ?, short_answers = ? WHERE id = ?').run(name, JSON.stringify(full), JSON.stringify(short), id);
+    recordScenarioChanges(db, affected, 'prompt', id, name, `Промпт «${cur.name}»: изменены варианты ответа`);
     res.json(load(id));
   });
 

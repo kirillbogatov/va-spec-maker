@@ -6,6 +6,7 @@ import { renderMarkdown, renderMarkdownScenario } from '../export/markdown';
 import { loadProjectSpec, loadScenarioDoc, parseIntentMode } from '../export/model';
 import { parseLang } from '../export/i18n';
 import { parseId } from '../validate';
+import { resolveProjectChanges, resolveScenarioChanges } from '../scenario-changes';
 
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -24,9 +25,13 @@ export function exportRouter(db: Db): RouterT {
     const date = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name)}.${format}`);
     if (format === 'md') {
-      res.type('text/markdown; charset=utf-8').send(renderMarkdownScenario(doc, date, lang));
+      const output = renderMarkdownScenario(doc, date, lang);
+      resolveScenarioChanges(db, id);
+      res.type('text/markdown; charset=utf-8').send(output);
     } else {
-      res.type(DOCX_TYPE).send(await renderDocxScenario(doc, name, lang));
+      const output = await renderDocxScenario(doc, name, lang);
+      resolveScenarioChanges(db, id);
+      res.type(DOCX_TYPE).send(output);
     }
   });
 
@@ -47,8 +52,15 @@ export function exportRouter(db: Db): RouterT {
     if (format !== 'md' && format !== 'docx') throw badRequest('Параметр format должен быть md или docx');
     const date = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(spec.project.name)}.${format}`);
-    if (format === 'md') res.type('text/markdown; charset=utf-8').send(renderMarkdown(spec, date, lang));
-    else res.type(DOCX_TYPE).send(await renderDocx(spec, date, lang));
+    if (format === 'md') {
+      const output = renderMarkdown(spec, date, lang);
+      resolveProjectChanges(db, parseId(req.params.pid));
+      res.type('text/markdown; charset=utf-8').send(output);
+    } else {
+      const output = await renderDocx(spec, date, lang);
+      resolveProjectChanges(db, parseId(req.params.pid));
+      res.type(DOCX_TYPE).send(output);
+    }
   });
 
   return r;

@@ -4,6 +4,7 @@ import type { Db } from '../sqlite';
 import { HttpError, notFound } from '../errors';
 import { parseEntityKind, type EntityKind, type EntityType } from '../entity-types';
 import { cleanStrings, optString, parseId, requireString } from '../validate';
+import { affectedScenarioIds, recordScenarioChanges } from '../scenario-changes';
 
 interface ValueIn { value: string; synonyms: string[] }
 
@@ -77,6 +78,21 @@ export function entitiesRouter(db: Db): RouterT {
     const description = optString(req.body?.description);
     const kind: EntityKind = parseEntityKind(req.body, current);
     const values = kind.type === 'string' ? cleanValues(req.body?.values) : [];
+    const affected = affectedScenarioIds(db, 'entity', id, current.project_id, current.name);
+    const added = values.map((v) => v.value).filter((value) => !current.values.some((v) => v.value === value));
+    const removed = current.values.map((v) => v.value).filter((value) => !values.some((v) => v.value === value));
+    const valuesChanged = JSON.stringify(current.values) !== JSON.stringify(values);
+    const details = [
+      name !== current.name ? `переименовано в «${name}»` : '',
+      added.length ? `добавлены значения: ${added.join(', ')}` : '',
+      removed.length ? `удалены значения: ${removed.join(', ')}` : '',
+      valuesChanged && !added.length && !removed.length ? 'изменены синонимы' : '',
+      description !== current.description ? 'изменено описание' : '',
+      kind.type !== current.type ? `изменён тип: ${current.type} → ${kind.type}` : '',
+      Boolean(req.body?.multiple_values) !== current.multiple_values ? 'изменён режим множественных значений' : '',
+      kind.range_min !== current.range_min || kind.range_max !== current.range_max ? 'изменён диапазон' : '',
+    ].filter(Boolean).join('; ') || 'изменены параметры';
+    const changed = details !== 'изменены параметры';
     db.transaction(() => {
       db.prepare('UPDATE entities SET name = ?, description = ?, multiple_values = ?, type = ?, range_min = ?, range_max = ? WHERE id = ?').run(
         name, description, req.body?.multiple_values ? 1 : 0, kind.type, kind.range_min, kind.range_max, id,
@@ -85,6 +101,7 @@ export function entitiesRouter(db: Db): RouterT {
       const ins = db.prepare('INSERT INTO entity_values(entity_id, value, synonyms, position) VALUES (?, ?, ?, ?)');
       values.forEach((v, i) => ins.run(id, v.value, JSON.stringify(v.synonyms), i));
     })();
+    if (changed) recordScenarioChanges(db, affected, 'entity', id, name, `Сущность «${current.name}»: ${details}`);
     res.json(load(id));
   });
 

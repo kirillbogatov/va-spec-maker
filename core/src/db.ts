@@ -3,6 +3,7 @@ import { initTemplateObjects } from './template-objects';
 import { initDictionaryHistory } from './dictionary-history';
 import { openSqlite, type Db, type OpenOpts } from './sqlite';
 import { backfillDependencyLinks } from './dependency-links';
+import { initScenarioChanges } from './scenario-changes';
 
 export type { Db };
 
@@ -99,7 +100,8 @@ CREATE TABLE IF NOT EXISTS scenarios (
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
-  layout TEXT NOT NULL DEFAULT '{}'
+  layout TEXT NOT NULL DEFAULT '{}',
+  custom_sections TEXT NOT NULL DEFAULT '[]'
 );
 CREATE TABLE IF NOT EXISTS scenario_parts (
   id INTEGER PRIMARY KEY,
@@ -261,9 +263,13 @@ export function migrate(db: Db): void {
     if (!hasColumn(db, 'dependency_dictionary', 'description')) db.exec("ALTER TABLE dependency_dictionary ADD COLUMN description TEXT NOT NULL DEFAULT ''");
     db.exec('PRAGMA user_version = 5');
   }
+  if (db.prepare("PRAGMA table_info(scenarios)").all().length && !hasColumn(db, 'scenarios', 'custom_sections')) {
+    db.exec("ALTER TABLE scenarios ADD COLUMN custom_sections TEXT NOT NULL DEFAULT '[]'");
+  }
   backfillDependencyLinks(db);
   initTemplateObjects(db);
   initDictionaryHistory(db);
+  initScenarioChanges(db);
 }
 
 export async function openDb(opts: OpenOpts = {}): Promise<Db> {

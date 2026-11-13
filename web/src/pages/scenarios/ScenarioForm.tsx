@@ -3,7 +3,7 @@ import type { DictionaryDependency } from '@/lib/types';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ellipsis } from 'lucide-react';
+import { Ellipsis, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,6 +33,9 @@ import { duplicatePart } from './duplicatePart';
 import { CreateScenarioDialog } from './CreateScenarioDialog';
 import { waitForSaves } from '@/lib/saveStore';
 import { usePrefixes } from '@/lib/prefixes';
+import { groupScenarioChanges, ReadinessPill } from './ScenarioChecks';
+import { ExportReviewPanel } from './ExportReviewPanel';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'history' | 'preview';
 
@@ -45,13 +48,14 @@ const TABS: { id: ScenarioTab; label: string }[] = [
   { id: 'preview', label: 'Предпросмотр' },
 ];
 
-type Draft = Pick<Scenario, 'name' | 'description' | 'entities' | 'dependencies' | 'parts'>;
+type Draft = Pick<Scenario, 'name' | 'description' | 'custom_sections' | 'entities' | 'dependencies' | 'parts'>;
 
 /** Черновик из сохранённого сценария; входное состояние всегда получает имя VA_ACTIVATION. */
 function initialDraft(scenario: Scenario): Draft {
   return {
     name: scenario.name,
     description: scenario.description,
+    custom_sections: (scenario.custom_sections ?? []).map((s) => ({ ...s, key: crypto.randomUUID() })),
     entities: scenario.entities.map((e) => ({ ...e, key: crypto.randomUUID() })),
     dependencies: scenario.dependencies,
     parts: scenario.parts.map((p) => ({
@@ -108,10 +112,17 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
   }, [partParam, stateParam]);
   const [showPart, setShowPart] = useState(false);
   const [schemeWide, setSchemeWide] = useState(false);
+  const [sectionDialog, setSectionDialog] = useState<{ key?: string; title: string; content: string } | null>(null);
+  const [reviewedChanges, setReviewedChanges] = useState<Record<string, boolean>>({});
+  const [reviewOpen, setReviewOpen] = useState(false);
   const { data: ownIntents = [] } = useQuery({ queryKey: ['intents', 'scenario', scenario.id], queryFn: () => api.intents.listByScenario(scenario.id) });
   const { data: allIntents = [] } = useQuery({ queryKey: ['intents', projectId], queryFn: () => api.intents.list(projectId) });
   const { data: entities = [] } = useQuery({ queryKey: ['entities', projectId], queryFn: () => api.entities.list(projectId) });
   const { data: ownPrompts = [] } = useQuery({ queryKey: ['prompts', 'scenario', scenario.id], queryFn: () => api.prompts.listByScenario(scenario.id) });
+  const { data: scenarioChanges } = useQuery({ queryKey: ['scenario-changes', scenario.id], queryFn: () => api.scenarios.changes(scenario.id) });
+  const groupedChanges = useMemo(() => groupScenarioChanges(scenarioChanges?.changes ?? []), [scenarioChanges?.changes]);
+  useEffect(() => setReviewedChanges(Object.fromEntries(groupedChanges.map((change) => [change.key, change.reviewed]))), [groupedChanges]);
+  const hasUnreviewedChanges = groupedChanges.some((change) => !reviewedChanges[change.key]);
   const { data: allPrompts = [] } = useQuery({ queryKey: ['prompts', projectId], queryFn: () => api.prompts.list(projectId) });
   // В шагах выбираются интенты и промпты, подключённые к сценарию; сохранение само подключает ссылки, поэтому чужие здесь возможны только до первого сохранения
   const withUsed = <T extends { id: number }>(own: T[], all: T[], used: (number | null)[]) => [
@@ -240,6 +251,12 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     setActiveKey(rest[Math.min(i, rest.length - 1)].key!);
     setShowPart(false);
   };
+  const saveCustomSection = () => {
+    if (!sectionDialog?.title.trim()) return;
+    const section = { ...sectionDialog, key: sectionDialog.key ?? crypto.randomUUID(), title: sectionDialog.title.trim() };
+    setDraft((d) => ({ ...d, custom_sections: sectionDialog.key ? d.custom_sections.map((s) => s.key === sectionDialog.key ? section : s) : [...d.custom_sections, section] }));
+    setSectionDialog(null);
+  };
 
   const remove = useMutation({
     mutationFn: () => api.scenarios.remove(scenario.id),
@@ -285,6 +302,8 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
           </div>
         </div>
       )}
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="shrink-0 border-b bg-nav px-4 pt-3 md:px-8 md:pt-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <Input
@@ -294,8 +313,9 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
             aria-label="Название сценария"
           />
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:gap-3">
+            <ReadinessPill criteria={[]} hasUnreviewedChanges={hasUnreviewedChanges} onOpen={() => setReviewOpen(true)} />
             <SaveIndicator state={status} />
-            <ExportMenu scenarioId={scenario.id} />
+            <ExportMenu scenarioId={scenario.id} onExported={() => { setReviewOpen(false); qc.invalidateQueries({ queryKey: ['scenario-changes', scenario.id] }); }} />
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Действия со сценарием" className="max-md:size-10" />}>
                 <Ellipsis className="size-4" />
@@ -350,6 +370,9 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
               <Textarea id={`scenario-description-${scenario.id}`} rows={1} className="resize-y rounded-md bg-background" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             </Card>
             <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} onDictionarySaved={onDictionarySaved} />
+            <Card title="Собственные разделы" action={<Button variant="outline" size="sm" onClick={() => setSectionDialog({ title: '', content: '' })}><Plus className="size-4" /> Добавить собственный раздел</Button>}>
+              {draft.custom_sections.length === 0 ? <p className="text-sm text-muted-foreground">Добавьте раздел, если в спецификации нужна дополнительная информация.</p> : <div className="grid gap-3">{draft.custom_sections.map((section) => <div key={section.key} className="rounded-lg border bg-background p-3"><div className="flex items-start gap-3"><h3 className="min-w-0 flex-1 break-words font-medium">{section.title}</h3><div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon-sm" aria-label={`Редактировать раздел «${section.title}»`} onClick={() => setSectionDialog(section)}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon-sm" aria-label={`Удалить раздел «${section.title}»`} onClick={() => setDraft((d) => ({ ...d, custom_sections: d.custom_sections.filter((s) => s.key !== section.key) }))}><Trash2 className="size-4" /></Button></div></div><p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">{section.content || 'Пустое содержимое'}</p></div>)}</div>}
+            </Card>
           </div>
         </div>
       )}
@@ -422,6 +445,36 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
           </div>
         </div>
       )}
+        </div>
+        {reviewOpen && <ExportReviewPanel
+          scenarioId={scenario.id}
+          scenarioName={draft.name}
+          base={base}
+          criteria={[]}
+          changes={groupedChanges}
+          reviewed={reviewedChanges}
+          onToggle={async (key, value) => {
+            const change = groupedChanges.find((item) => item.key === key);
+            if (!change) return;
+            setReviewedChanges((current) => ({ ...current, [key]: value }));
+            try {
+              await api.scenarios.reviewChanges(scenario.id, change.change_ids, value);
+              qc.invalidateQueries({ queryKey: ['scenario-changes', scenario.id] });
+            } catch {
+              setReviewedChanges((current) => ({ ...current, [key]: !value }));
+              toast.error('Не удалось сохранить отметку');
+            }
+          }}
+          onClose={() => setReviewOpen(false)}
+        />}
+      </div>
+      <Dialog open={sectionDialog !== null} onOpenChange={(open) => !open && setSectionDialog(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>{sectionDialog?.key ? 'Редактировать раздел' : 'Добавить собственный раздел'}</DialogTitle><DialogDescription>Раздел будет сохранён только в этом сценарии и попадёт в экспорт.</DialogDescription></DialogHeader>
+          <div className="grid gap-4"><label className="grid gap-1.5 text-sm font-medium">Название<Input autoFocus value={sectionDialog?.title ?? ''} onChange={(e) => setSectionDialog((s) => s && ({ ...s, title: e.target.value }))} /></label><label className="grid gap-1.5 text-sm font-medium">Содержимое<Textarea rows={8} value={sectionDialog?.content ?? ''} onChange={(e) => setSectionDialog((s) => s && ({ ...s, content: e.target.value }))} /></label></div>
+          <DialogFooter><Button variant="outline" onClick={() => setSectionDialog(null)}>Отмена</Button><Button disabled={!sectionDialog?.title.trim()} onClick={saveCustomSection}>{sectionDialog?.key ? 'Сохранить' : 'Добавить раздел'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         open={confirmPart !== null}
         onOpenChange={(o) => !o && setConfirmPart(null)}
