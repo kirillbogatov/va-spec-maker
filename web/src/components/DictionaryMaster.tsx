@@ -1,7 +1,7 @@
 import { DictionaryHistory, DictionaryHistoryActions, DictionaryHistoryContext } from './DictionaryHistory';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { MoreHorizontal, Plus, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ListTree, MoreHorizontal, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -116,8 +116,29 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
   const navigate = useNavigate();
   const path = usePath();
   const [creating, setCreating] = useState(false);
+  const [groupByScenario, setGroupByScenario] = useState(() => {
+    try { return localStorage.getItem(`dictionary-group-by-scenario:${p.kind}`) === 'true'; } catch { return false; }
+  });
+  const [expandedScenarios, setExpandedScenarios] = useState<Set<number | 'unused'>>(() => new Set());
   const { filtered, search, filtering } = useListFilter(p.items, SEARCH_WHERE[p.kind], p.searchValues);
   const selected = p.items.find((i) => String(i.id) === itemId);
+
+  const scenarioGroups: { id: number | 'unused'; label: string; items: T[] }[] = [];
+  if (groupByScenario && p.usedIn) {
+    const grouped = new Map<number, { label: string; items: T[] }>();
+    const unused: T[] = [];
+    for (const item of filtered) {
+      const scenarios = p.usedIn(item);
+      if (!scenarios.length) unused.push(item);
+      for (const scenario of scenarios) {
+        let group = grouped.get(scenario.id);
+        if (!group) grouped.set(scenario.id, (group = { label: scenario.name, items: [] }));
+        group.items.push(item);
+      }
+    }
+    scenarioGroups.push(...[...grouped].map(([id, group]) => ({ id, ...group })));
+    if (unused.length) scenarioGroups.push({ id: 'unused', label: 'Не используются', items: unused });
+  }
 
   // Группы: в порядке первого появления, «без группы» — в конце
   const fallback = p.fallbackGroup ?? 'Общие';
@@ -147,13 +168,25 @@ export function DictionaryMaster<T extends DictItem>(p: Props<T>) {
       onBack={() => navigate(path(p.base))}
       list={
         <>
-          {p.onCreate && <ListHeader onCreate={() => setCreating(true)} label={p.createTitle} extra={listActions} />}
+          {p.onCreate && <ListHeader onCreate={() => setCreating(true)} label={p.createTitle} extra={<div className="flex items-center gap-1">{p.usedIn && <Button type="button" variant={groupByScenario ? 'secondary' : 'ghost'} size="icon" className="size-10 md:size-8" aria-label="Группировать по сценариям" aria-pressed={groupByScenario} title="Группировать по сценариям" onClick={() => setGroupByScenario((value) => { const next = !value; try { localStorage.setItem(`dictionary-group-by-scenario:${p.kind}`, String(next)); } catch { /* Preferences may be unavailable. */ } return next; })}><ListTree className="size-4" /></Button>}{listActions}</div>} />}
           {search}
           <ul className="flex-1 overflow-y-auto pb-2">
-            {groups.map((g) => (
+            {groupByScenario && p.usedIn ? scenarioGroups.map((g) => (
+              <li key={g.id} className="list-none">
+                <button type="button" aria-expanded={expandedScenarios.has(g.id)} onClick={() => setExpandedScenarios((current) => { const next = new Set(current); if (next.has(g.id)) next.delete(g.id); else next.add(g.id); return next; })} className="flex min-h-10 w-full items-center gap-2 px-3 text-left hover:bg-muted/60">
+                  {expandedScenarios.has(g.id) ? <ChevronDown className="size-4 shrink-0" /> : <ChevronRight className="size-4 shrink-0" />}
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{g.label}</span>
+                  <span className="text-xs tabular-nums text-muted-foreground">{g.items.length}</span>
+                </button>
+                {expandedScenarios.has(g.id) && <ul>{g.items.map((i) => {
+                  const m = p.meta?.(i);
+                  return <li key={`${g.id}:${i.id}`}><ListItem to={path(`${p.base}/${i.id}`)} kind={p.kind} meta={m?.text} warn={m?.warn}><span className={cn('block truncate', p.mono && 'font-mono text-[13px]')}>{i.name}</span>{sub(i) && <span className="block truncate text-xs font-normal text-muted-foreground">{sub(i)}</span>}</ListItem></li>;
+                })}</ul>}
+              </li>
+            )) : groups.map((g) => (
               <li key={g.label} className="list-none">
                 <ul>
-                  {showGroups && <ListGroup count={g.items.length}>{g.label}</ListGroup>}
+                  {showGroups && <ListGroup count={g.label === '\u041f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u044b \u043a \u0441\u0446\u0435\u043d\u0430\u0440\u0438\u044f\u043c' ? undefined : g.items.length}>{g.label}</ListGroup>}
                   {g.items.map((i) => {
                     const m = p.meta?.(i);
                     return (

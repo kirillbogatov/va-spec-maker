@@ -9,7 +9,7 @@ import { useProjectId } from '@/hooks/project';
 import { usePrefixes } from '@/lib/prefixes';
 import { useScenarioGroups } from '@/hooks/scenarioGroups';
 import { api } from '@/lib/api';
-import { entityTypeLabel, type EntityKind } from '@/lib/entityTypes';
+import { type EntityKind } from '@/lib/entityTypes';
 import type { EntityListItem } from '@/lib/types';
 import { EntityValues } from './EntityValues';
 
@@ -80,7 +80,7 @@ export function EntitiesPage() {
       items={items}
       searchValues={(i) => i.values.flatMap((v) => [v.value, ...v.synonyms])}
       loading={isPending}
-      meta={(i) => (i.type !== 'string' ? { text: entityTypeLabel(i.type) } : i.values.length ? null : { text: 'нет значений', warn: true })}
+      meta={(i) => (i.type === 'string' && !i.values.length ? { text: 'нет значений', warn: true } : null)}
       usedIn={(i) => {
         const ids = [...new Set(i.used_by.flatMap((u) => u.scenario_ids))];
         return ids.flatMap((id) => {
