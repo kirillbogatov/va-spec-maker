@@ -9,18 +9,19 @@ test.describe('UJ-3 Проверить и выгрузить специфика�
     }
   });
 
-  test('ED-08-01 выгрузить сценарий в Word', async ({ page }) => {
+  test('ED-08-01 выгрузить сценарий в Word через меню экспорта', async ({ page }) => {
     await openDemo(page);
+    await page.getByRole('button', { name: 'Экспорт', exact: true }).click();
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Экспорт .docx' }).click();
+    await page.getByRole('menuitem', { name: /Сценарий — Word/ }).click();
     expect((await download).suggestedFilename()).toMatch(/SC_LIGHT\.docx$/);
   });
 
-  test('ED-08-01 выгрузить сценарий в Markdown через меню форматов', async ({ page }) => {
+  test('ED-08-01 выгрузить сценарий в Markdown через меню экспорта', async ({ page }) => {
     await openDemo(page);
-    await page.getByRole('button', { name: 'Другие форматы экспорта' }).click();
+    await page.getByRole('button', { name: 'Экспорт', exact: true }).click();
     const download = page.waitForEvent('download');
-    await page.getByRole('menuitem', { name: /Markdown/ }).first().click();
+    await page.getByRole('menuitem', { name: /Сценарий — Markdown/ }).click();
     expect((await download).suggestedFilename()).toMatch(/\.md$/);
   });
 

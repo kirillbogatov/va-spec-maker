@@ -92,7 +92,8 @@ test('правки чата: сортировка, глобальные инте
   await page.getByLabel('Задача, строка 1', { exact: true }).fill('CHAT-DATE');
   await expect(page.getByRole('status', { name: 'Сохранение…' }).or(page.getByRole('status').filter({ hasText: /^Сохранение…$/ }))).toHaveCount(0);
   const downloading = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Экспорт .docx', exact: true }).click();
+  await page.getByRole('button', { name: 'Экспорт', exact: true }).click();
+  await page.getByRole('menuitem', { name: /Сценарий — Word/ }).click();
   const zip = await JSZip.loadAsync(await readFile((await (await downloading).path())!));
   const xml = await zip.file('word/document.xml')!.async('string');
   expect(xml).toContain('2026-11-02');

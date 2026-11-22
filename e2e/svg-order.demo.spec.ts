@@ -46,7 +46,8 @@ test('все вкладки в SVG и сохранённая перестано�
   await canvas.press('ArrowUp');
   // Нажимаем экспорт сразу, пока изменение ещё ожидает автосохранения.
   const docxDownloading = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Экспорт .docx', exact: true }).click();
+  await page.getByRole('button', { name: 'Экспорт', exact: true }).click();
+  await page.getByRole('menuitem', { name: /Сценарий — Word/ }).click();
   const docx = await readFile((await (await docxDownloading).path())!);
   const xml = await (await JSZip.loadAsync(docx)).file('word/document.xml')!.async('string');
   expect(xml.indexOf(selected)).toBeGreaterThanOrEqual(0);
