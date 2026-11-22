@@ -22,7 +22,7 @@ function formattedText(text: string): ReactNode[] {
 
 function inline(text: string): ReactNode[] {
   return parseTextLinks(text.replace(/\\\|/g, '|')).map((part, i) => part.url
-    ? <a key={i} href={part.url} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:decoration-2">{formattedText(part.text)}</a>
+    ? <a key={i} href={part.url} target="_blank" rel="noopener noreferrer" className="text-primary no-underline hover:font-semibold">{formattedText(part.text)}</a>
     : <Fragment key={i}>{formattedText(part.text)}</Fragment>);
 }
 

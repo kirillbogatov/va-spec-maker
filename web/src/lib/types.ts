@@ -1,7 +1,7 @@
 import type { EntityType } from './entityTypes';
 import type { ValueItem } from './values';
 
-export interface Project { id: number; name: string; description: string }
+export interface Project { id: number; name: string; description: string; branch_group_id?: number; branch_name?: string; branch_count?: number }
 export interface ProjectListItem extends Project {
   scenario_count: number; created_at: string;
   intent_count: number; entity_count: number; prompt_count: number; ready_count: number;

@@ -15,7 +15,7 @@ function Guard() {
   if (!project) return (
     <main className="space-y-3 p-6">
       <h1 className="text-lg font-semibold">Проект не найден</h1>
-      <Link to="/" className="text-sm text-brand underline underline-offset-4">Все проекты</Link>
+      <Link to="/" className="text-sm text-brand no-underline hover:font-semibold">Все проекты</Link>
     </main>
   );
   return <AppShell />;

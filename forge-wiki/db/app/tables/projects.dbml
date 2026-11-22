@@ -2,6 +2,8 @@ Table projects {
   id integer [pk]
   name text [not null]
   description text [not null, default: '']
+  branch_group_id integer [not null, default: 0, note: 'Объединяет ветки одного проекта; после миграции равен id первой ветки.']
+  branch_name text [not null, default: 'main']
   created_at text [not null, default: `CURRENT_TIMESTAMP`]
 
   Note: 'Проект — изолированная спецификация; владелец всего содержимого (каскадное удаление).'

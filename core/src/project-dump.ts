@@ -97,6 +97,7 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
         .prepare('INSERT INTO projects(name, description) VALUES (?, ?)')
         .run(name ?? dump.name, typeof dump.description === 'string' ? dump.description : '').lastInsertRowid,
     );
+    if (targetProjectId === undefined) db.prepare("UPDATE projects SET branch_group_id = ?, branch_name = 'main' WHERE id = ?").run(pid, pid);
     const maps: Record<string, Map<number, number>> = {};
     const importedParts: number[] = [];
     const legacyTemplateObjects = { intents: [] as number[], prompts: [] as number[] };

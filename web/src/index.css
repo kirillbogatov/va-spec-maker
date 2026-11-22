@@ -205,6 +205,12 @@
   html {
     @apply font-sans;
     }
+  a {
+    text-decoration: none;
+  }
+  a:hover {
+    font-weight: 600;
+  }
 }
 
 /* Поверхности браузера: выделение, скроллбары, цифры в таблицах */

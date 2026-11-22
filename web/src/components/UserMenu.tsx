@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { KeyRound, LogOut, RotateCcw, Settings, Users } from 'lucide-react';
+import { KeyRound, LayoutGrid, LogOut, RotateCcw, Settings, Users } from 'lucide-react';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 import { UsersDialog } from '@/components/UsersDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -60,6 +60,11 @@ export function UserMenu({ variant, collapsed = false, settingsTo }: Props) {
           {settingsTo && (
             <DropdownMenuItem className="min-h-9" onClick={() => navigate(settingsTo)}>
               <Settings className="size-4" /> Настройки
+            </DropdownMenuItem>
+          )}
+          {settingsTo && (
+            <DropdownMenuItem className="min-h-9" onClick={() => navigate('/')}>
+              <LayoutGrid className="size-4" /> Сменить проект
             </DropdownMenuItem>
           )}
           {!DEMO && (

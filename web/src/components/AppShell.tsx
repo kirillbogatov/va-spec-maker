@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, ChevronDown, Copy, Files, LayoutGrid, MessageSquareText, PanelLeftOpen, PanelsTopLeft, ScrollText, Search, Shapes, SlidersHorizontal, KeyRound, Workflow, type LucideIcon } from 'lucide-react';
+import { BookOpen, ChevronDown, Copy, Files, MessageSquareText, PanelLeftOpen, PanelsTopLeft, ScrollText, Shapes, SlidersHorizontal, KeyRound, Workflow, type LucideIcon } from 'lucide-react';
 import { CommandPalette } from '@/components/CommandPalette';
 import { GlobalSaveStatus } from '@/components/GlobalSaveStatus';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
@@ -123,30 +123,13 @@ export function AppShell() {
               <PanelLeftOpen className="size-4" aria-hidden />
             </button>
           ) : (
-            <Link to="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight" title="Все проекты">
+            <span className="flex items-center gap-2 text-sm font-semibold tracking-tight">
               <Logo className="size-7" />
               VA Spec Maker
-            </Link>
+            </span>
           )}
         </div>
         {!collapsed && <ProjectSwitcher />}
-        <button
-          type="button"
-          onClick={() => setSearching(true)}
-          aria-label="Поиск"
-          title="Поиск"
-          className={cn(
-            'inline-flex h-8 items-center gap-2 rounded-md border bg-muted/50 text-sm text-muted-foreground hover:bg-muted',
-            collapsed ? 'w-8 justify-center' : 'px-2.5',
-          )}
-        >
-          <Search className="size-4" />
-          {!collapsed && (
-            <>
-              Поиск <kbd className="ml-auto rounded border bg-background px-1 font-mono text-[11px]">/</kbd>
-            </>
-          )}
-        </button>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto" aria-label="Основная навигация">
           <div className="flex shrink-0 flex-col gap-0.5">
@@ -173,13 +156,17 @@ export function AppShell() {
         </div>
       </aside>
 
+      <div className="flex shrink-0 items-center border-b bg-nav px-3 py-2 md:hidden">
+        <ProjectSwitcher />
+      </div>
+
       <main className="min-h-0 min-w-0 flex-1 bg-page">
         <PanelVisibilityContext.Provider value={{ collapsed, setCollapsed, restoreButton }}>
           <Outlet />
         </PanelVisibilityContext.Provider>
       </main>
 
-      <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-6 border-t bg-nav pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-4 border-t bg-nav pb-[env(safe-area-inset-bottom)] md:hidden">
         <NavLink to={path('/scenarios')} className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground', onScenarios && 'font-medium text-brand')}>
           <Workflow className="size-5" /> Сценарии
         </NavLink>
@@ -204,12 +191,6 @@ export function AppShell() {
             {TEMPLATES.map(d => <DropdownMenuItem key={d.to} onClick={() => navigate(path(d.to))}><d.icon className="size-4" />{d.label}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
-        <button type="button" onClick={() => setSearching(true)} className="flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground">
-          <Search className="size-5" /> Поиск
-        </button>
-        <Link to="/" className="flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground">
-          <LayoutGrid className="size-5" /> Проекты
-        </Link>
         <UserMenu variant="tab" settingsTo={path('/settings')} />
       </nav>
 

@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS projects (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
+  branch_group_id INTEGER NOT NULL DEFAULT 0,
+  branch_name TEXT NOT NULL DEFAULT 'main',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS prompt_settings (
@@ -201,6 +203,8 @@ const hasColumn = (db: Db, table: string, column: string) =>
 export function migrate(db: Db): void {
   // Edition-specific migration numbers overlap; inspect the actual schema.
   const compatibleColumns: [string, string][] = [
+    ["projects", "branch_group_id INTEGER NOT NULL DEFAULT 0"],
+    ["projects", "branch_name TEXT NOT NULL DEFAULT 'main'"],
     ["scenarios", "is_template INTEGER NOT NULL DEFAULT 0"],
     ["prompts", "short_answers TEXT NOT NULL DEFAULT '[]'"],
     ["scenario_parts", "preconditions TEXT NOT NULL DEFAULT '[]'"],
@@ -212,7 +216,21 @@ export function migrate(db: Db): void {
     ["scenario_dependencies", "dictionary_id INTEGER REFERENCES dependency_dictionary(id) ON DELETE SET NULL"],
     ["scenario_dependencies", "editable INTEGER NOT NULL DEFAULT 0"],
   ];
+  for (const [table, ddl] of compatibleColumns.slice(0, 2)) {
+    const column = ddl.split(' ')[0];
+    if (!hasColumn(db, table, column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  }
+  db.exec('UPDATE projects SET branch_group_id = id WHERE branch_group_id = 0');
+  db.exec('CREATE INDEX IF NOT EXISTS projects_branch_group_idx ON projects(branch_group_id, id)');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS projects_branch_name_unique ON projects(branch_group_id, branch_name COLLATE NOCASE)');
+  db.exec(`CREATE TRIGGER IF NOT EXISTS projects_default_branch_identity
+    AFTER INSERT ON projects
+    WHEN NEW.branch_group_id = 0
+    BEGIN
+      UPDATE projects SET branch_group_id = NEW.id WHERE id = NEW.id;
+    END`);
   for (const [table, ddl] of compatibleColumns) {
+    if (table === 'projects') continue;
     if (db.prepare(`PRAGMA table_info(${table})`).all().length && !hasColumn(db, table, ddl.split(' ')[0])) {
       db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
     }

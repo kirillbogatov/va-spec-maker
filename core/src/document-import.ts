@@ -12,7 +12,8 @@ const conditionText = (s = '') => clean(s).split('\n').map(s => s.replace(/^\s*\
 export async function convertScenarioDocument(text: string, filename: string, opts: OpenOpts = {}) {
   const doc = parseL3(text, filename);
   const db = await openDb(opts);
-  db.prepare('INSERT INTO projects(name) VALUES (?)').run(doc.title);
+  const projectId = Number(db.prepare('INSERT INTO projects(name) VALUES (?)').run(doc.title).lastInsertRowid);
+  db.prepare("UPDATE projects SET branch_group_id = ?, branch_name = 'main' WHERE id = ?").run(projectId, projectId);
   const warnings: string[] = [];
   for (const section of doc.sections.filter(s => s.blocks.length)) {
     const sid = db.prepare('INSERT INTO scenarios(project_id,name) VALUES (1,?)').run(section.title).lastInsertRowid;

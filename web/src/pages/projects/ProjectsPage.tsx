@@ -2,7 +2,7 @@ import { ImportProjectDialog } from './ImportProjectDialog';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, X, Upload } from 'lucide-react';
+import { Download, FileText, FolderOpen, MoreHorizontal, Pencil, Plus, X, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/UserMenu';
@@ -90,6 +90,7 @@ export function ProjectsPage() {
   const [dialog, setDialog] = useState<{ project: ProjectListItem | null } | null>(null);
   const [deleting, setDeleting] = useState<ProjectListItem | null>(null);
   const { data: projects = [], isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ['projects'], queryFn: api.projects.list });
+  const displayedProjects = projects.filter((project) => (project.branch_group_id ?? project.id) === project.id);
   const refresh = () => qc.invalidateQueries({ queryKey: ['projects'] });
 
   const save = useMutation({
@@ -98,7 +99,6 @@ export function ProjectsPage() {
     onSuccess: refresh,
   });
   const remove = useMutation({ mutationFn: (id: number) => api.projects.remove(id), onSuccess: refresh });
-  const duplicate = useMutation({ mutationFn: (id: number) => api.projects.duplicate(id), onSuccess: refresh });
 
   const exportJson = async (p: ProjectListItem) => {
     await backupProject(p);
@@ -135,7 +135,7 @@ export function ProjectsPage() {
             <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>{isFetching ? 'Загрузка…' : 'Повторить загрузку'}</Button>
           </div>
         )}
-        {!isLoading && !isError && projects.length === 0 && (
+        {!isLoading && !isError && displayedProjects.length === 0 && (
           <div className="grid place-items-center rounded-xl border border-dashed bg-background px-6 py-16 text-center">
             <FolderOpen className="mb-3 size-10 text-muted-foreground" aria-hidden />
             <h2 className="text-balance text-lg font-semibold">Проектов пока нет</h2>
@@ -147,9 +147,9 @@ export function ProjectsPage() {
           </div>
         )}
 
-        {projects.length > 0 && (
+        {displayedProjects.length > 0 && (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p) => {
+            {displayedProjects.map((p) => {
               return (
                 <li key={p.id} className="group relative flex flex-col gap-3 rounded-xl border bg-background p-5 transition-[box-shadow,border-color] duration-300 ease-in-out hover:border-foreground/20 hover:shadow-md motion-reduce:transition-none">
                   <div className="flex items-start gap-2">
@@ -162,11 +162,10 @@ export function ProjectsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem className="min-h-9" onClick={() => setDialog({ project: p })}><Pencil className="size-4" /> Изменить описание</DropdownMenuItem>
-                        <DropdownMenuItem className="min-h-9" onClick={() => duplicate.mutate(p.id)}><Copy className="size-4" /> Дублировать</DropdownMenuItem>
                         <DropdownMenuItem className="min-h-9" onClick={() => exportJson(p)}><Download className="size-4" /> Экспорт (.json)</DropdownMenuItem>
                         <DropdownMenuItem className="min-h-9" onClick={() => exportDocx(p)}><FileText className="size-4" /> Скачать .docx</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="min-h-9" variant="destructive" onClick={() => setDeleting(p)}><X className="size-4" /> Удалить</DropdownMenuItem>
+                        <DropdownMenuItem className="min-h-9" variant="destructive" disabled={(p.branch_count ?? 1) > 1} onClick={() => setDeleting(p)}><X className="size-4" /> Удалить</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
