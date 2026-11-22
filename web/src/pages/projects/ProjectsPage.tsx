@@ -45,9 +45,9 @@ function ProjectDialog({ project, open, onOpenChange, onSubmit }: {
   const valid = name.trim().length > 0;
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent showCloseButton={!pending}>
+      <DialogContent className="max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto" showCloseButton={!pending}>
         <DialogHeader>
-          <DialogTitle>{project ? 'Переименовать проект' : 'Новый проект'}</DialogTitle>
+          <DialogTitle>{project ? 'Изменить проект' : 'Новый проект'}</DialogTitle>
         </DialogHeader>
         <form
           className="space-y-3"
@@ -73,7 +73,7 @@ function ProjectDialog({ project, open, onOpenChange, onSubmit }: {
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
             Описание проекта
-            <Textarea rows={3} disabled={pending} value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Textarea rows={10} className="max-h-[50dvh] min-h-48 resize-y overflow-y-auto" disabled={pending} value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
           {failure && <p role="alert" className="text-sm text-destructive">{failure}</p>}
           <DialogFooter>
@@ -161,7 +161,7 @@ export function ProjectsPage() {
                         <MoreHorizontal className="size-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="min-h-9" onClick={() => setDialog({ project: p })}><Pencil className="size-4" /> Переименовать</DropdownMenuItem>
+                        <DropdownMenuItem className="min-h-9" onClick={() => setDialog({ project: p })}><Pencil className="size-4" /> Изменить описание</DropdownMenuItem>
                         <DropdownMenuItem className="min-h-9" onClick={() => duplicate.mutate(p.id)}><Copy className="size-4" /> Дублировать</DropdownMenuItem>
                         <DropdownMenuItem className="min-h-9" onClick={() => exportJson(p)}><Download className="size-4" /> Экспорт (.json)</DropdownMenuItem>
                         <DropdownMenuItem className="min-h-9" onClick={() => exportDocx(p)}><FileText className="size-4" /> Скачать .docx</DropdownMenuItem>
