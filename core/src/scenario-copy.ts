@@ -1,5 +1,7 @@
 import type { Db } from './sqlite';
-import { notFound } from './errors';
+import { badRequest, notFound } from './errors';
+import { dumpProject } from './project-dump';
+import { importScenario } from './scenario-import';
 
 type Row = Record<string, any>;
 
@@ -55,5 +57,23 @@ export function copyScenario(db: Db, projectId: number, sourceId: number, name: 
       }
     }
     return { id, name };
+  })();
+}
+
+/** Replace a scenario in another branch with this branch's scenario, remapping shared project resources by name. */
+export function copyScenarioToBranch(db: Db, sourceId: number, targetScenarioId: number) {
+  const get = (id: number) => db.prepare(`SELECT s.id, s.project_id, s.name, s.is_template, p.branch_group_id
+    FROM scenarios s JOIN projects p ON p.id = s.project_id WHERE s.id = ?`).get(id) as
+    | { id: number; project_id: number; name: string; is_template: number; branch_group_id: number }
+    | undefined;
+  const source = get(sourceId);
+  const target = get(targetScenarioId);
+  if (!source || !target) throw notFound('Сценарий');
+  if (source.project_id === target.project_id || source.branch_group_id !== target.branch_group_id) {
+    throw badRequest('Выберите сценарий из другой ветки этого проекта');
+  }
+  if (source.is_template || target.is_template) throw badRequest('Копирование между ветками доступно только для сценариев');
+  return db.transaction(() => {
+    return importScenario(db, target.project_id, dumpProject(db, source.project_id), source.id, { reuseExisting: true, scenarioId: target.id });
   })();
 }

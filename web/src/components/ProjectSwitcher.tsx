@@ -87,10 +87,10 @@ export function ProjectSwitcher() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="min-h-9" onClick={() => setAction('add')}><Plus className="size-4" /> Добавить ветку</DropdownMenuItem>
-            <DropdownMenuItem className="min-h-9" onClick={() => setAction('clone')}><Copy className="size-4" /> Клонировать ветку</DropdownMenuItem>
-            <DropdownMenuItem className="min-h-9" onClick={() => setAction('rename')}><Pencil className="size-4" /> Переименовать выбранную ветку</DropdownMenuItem>
+            <DropdownMenuItem className="min-h-9" onClick={() => setAction('clone')}><Copy className="size-4" /> Клонировать</DropdownMenuItem>
+            <DropdownMenuItem className="min-h-9" onClick={() => setAction('rename')}><Pencil className="size-4" /> Переименовать</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="min-h-9" variant="destructive" disabled={branches.length <= 1} onClick={() => setDeleting(true)}><Trash2 className="size-4" /> Удалить выбранную ветку</DropdownMenuItem>
+            <DropdownMenuItem className="min-h-9" variant="destructive" disabled={branches.length <= 1} onClick={() => setDeleting(true)}><Trash2 className="size-4" /> Удалить</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

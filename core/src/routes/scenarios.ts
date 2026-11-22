@@ -5,7 +5,7 @@ import { Router, type RouterT } from '../router';
 import type { Db } from '../sqlite';
 import { badRequest, notFound } from '../errors';
 import { connect } from '../links';
-import { copyScenario } from '../scenario-copy';
+import { copyScenario, copyScenarioToBranch } from '../scenario-copy';
 import { normalizeTaskLinks } from '../text-links';
 import { optString, parseId, requireString } from '../validate';
 import { reviewScenarioChanges, scenarioChanges } from '../scenario-changes';
@@ -52,6 +52,10 @@ export function scenariosRouter(db: Db): RouterT {
   const r = Router();
   r.post('/projects/:pid/scenarios/import', (req, res) => {
     res.status(201).json(importScenario(db, parseId(req.params.pid), req.body?.dump, parseId(req.body?.scenario_id)));
+  });
+
+  r.put('/scenarios/:sourceId/copy-to/:targetId', (req, res) => {
+    res.json(copyScenarioToBranch(db, parseId(req.params.sourceId), parseId(req.params.targetId)));
   });
 
   const loadPart = (part: { id: number; name: string; description: string; layout: string; preconditions: string; precondition: string; precond_mode: string }) => {

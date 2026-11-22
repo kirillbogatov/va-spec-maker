@@ -86,7 +86,14 @@ export function dumpProject(db: Db, id: number): ProjectDump {
 }
 
 /** Импорт: id пересоздаются, ссылки переписываются. Имена столбцов проверяются по схеме. */
-export function importProject(db: Db, dump: ProjectDump, name?: string, targetProjectId?: number): number {
+export function importProject(
+  db: Db,
+  dump: ProjectDump,
+  name?: string,
+  targetProjectId?: number,
+  reusedIds: Record<string, Record<number, number>> = {},
+  forcedIds: Record<string, Record<number, number>> = {},
+): number {
   if (!dump || dump.version !== 1 || typeof dump.name !== 'string' || !dump.tables || typeof dump.tables !== 'object') {
     throw badRequest('Файл не похож на экспорт проекта VA Spec Maker');
   }
@@ -103,18 +110,22 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
     const legacyTemplateObjects = { intents: [] as number[], prompts: [] as number[] };
     for (const t of TABLES) {
       const cols = new Set((db.prepare(`PRAGMA table_info(${t.name})`).all() as { name: string }[]).map((c) => c.name));
-      const map = (maps[t.name] = new Map());
+      const map = (maps[t.name] = new Map<number, number>());
+      for (const [sourceId, targetId] of Object.entries(reusedIds[t.name] ?? {})) map.set(Number(sourceId), targetId);
       const rows = tables[t.name];
       if (rows !== undefined && !Array.isArray(rows)) throw badRequest(`Некорректная таблица ${t.name}`);
       for (const original of rows ?? []) {
+        if (typeof original.id === 'number' && map.has(original.id)) continue;
         let row = original;
+        const forcedId = typeof original.id === 'number' ? forcedIds[t.name]?.[original.id] : undefined;
+        if (forcedId !== undefined) row = { ...row, id: forcedId };
         if (t.name === 'scenario_steps' && row.match_any_intent !== undefined) {
           const flag = row.match_any_intent;
           if (flag !== true && flag !== false && flag !== 0 && flag !== 1) throw badRequest('Некорректное поле match_any_intent');
           row = { ...row, match_any_intent: flag === true || flag === 1 ? 1 : 0 };
           if (row.match_any_intent === 1) row.intent_id = null;
         }
-        const keys = Object.keys(row).filter((k) => k !== 'id' && !LEGACY[t.name]?.includes(k));
+        const keys = Object.keys(row).filter((k) => (k !== 'id' || forcedId !== undefined) && !LEGACY[t.name]?.includes(k));
         if (keys.some((k) => !cols.has(k))) throw badRequest(`Неизвестное поле в таблице ${t.name}`);
         const values = keys.map((k) => {
           if (k === 'project_id') return pid;
@@ -144,7 +155,7 @@ export function importProject(db: Db, dump: ProjectDump, name?: string, targetPr
         const info = db.prepare(`INSERT INTO ${t.name}(${q}) VALUES (${keys.map(() => '?').join(', ')})`).run(...values);
         if (t.name === 'scenario_parts') importedParts.push(Number(info.lastInsertRowid));
         if ((t.name === 'intents' || t.name === 'prompts') && row.is_template === undefined) legacyTemplateObjects[t.name].push(Number(info.lastInsertRowid));
-        if (typeof row.id === 'number') map.set(row.id, Number(info.lastInsertRowid));
+        if (typeof original.id === 'number') map.set(original.id, Number(info.lastInsertRowid));
       }
     }
     restoreImportedPreconditions(db, pid, maps, importedParts);

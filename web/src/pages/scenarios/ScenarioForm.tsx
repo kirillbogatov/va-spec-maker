@@ -3,14 +3,14 @@ import type { DictionaryDependency } from '@/lib/types';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ellipsis, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Ellipsis, FilePlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SaveIndicator } from '@/components/SaveIndicator';
 import { ExportMenu } from '@/components/ExportMenu';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn, GHOST } from '@/lib/utils';
 import { usePath, useProjectId } from '@/hooks/project';
 import { useAutosave } from '@/hooks/useAutosave';
@@ -30,6 +30,7 @@ import { canonicalOrder, normalizeEntry, splitLegacySteps } from '@/lib/fsm';
 import { StateEditor } from './state-editor/StateEditor';
 import { PartPanel, PartTabs } from './PartTabs';
 import { duplicatePart } from './duplicatePart';
+import { ScenarioBranchActions } from './ScenarioBranchActions';
 import { CreateScenarioDialog } from './CreateScenarioDialog';
 import { waitForSaves } from '@/lib/saveStore';
 import { usePrefixes } from '@/lib/prefixes';
@@ -320,10 +321,12 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
               <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Действия со сценарием" className="max-md:size-10" />}>
                 <Ellipsis className="size-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {!scenario.is_template && <DropdownMenuItem onClick={() => { setTemplateName(`${prefixes.scenarioTemplate}${draft.name}`); setSavingTemplate(true); }}>Сохранить как шаблон</DropdownMenuItem>}
-                <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
-                  Удалить сценарий
+              <DropdownMenuContent align="end" className="min-w-56">
+                {!scenario.is_template && <ScenarioBranchActions scenario={scenario} projectId={projectId} />}
+                {!scenario.is_template && <DropdownMenuItem className="min-h-9" onClick={() => { setTemplateName(`${prefixes.scenarioTemplate}${draft.name}`); setSavingTemplate(true); }}><FilePlus className="size-4" /> Сохранить как шаблон</DropdownMenuItem>}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="min-h-9" variant="destructive" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 className="size-4" /> Удалить сценарий
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

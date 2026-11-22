@@ -31,7 +31,7 @@ export async function req<T>(method: string, url: string, body?: unknown, option
   }
   if (method !== 'GET') {
     const sid = url.match(/^\/api\/scenarios\/(\d+)(?:\/|$)/)?.[1];
-    if (sid && !(method === 'DELETE' && url === `/api/scenarios/${sid}`)) markScenarioEdited(Number(sid));
+    if (sid && !url.includes('/copy-to/') && !(method === 'DELETE' && url === `/api/scenarios/${sid}`)) markScenarioEdited(Number(sid));
   }
   return (r.status === 204 ? undefined : r.body) as T;
 }
@@ -121,6 +121,8 @@ export const api = {
     create: (pid: number, name: string, template_id?: number) => req<{ id: number; name: string }>('POST', `/api/projects/${pid}/scenarios`, { name, template_id }),
     save: (id: number, body: Omit<Scenario, 'id' | 'project_id'>, expected?: Scenario) =>
       req<Scenario>('PUT', `/api/scenarios/${id}`, body, expected ? { expected } : undefined),
+    copyToBranch: (sourceId: number, targetScenarioId: number) =>
+      req<{ id: number; name: string }>('PUT', `/api/scenarios/${sourceId}/copy-to/${targetScenarioId}`),
     remove: (id: number) => req<void>('DELETE', `/api/scenarios/${id}`),
     changelog: (id: number) => req<ChangelogRow[]>('GET', `/api/scenarios/${id}/changelog`),
     saveChangelog: (id: number, rows: ChangelogRow[], expected?: ChangelogRow[]) =>

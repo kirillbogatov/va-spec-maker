@@ -4,7 +4,7 @@ import { importProject, type ProjectDump } from './project-dump';
 import type { Db } from './sqlite';
 
 /** Import a single scenario and its dictionary references using the project ID remapper. */
-export function importScenario(db: Db, pid: number, dump: ProjectDump, sid: number) {
+export function importScenario(db: Db, pid: number, dump: ProjectDump, sid: number, options: { reuseExisting?: boolean; scenarioId?: number } = {}) {
   if (!db.prepare('SELECT 1 FROM projects WHERE id = ?').get(pid)) throw notFound('Проект');
   if (!dump || dump.version !== 1 || typeof dump.name !== 'string' || !dump.tables || typeof dump.tables !== 'object') {
     throw badRequest('Выберите JSON-файл экспорта проекта');
@@ -36,11 +36,39 @@ export function importScenario(db: Db, pid: number, dump: ProjectDump, sid: numb
   const keywordIds = ids(conditions, 'keyword_id');
   const patterns = (tables.intent_patterns ?? []).map(r => String(r.text)).join(' ');
   tables.keywords = (tables.keywords ?? []).filter(r => keywordIds.has(r.id) || patterns.includes(String(r.name)));
-  tables.dependency_dictionary = [];
+  if (options.reuseExisting) {
+    const dictionaryIds = new Set((tables.scenario_dependencies ?? []).map((row) => row.dictionary_id).filter((id): id is number => typeof id === 'number'));
+    tables.dependency_dictionary = (tables.dependency_dictionary ?? []).filter((row) => dictionaryIds.has(row.id as number));
+  } else {
+    tables.dependency_dictionary = [];
+  }
   tables.project_settings = [];
   tables.prompt_settings = [];
   tables.response_templates = [];
+  const reusedIds: Record<string, Record<number, number>> = {};
+  if (options.reuseExisting) {
+    const referenceTable = Object.hasOwn(dump.tables, 'concepts') ? 'concepts' : 'keywords';
+    for (const table of ['entities', 'intents', 'prompts', referenceTable, 'dependency_dictionary']) {
+      reusedIds[table] = {};
+      for (const row of tables[table] ?? []) {
+        const target = db.prepare(`SELECT id FROM ${table} WHERE project_id = ? AND name = ? COLLATE NOCASE`).get(pid, row.name) as { id: number } | undefined;
+        if (target && typeof row.id === 'number') reusedIds[table][row.id] = target.id;
+      }
+      tables[table] = (tables[table] ?? []).filter((row) => typeof row.id !== 'number' || reusedIds[table][row.id] === undefined);
+    }
+    const reusedIntents = new Set(Object.keys(reusedIds.intents ?? {}).map(Number));
+    const reusedEntities = new Set(Object.keys(reusedIds.entities ?? {}).map(Number));
+    tables.intent_phrases = (tables.intent_phrases ?? []).filter((row) => !reusedIntents.has(Number(row.intent_id)));
+    tables.intent_patterns = (tables.intent_patterns ?? []).filter((row) => !reusedIntents.has(Number(row.intent_id)));
+    tables.intent_entities = (tables.intent_entities ?? []).filter((row) => !reusedIntents.has(Number(row.intent_id)));
+    tables.entity_values = (tables.entity_values ?? []).filter((row) => !reusedEntities.has(Number(row.entity_id)));
+  }
   return db.transaction(() => {
+    if (options.scenarioId !== undefined) {
+      const target = db.prepare('SELECT project_id FROM scenarios WHERE id = ?').get(options.scenarioId) as { project_id: number } | undefined;
+      if (!target || target.project_id !== pid) throw notFound('Сценарий назначения');
+      db.prepare('DELETE FROM scenarios WHERE id = ?').run(options.scenarioId);
+    }
     for (const table of ['entities', 'intents', 'prompts', 'keywords']) {
       for (const row of tables[table] ?? []) {
         if (db.prepare(`SELECT 1 FROM ${table} WHERE project_id = ? AND name = ?`).get(pid, row.name)) {
@@ -48,7 +76,9 @@ export function importScenario(db: Db, pid: number, dump: ProjectDump, sid: numb
         }
       }
     }
-    importProject(db, { ...dump, tables }, undefined, pid);
-    return db.prepare('SELECT id, name FROM scenarios WHERE project_id = ? ORDER BY id DESC LIMIT 1').get(pid) as { id: number; name: string };
+    importProject(db, { ...dump, tables }, undefined, pid, reusedIds, options.scenarioId === undefined ? {} : { scenarios: { [sid]: options.scenarioId } });
+    return (options.scenarioId === undefined
+      ? db.prepare('SELECT id, name FROM scenarios WHERE project_id = ? ORDER BY id DESC LIMIT 1').get(pid)
+      : db.prepare('SELECT id, name FROM scenarios WHERE id = ? AND project_id = ?').get(options.scenarioId, pid)) as { id: number; name: string };
   })();
 }
