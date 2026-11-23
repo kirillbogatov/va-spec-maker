@@ -396,7 +396,9 @@ function IntentRow({ intent, link, siblings, defaultOpen, focusName, onToggleGlo
             </div>
           </div>
           <DialogFooter className="shrink-0 -mx-5 -mb-5 mt-4 px-5 sm:items-center sm:justify-between">
-            <SaveNote state={status} />
+            <span className="min-h-4">
+              <SaveNote state={status} />
+            </span>
             <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
               <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => setConfirmRemove(true)}>
                 <X className="size-4" /> Удалить
