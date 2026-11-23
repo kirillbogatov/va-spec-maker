@@ -368,7 +368,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
       </header>
       {tab === 'general' && (
         <div className={column}>
-          <div className={cn(inner, 'grid min-w-0 gap-4')}>
+          <div className={cn(inner, 'grid min-w-0 gap-6')}>
             <Card title="Описание">
               <Textarea id={`scenario-description-${scenario.id}`} rows={1} className="resize-y rounded-md bg-background" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             </Card>
