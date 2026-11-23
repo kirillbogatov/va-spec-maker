@@ -321,19 +321,37 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
             <ReadinessPill criteria={[]} hasUnreviewedChanges={hasUnreviewedChanges} onOpen={() => setReviewOpen(true)} />
             <SaveIndicator state={status} />
             <ExportMenu scenarioId={scenario.id} onExported={() => { setReviewOpen(false); qc.invalidateQueries({ queryKey: ['scenario-changes', scenario.id] }); }} />
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Действия со сценарием" className="max-md:size-10" />}>
-                <Ellipsis className="size-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-56">
-                {!scenario.is_template && <ScenarioBranchActions scenario={scenario} projectId={projectId} />}
-                {!scenario.is_template && <DropdownMenuItem className="min-h-9" onClick={() => { setTemplateName(`${prefixes.scenarioTemplate}${draft.name}`); setSavingTemplate(true); }}><FilePlus className="size-4" /> Сохранить как шаблон</DropdownMenuItem>}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="min-h-9" variant="destructive" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 className="size-4" /> Удалить сценарий
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {scenario.is_template ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Действия со сценарием" className="max-md:size-10" />}>
+                  <Ellipsis className="size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-56">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="min-h-9" variant="destructive" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 className="size-4" /> Удалить сценарий
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <ScenarioBranchActions scenario={scenario} projectId={projectId}>
+                {(branchActions) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Действия со сценарием" className="max-md:size-10" />}>
+                      <Ellipsis className="size-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-56">
+                      {branchActions}
+                      <DropdownMenuItem className="min-h-9" onClick={() => { setTemplateName(`${prefixes.scenarioTemplate}${draft.name}`); setSavingTemplate(true); }}><FilePlus className="size-4" /> Сохранить как шаблон</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="min-h-9" variant="destructive" onClick={() => setConfirmDelete(true)}>
+                        <Trash2 className="size-4" /> Удалить сценарий
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </ScenarioBranchActions>
+            )}
           </div>
         </div>
         <div className="mt-3 flex items-end gap-2">
