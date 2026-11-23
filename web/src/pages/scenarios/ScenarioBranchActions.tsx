@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, GitCompareArrows } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,8 +14,13 @@ import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdow
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { waitForSaves } from '@/lib/saveStore';
+import { MarkdownView, type MarkdownLineDiff } from '@/components/MarkdownView';
 
 type DiffRow = { left?: string; right?: string; kind: 'same' | 'removed' | 'added' };
+type SpecSection = { key: string; start: number; source: string; lineDiff: MarkdownLineDiff[] };
+type AlignedSection = { left: SpecSection | null; right: SpecSection | null };
+
+const sectionHeading = /^(#{1,2})\s+(.+)$/;
 
 function diffLines(leftText: string, rightText: string): DiffRow[] {
   const left = leftText.replace(/\r/g, '').split('\n');
@@ -44,7 +50,54 @@ function diffLines(leftText: string, rightText: string): DiffRow[] {
   return rows;
 }
 
-export function ScenarioBranchActions({ scenario, projectId }: { scenario: Scenario; projectId: number }) {
+function splitSpecSections(source: string, lineDiff: MarkdownLineDiff[]): SpecSection[] {
+  const lines = source.replace(/\r/g, '').split('\n');
+  const headings = lines.flatMap((line, index) => {
+    const match = sectionHeading.exec(line);
+    if (!match) return [];
+    const title = match[2].replace(/\*\*|`/g, '').replace(/(?<!\w)_([^_]+)_(?!\w)/g, '$1').trim().toLocaleLowerCase();
+    return [{ index, key: `${match[1].length}:${title}` }];
+  });
+  if (!headings.length) return [{ key: '0:document', start: 0, source: lines.join('\n'), lineDiff }];
+
+  const sections: SpecSection[] = [];
+  if (headings[0].index > 0) {
+    sections.push({ key: '0:preamble', start: 0, source: lines.slice(0, headings[0].index).join('\n'), lineDiff: lineDiff.slice(0, headings[0].index) });
+  }
+  headings.forEach((heading, index) => {
+    const end = headings[index + 1]?.index ?? lines.length;
+    sections.push({ key: heading.key, start: heading.index, source: lines.slice(heading.index, end).join('\n'), lineDiff: lineDiff.slice(heading.index, end) });
+  });
+  return sections;
+}
+
+function alignSpecSections(left: SpecSection[], right: SpecSection[]): AlignedSection[] {
+  const width = right.length + 1;
+  const lcs = new Uint32Array((left.length + 1) * width);
+  for (let i = left.length - 1; i >= 0; i--) {
+    for (let j = right.length - 1; j >= 0; j--) {
+      const cell = i * width + j;
+      lcs[cell] = left[i].key === right[j].key
+        ? lcs[(i + 1) * width + j + 1] + 1
+        : Math.max(lcs[(i + 1) * width + j], lcs[i * width + j + 1]);
+    }
+  }
+  const aligned: AlignedSection[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length || j < right.length) {
+    if (i < left.length && j < right.length && left[i].key === right[j].key) aligned.push({ left: left[i++], right: right[j++] });
+    else if (i < left.length && (j >= right.length || lcs[(i + 1) * width + j] >= lcs[i * width + j + 1])) aligned.push({ left: left[i++], right: null });
+    else aligned.push({ left: null, right: right[j++] });
+  }
+  return aligned;
+}
+
+export function ScenarioBranchActions({ scenario, projectId, children }: {
+  scenario: Scenario;
+  projectId: number;
+  children: (menuItems: ReactNode) => ReactNode;
+}) {
   const qc = useQueryClient();
   const { project } = useProject();
   const [copyOpen, setCopyOpen] = useState(false);
@@ -75,6 +128,7 @@ export function ScenarioBranchActions({ scenario, projectId }: { scenario: Scena
   const copyScenarios = copyScenariosQuery.data ?? [];
   const compareScenarios = compareScenariosQuery.data ?? [];
   const copyTarget = copyScenarios.find((item) => String(item.id) === copyTargetId);
+  const compareBranch = branches.find((branch) => String(branch.id) === compareBranchId);
   const compareTarget = compareScenarios.find((item) => String(item.id) === compareTargetId);
 
   useEffect(() => {
@@ -122,9 +176,30 @@ export function ScenarioBranchActions({ scenario, projectId }: { scenario: Scena
     refetchOnMount: 'always',
     gcTime: 0,
   });
-  const diff = useMemo(() => sourcePreview.data && targetPreview.data ? diffLines(sourcePreview.data, targetPreview.data) : [], [sourcePreview.data, targetPreview.data]);
+  const lineDiff = useMemo(() => {
+    if (!sourcePreview.data || !targetPreview.data) return null;
+    const left: MarkdownLineDiff[] = [];
+    const right: MarkdownLineDiff[] = [];
+    for (const row of diffLines(sourcePreview.data, targetPreview.data)) {
+      if (row.left !== undefined) left.push(row.kind === 'removed' ? 'removed' : undefined);
+      if (row.right !== undefined) right.push(row.kind === 'added' ? 'added' : undefined);
+    }
+    return { left, right };
+  }, [sourcePreview.data, targetPreview.data]);
+  const alignedSections = useMemo(() => {
+    if (!sourcePreview.data || !targetPreview.data || !lineDiff) return [];
+    return alignSpecSections(
+      splitSpecSections(sourcePreview.data, lineDiff.left),
+      splitSpecSections(targetPreview.data, lineDiff.right),
+    );
+  }, [sourcePreview.data, targetPreview.data, lineDiff]);
+  const changedSections = useMemo(
+    () => alignedSections.filter(({ left, right }) => !left || !right || left.source !== right.source),
+    [alignedSections],
+  );
 
   return <>
+    {children(<>
     <DropdownMenuItem className="min-h-9" disabled={(project?.branch_count ?? 1) <= 1} onClick={() => { setCopyOpen(true); setCopyBranchId(''); setCopyTargetId(''); }}>
       <Copy className="size-4" /> Скопировать в ветку
     </DropdownMenuItem>
@@ -132,6 +207,7 @@ export function ScenarioBranchActions({ scenario, projectId }: { scenario: Scena
       <GitCompareArrows className="size-4" /> Сравнить версии
     </DropdownMenuItem>
     <DropdownMenuSeparator />
+    </>)}
 
     <Dialog open={copyOpen} onOpenChange={(open) => !copyMutation.isPending && setCopyOpen(open)}>
       <DialogContent>
@@ -173,39 +249,59 @@ export function ScenarioBranchActions({ scenario, projectId }: { scenario: Scena
     />
 
     <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
-      <DialogContent className="max-h-[92vh] max-w-[min(96vw,90rem)] gap-3 overflow-hidden">
+      <DialogContent className="max-h-[92vh] w-[min(98vw,110rem)] max-w-none gap-3 overflow-hidden sm:max-w-none">
         <DialogHeader>
           <DialogTitle>Сравнение спецификаций</DialogTitle>
-          <DialogDescription>Удалённые строки выделены красным, добавленные — зелёным.</DialogDescription>
+          <DialogDescription>Текущая ветка: {project?.branch_name ?? 'main'}</DialogDescription>
         </DialogHeader>
         {branchesQuery.isError && <p role="alert" className="text-sm text-destructive">Не удалось загрузить ветки: {branchesQuery.error.message}</p>}
         {!branchesQuery.isLoading && branches.length === 0 && <p className="text-sm text-muted-foreground">В проекте нет других веток.</p>}
-        {branches.length > 0 && <label className="grid max-w-sm gap-1.5 text-sm font-medium">Сравнить с веткой
+        <div className="flex flex-wrap items-end gap-4">
+        {branches.length > 0 && <label className="grid w-full max-w-xs gap-1.5 text-sm font-medium">Сравнить с веткой
           <Select value={compareBranchId} onValueChange={(value) => { setCompareBranchId(value ?? ''); setCompareTargetId(''); }}>
-            <SelectTrigger className="w-full"><SelectValue placeholder="Выберите ветку" /></SelectTrigger>
-            <SelectContent>{branches.map((branch) => <SelectItem key={branch.id} value={String(branch.id)}>{branch.branch_name ?? 'main'}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Выберите ветку">{branches.find((branch) => String(branch.id) === compareBranchId)?.branch_name ?? 'main'}</SelectValue></SelectTrigger>
+            <SelectContent alignItemWithTrigger={false} sideOffset={12}>{branches.map((branch) => <SelectItem key={branch.id} value={String(branch.id)}>{branch.branch_name ?? 'main'}</SelectItem>)}</SelectContent>
           </Select>
         </label>}
-        {compareBranchId && <label className="grid max-w-sm gap-1.5 text-sm font-medium">Сценарий в выбранной ветке
+        {compareBranchId && <label className="grid w-full max-w-xs gap-1.5 text-sm font-medium">Сценарий в выбранной ветке
           <Select value={compareTargetId} onValueChange={(value) => setCompareTargetId(value ?? '')}>
-            <SelectTrigger className="w-full"><SelectValue placeholder="Выберите сценарий" /></SelectTrigger>
-            <SelectContent>{compareScenarios.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.name}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Выберите сценарий">{compareTarget?.name}</SelectValue></SelectTrigger>
+            <SelectContent alignItemWithTrigger={false} sideOffset={12}>{compareScenarios.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.name}</SelectItem>)}</SelectContent>
           </Select>
         </label>}
+        </div>
         <div className="min-w-0 max-h-[68vh] overflow-auto rounded-lg border">
-          <div className="grid min-w-[52rem] grid-cols-2 divide-x">
-            <div className="sticky top-0 z-10 bg-muted px-3 py-2 text-sm font-semibold">Текущая версия · {scenario.name}</div>
-            <div className="sticky top-0 z-10 bg-muted px-3 py-2 text-sm font-semibold">{compareTarget?.name ?? 'Другая версия'}</div>
+          <div className="grid min-w-[72rem] grid-cols-2 divide-x">
+            <div className="sticky top-0 z-20 col-span-2 grid grid-cols-2 divide-x bg-muted shadow-sm">
+              <div className="px-3 py-2 text-sm font-semibold">Текущая ветка · {project?.branch_name ?? 'main'}<span className="block font-normal text-muted-foreground">{scenario.name}</span></div>
+              <div className="px-3 py-2 text-sm font-semibold">Ветка сравнения · {compareBranch?.branch_name ?? 'Выберите ветку'}<span className="block font-normal text-muted-foreground">{compareTarget?.name ?? 'Выберите сценарий'}</span></div>
+            </div>
+          {sourcePreview.isLoading || (compareTargetId && targetPreview.isLoading) ? <p role="status" className="col-span-2 p-4 text-sm text-muted-foreground">Загрузка спецификаций…</p> : null}
+          {(sourcePreview.error || targetPreview.error) && <p role="alert" className="col-span-2 p-4 text-sm text-destructive">Не удалось загрузить спецификацию: {(sourcePreview.error ?? targetPreview.error as Error).message}</p>}
+          {!compareTargetId && compareBranchId && !compareScenariosQuery.isLoading && <p className="col-span-2 p-4 text-sm text-muted-foreground">{compareScenarios.length ? 'Выберите сценарий для сравнения.' : 'В этой ветке нет сценариев для сравнения.'}</p>}
+          {sourcePreview.data && targetPreview.data && changedSections.length === 0 && <p role="status" className="col-span-2 p-6 text-center text-sm text-muted-foreground">Различий между спецификациями нет</p>}
+          {sourcePreview.data && targetPreview.data && lineDiff && <>
+            {changedSections.map(({ left, right }, index) => {
+              const rowKey = `${left?.key ?? 'missing'}:${right?.key ?? 'missing'}:${index}`;
+              return <Fragment key={rowKey}>
+                {left ? <section data-spec-pane="current" data-section-key={left.key} className="min-w-0 border-b p-3 sm:p-4">
+                  <article className="mx-auto min-w-0 max-w-[1123px] rounded-lg border bg-card px-5 py-6 shadow-sm sm:px-8 sm:py-8 md:px-[40px]">
+                    <MarkdownView source={left.source} lineDiff={left.lineDiff} headingIdPrefix="compare-current" lineOffset={left.start} />
+                  </article>
+                </section> : <section data-spec-pane="current" data-section-key={right!.key} className="min-w-0 border-b p-3 sm:p-4">
+                  <div className="flex h-full min-h-24 items-center justify-center rounded-lg border border-dashed bg-muted/20 px-4 text-center text-sm text-muted-foreground">Раздела нет в текущей ветке</div>
+                </section>}
+                {right ? <section data-spec-pane="comparison" data-section-key={right.key} className="min-w-0 border-b p-3 sm:p-4">
+                  <article className="mx-auto min-w-0 max-w-[1123px] rounded-lg border bg-card px-5 py-6 shadow-sm sm:px-8 sm:py-8 md:px-[40px]">
+                    <MarkdownView source={right.source} lineDiff={right.lineDiff} headingIdPrefix="compare-comparison" lineOffset={right.start} />
+                  </article>
+                </section> : <section data-spec-pane="comparison" data-section-key={left!.key} className="min-w-0 border-b p-3 sm:p-4">
+                  <div className="flex h-full min-h-24 items-center justify-center rounded-lg border border-dashed bg-muted/20 px-4 text-center text-sm text-muted-foreground">Раздела нет в ветке сравнения</div>
+                </section>}
+              </Fragment>;
+            })}
+          </>}
           </div>
-          {sourcePreview.isLoading || (compareTargetId && targetPreview.isLoading) ? <p role="status" className="p-4 text-sm text-muted-foreground">Загрузка спецификаций…</p> : null}
-          {(sourcePreview.error || targetPreview.error) && <p role="alert" className="p-4 text-sm text-destructive">Не удалось загрузить спецификацию: {(sourcePreview.error ?? targetPreview.error as Error).message}</p>}
-          {!compareTargetId && compareBranchId && !compareScenariosQuery.isLoading && <p className="p-4 text-sm text-muted-foreground">{compareScenarios.length ? 'Выберите сценарий для сравнения.' : 'В этой ветке нет сценариев для сравнения.'}</p>}
-          {sourcePreview.data && targetPreview.data && <div className="grid min-w-[52rem] grid-cols-2 divide-x">
-            {diff.map((row, index) => <div key={`${index}-${row.kind}`} className="contents">
-              <pre className={`min-h-6 whitespace-pre-wrap break-words border-b px-2 py-1 font-mono text-xs ${row.kind === 'removed' ? 'bg-red-100 text-red-950 dark:bg-red-950/40 dark:text-red-100' : ''}`}>{row.left ?? ''}</pre>
-              <pre className={`min-h-6 whitespace-pre-wrap break-words border-b px-2 py-1 font-mono text-xs ${row.kind === 'added' ? 'bg-green-100 text-green-950 dark:bg-green-950/40 dark:text-green-100' : ''}`}>{row.right ?? ''}</pre>
-            </div>)}
-          </div>}
         </div>
       </DialogContent>
     </Dialog>

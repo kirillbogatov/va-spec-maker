@@ -34,6 +34,17 @@ const splitRow = (line: string) =>
   line.replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((c) => c.trim());
 
 export interface Heading { id: string; text: string; level: number; count: number }
+export type MarkdownLineDiff = 'added' | 'removed' | undefined;
+
+const lineDiffClass = (kind: MarkdownLineDiff) => kind === 'removed'
+  ? 'bg-red-100 text-red-950 dark:bg-red-950/40 dark:text-red-100'
+  : kind === 'added'
+    ? 'bg-green-100 text-green-950 dark:bg-green-950/40 dark:text-green-100'
+    : '';
+
+const lineDiffProps = (kind: MarkdownLineDiff) => kind
+  ? { 'data-diff-kind': kind, className: `rounded-sm px-1 [-webkit-box-decoration-break:clone] [box-decoration-break:clone] ${lineDiffClass(kind)}` }
+  : {};
 
 const headingPattern = /^(#{1,6}) (.*)$/;
 const orderedItem = /^(\d+)[.)] +(.*)$/;
@@ -71,7 +82,12 @@ export function extractHeadings(source: string): Heading[] {
   return out;
 }
 
-export function MarkdownView({ source }: { source: string }) {
+export function MarkdownView({ source, lineDiff, headingIdPrefix = 'md-h', lineOffset = 0 }: {
+  source: string;
+  lineDiff?: MarkdownLineDiff[];
+  headingIdPrefix?: string;
+  lineOffset?: number;
+}) {
   const lines = source.split('\n');
   const blocks: ReactNode[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -79,13 +95,14 @@ export function MarkdownView({ source }: { source: string }) {
     if (!line.trim()) continue;
     const heading = headingPattern.exec(line);
     if (line.startsWith('|')) {
-      const rows: string[][] = [];
+      const rows: { cells: string[]; lineIndex: number }[] = [];
       while (i < lines.length && lines[i].startsWith('|')) {
-        if (!/^\|[-| ]+\|$/.test(lines[i])) rows.push(splitRow(lines[i]));
+        if (!/^\|[-| ]+\|$/.test(lines[i])) rows.push({ cells: splitRow(lines[i]), lineIndex: i });
         i++;
       }
       i--;
-      const [head, ...body] = rows;
+      const [headRow, ...body] = rows;
+      const head = headRow.cells;
       // Короткие и пустые колонки сохраняют место независимо от длины соседнего текста.
       const promptTable = /^(промпт|prompt)$/i.test(head[0]);
       const widths = promptTable && head.length === 3 ? [26, 40, 34]
@@ -95,11 +112,11 @@ export function MarkdownView({ source }: { source: string }) {
           <table className="w-full table-fixed border-collapse text-sm" style={{ minWidth: Math.max(420, head.length * 140) }}>
             <colgroup>{widths.map((width, j) => <col key={j} style={{ width: `${width}%` }} />)}</colgroup>
             <thead>
-              <tr>{head.map((h, j) => <th key={j} className="border bg-muted px-2 py-1.5 text-left font-medium [overflow-wrap:anywhere]">{inline(h)}</th>)}</tr>
+              <tr {...lineDiffProps(lineDiff?.[headRow.lineIndex])}>{head.map((h, j) => <th key={j} className={`border px-2 py-1.5 text-left font-medium [overflow-wrap:anywhere] ${lineDiff?.[headRow.lineIndex] ? '' : 'bg-muted'}`}>{inline(h)}</th>)}</tr>
             </thead>
             <tbody>
-              {body.map((r, j) => (
-                <tr key={j}>{r.map((c, n) => <td key={n} className="border px-2 py-1.5 align-top [overflow-wrap:anywhere]">{inline(c)}</td>)}</tr>
+              {body.map(({ cells, lineIndex }, j) => (
+                <tr key={j} {...lineDiffProps(lineDiff?.[lineIndex])}>{cells.map((c, n) => <td key={n} className="border px-2 py-1.5 align-top [overflow-wrap:anywhere]">{inline(c)}</td>)}</tr>
               ))}
             </tbody>
           </table>
@@ -107,22 +124,23 @@ export function MarkdownView({ source }: { source: string }) {
       );
     } else if (heading) {
       const level = heading[1].length;
-      blocks.push(createElement(`h${level}`, { key: i, id: headingId(i), className: headingClass[level - 1] }, inline(heading[2])));
+      const highlight = lineDiff?.[i];
+      blocks.push(createElement(`h${level}`, { key: i, id: `${headingIdPrefix}-${lineOffset + i}`, ...(highlight ? { 'data-diff-kind': highlight } : {}), className: `${headingClass[level - 1]} ${lineDiffClass(highlight)} ${highlight ? 'rounded-sm px-2 py-1' : ''}` }, inline(heading[2])));
     } else if (line.startsWith('- ')) {
-      const items: string[] = [];
-      while (i < lines.length && lines[i].startsWith('- ')) items.push(lines[i++].slice(2));
+      const items: { text: string; lineIndex: number }[] = [];
+      while (i < lines.length && lines[i].startsWith('- ')) { items.push({ text: lines[i].slice(2), lineIndex: i }); i++; }
       i--;
-      blocks.push(<ul key={i} className="list-disc space-y-1 pl-6 text-sm">{items.map((t, j) => <li key={j}>{inline(t)}</li>)}</ul>);
+      blocks.push(<ul key={i} className="list-disc space-y-1 pl-6 text-sm">{items.map(({ text, lineIndex }, j) => <li key={j} {...lineDiffProps(lineDiff?.[lineIndex])}>{inline(text)}</li>)}</ul>);
     } else if (orderedItem.test(line)) {
       const start = Number(orderedItem.exec(line)![1]);
-      const items: string[] = [];
-      while (i < lines.length && orderedItem.test(lines[i])) items.push(orderedItem.exec(lines[i++])![2]);
+      const items: { text: string; lineIndex: number }[] = [];
+      while (i < lines.length && orderedItem.test(lines[i])) { items.push({ text: orderedItem.exec(lines[i]!)![2], lineIndex: i }); i++; }
       i--;
-      blocks.push(<ol key={i} start={start} className="list-decimal space-y-1 pl-6 text-sm">{items.map((t, j) => <li key={j}>{inline(t)}</li>)}</ol>);
+      blocks.push(<ol key={i} start={start} className="list-decimal space-y-1 pl-6 text-sm">{items.map(({ text, lineIndex }, j) => <li key={j} {...lineDiffProps(lineDiff?.[lineIndex])}>{inline(text)}</li>)}</ol>);
     } else {
-      const para: string[] = [line];
-      while (i + 1 < lines.length && lines[i + 1].trim() && !/^(#|\||- )/.test(lines[i + 1]) && !orderedItem.test(lines[i + 1])) para.push(lines[++i]);
-      blocks.push(<p key={i} className="text-sm">{para.map((t, j) => <Fragment key={j}>{j > 0 && <br />}{inline(t)}</Fragment>)}</p>);
+      const para: { text: string; lineIndex: number }[] = [{ text: line, lineIndex: i }];
+      while (i + 1 < lines.length && lines[i + 1].trim() && !/^(#|\||- )/.test(lines[i + 1]) && !orderedItem.test(lines[i + 1])) { i++; para.push({ text: lines[i], lineIndex: i }); }
+      blocks.push(<p key={i} className="text-sm">{para.map(({ text, lineIndex }, j) => <Fragment key={j}>{j > 0 && <br />}{lineDiff ? <span {...lineDiffProps(lineDiff[lineIndex])}>{inline(text)}</span> : inline(text)}</Fragment>)}</p>);
     }
   }
   return <div className="space-y-3">{blocks}</div>;

@@ -1,9 +1,9 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { extractHeadings, MarkdownView } from './MarkdownView';
+import { extractHeadings, MarkdownView, type MarkdownLineDiff } from './MarkdownView';
 
-const render = (source: string) => renderToStaticMarkup(createElement(MarkdownView, { source }));
+const render = (source: string, lineDiff?: MarkdownLineDiff[]) => renderToStaticMarkup(createElement(MarkdownView, { source, lineDiff }));
 
 describe('export Markdown preview', () => {
   it('renders preconditions as a level-four heading and a real ordered list before the table', () => {
@@ -26,5 +26,19 @@ describe('export Markdown preview', () => {
     expect(html).toContain('start="3"');
     expect(html).toContain('<li><strong>Third</strong></li>');
     expect(html).toContain('<ul');
+  });
+
+  it('highlights changed preview headings, paragraphs, and table rows', () => {
+    const source = '# Current\n\nA changed paragraph.\n\n| Name | Value |\n| --- | --- |\n| old | 1 |';
+    const highlighted = render(source, ['removed', undefined, 'removed', undefined, undefined, undefined, 'removed']);
+
+    expect(highlighted.match(/data-diff-kind="removed"/g)).toHaveLength(3);
+    expect(highlighted).toContain('bg-red-100');
+    expect(highlighted).toContain('<h1');
+    expect(highlighted).toContain('<table');
+    expect(highlighted).toContain('old</td>');
+    const added = render('## New heading', ['added']);
+    expect(added).toContain('data-diff-kind="added"');
+    expect(added).toContain('bg-green-100');
   });
 });
