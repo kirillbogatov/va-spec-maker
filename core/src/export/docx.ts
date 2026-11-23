@@ -116,8 +116,20 @@ const gap = () => new Paragraph({ children: [], spacing: { after: 120 } });
 const subheading = (text: string) =>
   new Paragraph({ children: run(text, { size: 28, bold: true }), spacing: { before: 160, after: 100 }, keepNext: true });
 
-function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = spec.changelog ?? []): Block[] {
+function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['parts'], changelog: ScenarioDoc['changelog'] = spec.changelog ?? [], customSections: ScenarioDoc['custom_sections'] = []): Block[] {
   const t = STRINGS[lang];
+  const pending = [...customSections];
+  const anchors: Record<string, string> = { 'Интенты': t.intents, 'Сущности': t.entities, 'Зависимости': t.dependencies, 'Промпты': t.prompts, 'Переходы между состояниями': t.transitions };
+  const appendAfter = (anchor: string): Block[] => {
+    const result: Block[] = [];
+    for (let i = 0; i < pending.length;) {
+      const section = pending[i];
+      if ((anchors[section.after ?? 'Интенты'] ?? section.after ?? t.intents) !== anchor) { i++; continue; }
+      pending.splice(i, 1);
+      result.push(heading(section.title), new Paragraph({ children: run(section.content), spacing: { after: 120 } }), ...appendAfter(section.title));
+    }
+    return result;
+  };
   const transitionParts = parts ?? spec.parts;
   const transitions: Block[] = !transitionParts?.length
     ? [tableBlock(transitionsTable(spec.transitions, lang))]
@@ -131,14 +143,18 @@ function sectionBlocks(spec: ProjectSpec, lang: SpecLang, parts?: ScenarioDoc['p
           tableBlock(transitionsTable(p.transitions, lang)), gap(),
         ];
       });
-  return [
+  const output: Block[] = [
     ...(changelog.length ? [heading(t.changelog), tableBlock(changelogTable(changelog, lang, !parts)), gap()] : []),
-    heading(t.intents), tableBlock(intentsTable(spec, lang)), gap(),
-    ...(spec.entities.length ? [heading(t.entities), tableBlock(entitiesTable(spec, lang)), gap()] : []),
-    ...(spec.dependencies.length ? [heading(t.dependencies), tableBlock(dependenciesTable(spec, lang)), gap()] : []),
-    heading(t.prompts), tableBlock(promptsTable(spec, lang)), gap(),
-    heading(t.transitions), ...transitions, gap(),
   ];
+  output.push(heading(t.intents), tableBlock(intentsTable(spec, lang)), gap(), ...appendAfter(t.intents));
+  if (spec.entities.length) output.push(heading(t.entities), tableBlock(entitiesTable(spec, lang)), gap());
+  output.push(...appendAfter(t.entities));
+  if (spec.dependencies.length) output.push(heading(t.dependencies), tableBlock(dependenciesTable(spec, lang)), gap());
+  output.push(...appendAfter(t.dependencies));
+  output.push(heading(t.prompts), tableBlock(promptsTable(spec, lang)), gap(), ...appendAfter(t.prompts));
+  output.push(heading(t.transitions), ...transitions, gap(), ...appendAfter(t.transitions));
+  for (const section of pending) output.push(heading(section.title), new Paragraph({ children: run(section.content), spacing: { after: 120 } }));
+  return output;
 }
 
 export const renderDocx = (spec: ProjectSpec, _date: string, lang: SpecLang = 'ru'): Promise<Blob> => pack(sectionBlocks(spec, lang), spec.project.name);
@@ -146,9 +162,8 @@ export const renderDocx = (spec: ProjectSpec, _date: string, lang: SpecLang = 'r
 /** Общие таблицы сценария один раз; вкладки — только подразделы State transitions. */
 export function renderDocxScenario(doc: ScenarioDoc, name: string, lang: SpecLang = 'ru'): Promise<Blob> {
   const description = doc.spec.project.description.trim();
-  const blocks = sectionBlocks(doc.spec, lang, doc.parts, doc.changelog);
-  const custom = doc.custom_sections.flatMap((section) => [heading(section.title), new Paragraph({ children: run(section.content), spacing: { after: 120 } })]);
-  return pack([...(description ? [new Paragraph({ children: run(description), spacing: { after: 120 } })] : []), ...custom, ...blocks], name);
+  const blocks = sectionBlocks(doc.spec, lang, doc.parts, doc.changelog, doc.custom_sections);
+  return pack([...(description ? [new Paragraph({ children: run(description), spacing: { after: 120 } })] : []), ...blocks], name);
 }
 
 /** Одна таблица с заголовком: выгрузка справочника. */

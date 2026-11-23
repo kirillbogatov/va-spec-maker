@@ -32,7 +32,7 @@ export function ScenariosPage({ templates = false }: { templates?: boolean }) {
   const base = templates ? '/templates/scenarios' : '/scenarios';
   const listKey = templates ? 'scenario-templates' : 'scenarios';
   const { id, tab } = useParams();
-  const activeTab: ScenarioTab = tab === 'intents' || tab === 'prompts' || tab === 'logic' || tab === 'preview' || tab === 'history' ? tab : 'general';
+  const activeTab: ScenarioTab = tab === 'intents' || tab === 'prompts' || tab === 'logic' || tab === 'sections' || tab === 'preview' || tab === 'history' ? tab : 'general';
   const projectId = useProjectId();
   const prefixes = usePrefixes(projectId);
   const qc = useQueryClient();

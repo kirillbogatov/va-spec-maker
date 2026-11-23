@@ -36,15 +36,18 @@ import { waitForSaves } from '@/lib/saveStore';
 import { usePrefixes } from '@/lib/prefixes';
 import { groupScenarioChanges, ReadinessPill } from './ScenarioChecks';
 import { ExportReviewPanel } from './ExportReviewPanel';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CustomSectionEditor } from './CustomSectionEditor';
 
-export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'history' | 'preview';
+export type ScenarioTab = 'general' | 'intents' | 'prompts' | 'logic' | 'sections' | 'history' | 'preview';
 
 const TABS: { id: ScenarioTab; label: string }[] = [
   { id: 'general', label: 'Общая информация' },
   { id: 'intents', label: 'Интенты' },
   { id: 'prompts', label: 'Промпты' },
   { id: 'logic', label: 'Логика' },
+  { id: 'sections', label: 'Дополнительно' },
   { id: 'history', label: 'История изменений' },
   { id: 'preview', label: 'Предпросмотр' },
 ];
@@ -99,6 +102,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
   const [templateName, setTemplateName] = useState('');
   const { data: templateItems = [] } = useQuery({ queryKey: ['scenario-templates', projectId], queryFn: () => api.scenarioTemplates.list(projectId) });
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmSection, setConfirmSection] = useState<{ key: string; title: string } | null>(null);
   // Имя хранится вместе с ключом: после удаления вкладки диалог ещё закрывается и не должен потерять заголовок
   const [confirmPart, setConfirmPart] = useState<{ key: string; name: string } | null>(null);
   // Ссылки из истории: ?part=<вкладка>&state=<состояние> открывают нужную вкладку схемы и выделяют состояние
@@ -113,7 +117,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
   }, [partParam, stateParam]);
   const [showPart, setShowPart] = useState(false);
   const [schemeWide, setSchemeWide] = useState(false);
-  const [sectionDialog, setSectionDialog] = useState<{ key?: string; title: string; content: string } | null>(null);
+  const [sectionDialog, setSectionDialog] = useState<{ key?: string; title: string; content: string; after?: string } | null>(null);
   const [reviewedChanges, setReviewedChanges] = useState<Record<string, boolean>>({});
   const [reviewOpen, setReviewOpen] = useState(false);
   const { data: ownIntents = [] } = useQuery({ queryKey: ['intents', 'scenario', scenario.id], queryFn: () => api.intents.listByScenario(scenario.id) });
@@ -255,10 +259,10 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
   const saveCustomSection = () => {
     if (!sectionDialog?.title.trim()) return;
     const section = { ...sectionDialog, key: sectionDialog.key ?? crypto.randomUUID(), title: sectionDialog.title.trim() };
-    setDraft((d) => ({ ...d, custom_sections: sectionDialog.key ? d.custom_sections.map((s) => s.key === sectionDialog.key ? section : s) : [...d.custom_sections, section] }));
+    if (sectionDialog.key) setDraft((d) => ({ ...d, custom_sections: d.custom_sections.map((s) => s.key === sectionDialog.key ? section : s) }));
+    else setDraft((d) => ({ ...d, custom_sections: [...d.custom_sections, { ...section, content: '' }] }));
     setSectionDialog(null);
   };
-
   const remove = useMutation({
     mutationFn: () => api.scenarios.remove(scenario.id),
     onSuccess: () => {
@@ -373,11 +377,16 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
               <Textarea id={`scenario-description-${scenario.id}`} rows={1} className="resize-y rounded-md bg-background" aria-label="Описание сценария" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             </Card>
             <DependenciesTable dependencies={draft.dependencies} entities={entities} onChange={setDependencies} onDictionarySaved={onDictionarySaved} />
-            <Card title="Собственные разделы" action={<Button variant="outline" size="sm" onClick={() => setSectionDialog({ title: '', content: '' })}><Plus className="size-4" /> Добавить собственный раздел</Button>}>
-              {draft.custom_sections.length === 0 ? <p className="text-sm text-muted-foreground">Добавьте раздел, если в спецификации нужна дополнительная информация.</p> : <div className="grid gap-3">{draft.custom_sections.map((section) => <div key={section.key} className="rounded-lg border bg-background p-3"><div className="flex items-start gap-3"><h3 className="min-w-0 flex-1 break-words font-medium">{section.title}</h3><div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon-sm" aria-label={`Редактировать раздел «${section.title}»`} onClick={() => setSectionDialog(section)}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon-sm" aria-label={`Удалить раздел «${section.title}»`} onClick={() => setDraft((d) => ({ ...d, custom_sections: d.custom_sections.filter((s) => s.key !== section.key) }))}><Trash2 className="size-4" /></Button></div></div><p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">{section.content || 'Пустое содержимое'}</p></div>)}</div>}
-            </Card>
           </div>
         </div>
+      )}
+      {tab === 'sections' && (
+        <div className={column}><div className={inner}>
+            <Card>
+              <div className="mb-3 flex flex-wrap items-center gap-2"><Button size="action" variant="outline" onClick={() => setSectionDialog({ title: '', content: '', after: 'Интенты' })}><Plus className="size-4" /> Раздел</Button></div>
+              {draft.custom_sections.length === 0 ? <p className="text-sm text-muted-foreground">Добавьте раздел, если в спецификации нужна дополнительная информация.</p> : <div className="grid gap-3">{draft.custom_sections.map((section) => <div key={section.key} className="rounded-lg border bg-background p-3"><div className="flex items-start gap-3"><h3 className="min-w-0 flex-1 break-words font-medium">{section.title}</h3><div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon-sm" aria-label={`Редактировать раздел «${section.title}»`} onClick={() => setSectionDialog(section)}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon-sm" aria-label={`Удалить раздел «${section.title}»`} onClick={() => setConfirmSection({ key: section.key!, title: section.title })}><Trash2 className="size-4" /></Button></div></div><CustomSectionEditor value={section.content} onChange={(content) => setDraft((d) => ({ ...d, custom_sections: d.custom_sections.map((s) => s.key === section.key ? { ...s, content } : s) }))} ariaLabel={`Содержимое раздела «${section.title}»`} /></div>)}</div>}
+            </Card>
+        </div></div>
       )}
       {tab === 'intents' && (
         <div className={column}>
@@ -473,8 +482,8 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
       </div>
       <Dialog open={sectionDialog !== null} onOpenChange={(open) => !open && setSectionDialog(null)}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader><DialogTitle>{sectionDialog?.key ? 'Редактировать раздел' : 'Добавить собственный раздел'}</DialogTitle><DialogDescription>Раздел будет сохранён только в этом сценарии и попадёт в экспорт.</DialogDescription></DialogHeader>
-          <div className="grid gap-4"><label className="grid gap-1.5 text-sm font-medium">Название<Input autoFocus value={sectionDialog?.title ?? ''} onChange={(e) => setSectionDialog((s) => s && ({ ...s, title: e.target.value }))} /></label><label className="grid gap-1.5 text-sm font-medium">Содержимое<Textarea rows={8} value={sectionDialog?.content ?? ''} onChange={(e) => setSectionDialog((s) => s && ({ ...s, content: e.target.value }))} /></label></div>
+          <DialogHeader><DialogTitle>{sectionDialog?.key ? 'Редактировать раздел' : 'Добавить дополнительный раздел'}</DialogTitle></DialogHeader>
+          <div className="grid gap-4"><label className="grid gap-1.5 text-sm"><span className="font-medium">Название</span><Input autoFocus className="placeholder:font-normal" value={sectionDialog?.title ?? ''} onChange={(e) => setSectionDialog((s) => s && ({ ...s, title: e.target.value }))} placeholder="Например, Ограничения" /></label><label className="grid gap-1.5 text-sm"><span className="font-medium">Показывать после раздела</span><Select value={sectionDialog?.after ?? 'Интенты'} onValueChange={(value) => value && setSectionDialog((s) => s && ({ ...s, after: value }))}><SelectTrigger className="w-full font-normal"><SelectValue /></SelectTrigger><SelectContent>{['Интенты', 'Промпты', 'Переходы между состояниями', ...draft.custom_sections.filter((s) => s.key !== sectionDialog?.key).map((s) => s.title)].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></label></div>
           <DialogFooter><Button variant="outline" onClick={() => setSectionDialog(null)}>Отмена</Button><Button disabled={!sectionDialog?.title.trim()} onClick={saveCustomSection}>{sectionDialog?.key ? 'Сохранить' : 'Добавить раздел'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -484,6 +493,13 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
         title={`Удалить вкладку «${confirmPart?.name ?? ''}»?`}
         description="Её состояния и переходы будут удалены. Интенты и промпты останутся подключёнными к сценарию."
         onConfirm={() => { if (confirmPart) removePart(confirmPart.key); setConfirmPart(null); }}
+      />
+      <ConfirmDialog
+        open={confirmSection !== null}
+        onOpenChange={(open) => !open && setConfirmSection(null)}
+        title={`Удалить раздел «${confirmSection?.title ?? ''}»?`}
+        description="Содержимое раздела будет удалено."
+        onConfirm={() => { if (confirmSection) setDraft((d) => ({ ...d, custom_sections: d.custom_sections.filter((s) => s.key !== confirmSection.key) })); setConfirmSection(null); }}
       />
       <ConfirmDialog
         open={confirmDelete}

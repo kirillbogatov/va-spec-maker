@@ -167,7 +167,7 @@ export function scenariosRouter(db: Db): RouterT {
     const cur = load(id);
     const b = (req.body ?? {}) as Record<string, any>;
     const name = requireString(b.name, 'Название');
-    const customSections = (Array.isArray(b.custom_sections) ? b.custom_sections : cur.custom_sections).map((s: any) => ({ title: optString(s?.title).trim(), content: optString(s?.content) })).filter((s: { title: string; content: string }) => s.title);
+    const customSections = (Array.isArray(b.custom_sections) ? b.custom_sections : cur.custom_sections).map((s: any) => ({ title: optString(s?.title).trim(), content: optString(s?.content), after: optString(s?.after) || 'Диаграмма' })).filter((s: { title: string; content: string }) => s.title);
     const dependencies = (Array.isArray(b.dependencies) ? b.dependencies : []).map((d: any) => ({
       ref: requireString(d?.ref, 'Идентификатор зависимости'),
       entity_id: d?.entity_id == null ? null : parseId(d.entity_id),

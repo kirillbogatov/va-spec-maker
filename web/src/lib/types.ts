@@ -110,4 +110,4 @@ export interface Scenario {
   custom_sections: CustomSection[];
   entities: ScenarioEntity[]; dependencies: Dependency[]; parts: ScenarioPart[];
 }
-export interface CustomSection { key?: string; title: string; content: string }
+export interface CustomSection { key?: string; title: string; content: string; after?: string }

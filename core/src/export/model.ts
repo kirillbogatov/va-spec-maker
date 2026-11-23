@@ -65,7 +65,7 @@ export interface SpecPart {
 export interface ScenarioDoc {
   spec: ProjectSpec;
   parts: SpecPart[];
-  custom_sections: { title: string; content: string }[];
+  custom_sections: { title: string; content: string; after?: string }[];
   /** Журнал изменений, который ведут вручную; выводится вверху документа после описания. */
   changelog: { date?: string; task: string; author: string; description: string }[];
 }

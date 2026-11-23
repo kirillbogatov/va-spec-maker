@@ -62,7 +62,22 @@ export function renderMarkdown(spec: ProjectSpec, date: string, lang: SpecLang =
 /** Общие таблицы сценария один раз; вкладки — только подразделы State transitions. */
 export function renderMarkdownScenario(doc: ScenarioDoc, date: string, lang: SpecLang = 'ru'): string {
   const blocks = section(doc.spec, date, lang, doc.parts, doc.changelog);
-  const insertAt = blocks.findIndex((block) => block === `## ${STRINGS[lang].intents}`);
-  if (doc.custom_sections.length && insertAt >= 0) blocks.splice(insertAt, 0, ...doc.custom_sections.flatMap((custom) => [`## ${custom.title}`, custom.content]));
+  const pending = [...doc.custom_sections];
+  const headings: Record<string, string> = { 'Интенты': STRINGS[lang].intents, 'Сущности': STRINGS[lang].entities, 'Зависимости': STRINGS[lang].dependencies, 'Промпты': STRINGS[lang].prompts, 'Переходы между состояниями': STRINGS[lang].transitions };
+  const appendAfter = (anchor: string): void => {
+    for (let i = 0; i < pending.length;) {
+      const custom = pending[i];
+      if ((custom.after ?? 'Интенты') !== anchor) { i++; continue; }
+      pending.splice(i, 1);
+      const heading = `## ${headings[anchor] ?? anchor}`;
+      const at = blocks.findIndex((block) => block === heading);
+      let insertAt = at < 0 ? blocks.length : at + 1;
+      while (insertAt < blocks.length && !blocks[insertAt].startsWith('## ')) insertAt++;
+      blocks.splice(insertAt, 0, `## ${custom.title}`, custom.content);
+      appendAfter(custom.title);
+    }
+  };
+  for (const anchor of ['Интенты', 'Сущности', 'Зависимости', 'Промпты', 'Переходы между состояниями']) appendAfter(anchor);
+  for (const custom of pending) blocks.push(`## ${custom.title}`, custom.content);
   return blocks.join('\n\n') + '\n';
 }
