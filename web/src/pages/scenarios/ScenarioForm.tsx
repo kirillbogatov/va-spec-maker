@@ -152,9 +152,11 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
     () => analyzeSteps(transitions, intentName, part.layout),
     [transitions, part.layout, intents],
   );
-  const hasIssueErrors = (kind: Step['kind']) =>
-    draft.parts.some((p, i) => p.steps.some((s) => s.kind === kind && analyses[i].issues.get(s.key!)?.some((x) => x.level === 'error')));
-  const logicHasErrors = hasIssueErrors('transition');
+  const partsWithLogicErrors = useMemo(
+    () => new Set(draft.parts.flatMap((p, i) => p.steps.some((s) => s.kind === 'transition' && analyses[i].issues.get(s.key!)?.some((issue) => issue.level === 'error')) ? [p.key!] : [])),
+    [draft.parts, analyses],
+  );
+  const logicHasErrors = partsWithLogicErrors.size > 0;
 
   const saveDraft = async (d: Draft) => {
     if (!d.name.trim()) return;
@@ -431,6 +433,7 @@ export function ScenarioForm({ scenario, tab, deleted = false }: { scenario: Sce
               <PartTabs
                 parts={draft.parts}
                 activeKey={part.key!}
+                errorKeys={partsWithLogicErrors}
                 onSelect={(key) => { setActiveKey(key); setShowPart(true); }}
                 onAdd={addPart}
               />

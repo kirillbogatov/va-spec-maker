@@ -9,12 +9,13 @@ import { ConditionsCell } from './ConditionsCell';
 interface TabsProps {
   parts: ScenarioPart[];
   activeKey: string;
+  errorKeys?: ReadonlySet<string>;
   onSelect: (key: string) => void;
   onAdd?: () => void;
 }
 
 /** Вкладки подсценариев: у каждой свои состояния и переходы. Одна вкладка без кнопки «+» не показывается. */
-export function PartTabs({ parts, activeKey, onSelect, onAdd }: TabsProps) {
+export function PartTabs({ parts, activeKey, errorKeys, onSelect, onAdd }: TabsProps) {
   const active = parts.find((p) => p.key === activeKey) ?? parts[0];
   if (parts.length <= 1 && !onAdd) return null;
   return (
@@ -31,7 +32,8 @@ export function PartTabs({ parts, activeKey, onSelect, onAdd }: TabsProps) {
             p.key === active.key ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
           )}
         >
-          {p.name.trim() || 'Без названия'}
+          <span className="min-w-0 truncate">{p.name.trim() || 'Без названия'}</span>
+          {p.key && errorKeys?.has(p.key) && <span className="size-2 shrink-0 rounded-full bg-destructive" role="img" aria-label="Есть ошибки в логике этой вкладки" title="Есть ошибки в логике этой вкладки" />}
         </button>
       ))}
       {onAdd && (

@@ -203,12 +203,14 @@ interface ListItemProps {
   kind?: ObjectKind;
   /** Мета справа: «3 фразы». */
   meta?: ReactNode;
+  /** Значок или другое дополнение у правого края строки. */
+  endAdornment?: ReactNode;
   /** Предупреждение: мета выделяется цветом и значком. */
   warn?: boolean;
 }
 
 /** Строка списка со ссылкой; слева тип, справа мета или счётчик. */
-export function ListItem({ to, children, count, dim, meta, warn }: ListItemProps) {
+export function ListItem({ to, children, count, dim, meta, endAdornment, warn }: ListItemProps) {
   return (
     <NavLink
       to={to}
@@ -228,6 +230,7 @@ export function ListItem({ to, children, count, dim, meta, warn }: ListItemProps
         </span>
       )}
       {count !== undefined && <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">{count}</span>}
+      {endAdornment}
     </NavLink>
   );
 }
