@@ -5,7 +5,7 @@ test.describe('UJ-6 Настроить проект под правила ком
   test('ED-09-03 настройки проекта открываются из меню профиля', async ({ page }) => {
     await openDemo(page);
     await page.getByRole('button', { name: 'Профиль: demo' }).first().click();
-    await page.getByRole('menuitem', { name: 'Настройки' }).click();
+    await page.getByRole('menuitem', { name: 'Настройки проекта' }).click();
     await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible();
     await page.getByRole('tab', { name: 'Спецификации', exact: true }).click();
     await expect(page.getByText('Префиксы элементов')).toBeVisible();

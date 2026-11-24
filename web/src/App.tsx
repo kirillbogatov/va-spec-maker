@@ -7,6 +7,7 @@ import { PromptsPage } from '@/pages/prompts/PromptsPage';
 import { ProjectLayout } from '@/pages/projects/ProjectLayout';
 import { ProjectsPage } from '@/pages/projects/ProjectsPage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
+import { UserSettingsPage } from '@/pages/settings/UserSettingsPage';
 import { ScenariosPage } from '@/pages/scenarios/ScenariosPage';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="dependencies/:itemId?" element={<DependenciesPage />} />
         <Route path="lists/keywords/:itemId?" element={<KeywordsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="user-settings" element={<UserSettingsPage />} />
         <Route path="scenarios/:id?/:tab?" element={<ScenariosPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

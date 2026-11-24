@@ -52,7 +52,7 @@ export function AuthPage() {
         <Button type="submit" className="w-full" disabled={busy || !login.trim() || !password}>
           {setup ? 'Создать и войти' : 'Войти'}
         </Button>
-        <p className="text-xs text-muted-foreground">Пользователи хранятся в этом браузере. Вход защищает интерфейс, но не шифрует данные проектов.</p>
+        <p className="text-xs text-muted-foreground">Пользователи, email и хеши паролей хранятся в браузере. Администратор может сбросить пароль пользователя. Если потерян пароль единственного администратора, очистите данные сайта и импортируйте проекты из JSON-копии.</p>
       </form>
     </div>
   );

@@ -3,6 +3,7 @@ export type Role = 'admin' | 'user';
 export interface UserRecord {
   id: string;
   login: string;
+  email?: string;
   salt: string;
   passwordHash: string;
   role: Role;
@@ -13,6 +14,7 @@ export interface UserRecord {
 export interface PublicUser {
   id: string;
   login: string;
+  email?: string;
   role: Role;
   createdAt: number;
 }
@@ -75,13 +77,18 @@ function sameText(a: string, b: string): boolean {
   return diff === 0;
 }
 
-const toPublic = (u: UserRecord): PublicUser => ({ id: u.id, login: u.login, role: u.role, createdAt: u.createdAt });
+const toPublic = (u: UserRecord): PublicUser => ({ id: u.id, login: u.login, ...(u.email ? { email: u.email } : {}), role: u.role, createdAt: u.createdAt });
 
 function checkLogin(login: string) {
   if (!/^[\p{L}\p{N}._-]{3,32}$/u.test(login)) throw new AuthError('Логин: 3–32 символа, буквы, цифры и . _ -');
 }
 function checkPassword(password: string) {
   if (password.length < 8) throw new AuthError('Пароль должен быть не короче 8 символов');
+}
+function normalizeEmail(email: string): string {
+  const value = email.trim().toLowerCase();
+  if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new AuthError('Введите корректный email');
+  return value;
 }
 
 interface Options {
@@ -169,6 +176,23 @@ export function createAuth({ users, session, iterations = ITERATIONS, failDelayM
     async restoreSession(): Promise<PublicUser | null> {
       const u = await current();
       return u ? toPublic(u) : null;
+    },
+
+    async updateProfile(login: string, email: string): Promise<PublicUser> {
+      const u = await requireUser();
+      const nextLogin = login.trim();
+      checkLogin(nextLogin);
+      const nextEmail = normalizeEmail(email);
+      const all = await users.all();
+      if (all.some((candidate) => candidate.id !== u.id && candidate.login.toLowerCase() === nextLogin.toLowerCase())) {
+        throw new AuthError('Этот логин уже занят');
+      }
+      if (nextEmail && all.some((candidate) => candidate.id !== u.id && candidate.email?.toLowerCase() === nextEmail)) {
+        throw new AuthError('Этот email уже используется');
+      }
+      const next = { ...u, login: nextLogin, email: nextEmail || undefined };
+      await users.put(next);
+      return toPublic(next);
     },
 
     async logout(): Promise<void> {

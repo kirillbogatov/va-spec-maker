@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { KeyRound, LayoutGrid, LogOut, RotateCcw, Settings, Users } from 'lucide-react';
-import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
+import { LayoutGrid, LogOut, RotateCcw, Settings, UserRound, Users } from 'lucide-react';
 import { UsersDialog } from '@/components/UsersDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth, useUser } from '@/hooks/useAuth';
@@ -14,16 +13,17 @@ const ROLE_LABEL = { admin: 'Администратор', user: 'Пользов�
 interface Props {
   variant: 'sidebar' | 'tab' | 'header';
   collapsed?: boolean;
+  projectName?: string;
   /** Адрес настроек проекта; пункт показывается, только когда проект открыт. */
   settingsTo?: string;
+  userSettingsTo?: string;
 }
 
 /** Аватар с инициалами и меню профиля: настройки, смена пароля, пользователи (админ), выход. */
-export function UserMenu({ variant, collapsed = false, settingsTo }: Props) {
+export function UserMenu({ variant, collapsed = false, projectName, settingsTo, userSettingsTo }: Props) {
   const navigate = useNavigate();
   const user = useUser();
   const { signOut } = useAuth();
-  const [password, setPassword] = useState(false);
   const [users, setUsers] = useState(false);
   const avatar = (
     <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold uppercase text-primary-foreground">
@@ -40,7 +40,7 @@ export function UserMenu({ variant, collapsed = false, settingsTo }: Props) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger render={<button type="button" aria-label={`Профиль: ${user.login}`} title={user.login} className={triggerClass} />}>
+        <DropdownMenuTrigger render={<button type="button" aria-label={`Профиль: ${user.login}`} title={projectName ? `${user.login} · ${projectName}` : user.login} className={triggerClass} />}>
           {avatar}
           {variant === 'sidebar' && !collapsed && (
             <span className="min-w-0">
@@ -48,48 +48,53 @@ export function UserMenu({ variant, collapsed = false, settingsTo }: Props) {
               <span className="block truncate text-[11px] leading-tight text-muted-foreground">{ROLE_LABEL[user.role]}</span>
             </span>
           )}
-          {variant === 'tab' && 'Профиль'}
+          {variant === 'tab' && (
+            <span>Профиль</span>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align={variant === 'header' ? 'end' : 'start'} side={variant === 'tab' ? 'top' : variant === 'header' ? 'bottom' : 'right'}>
+          {(projectName || settingsTo) && (
+            <>
+              <DropdownMenuGroup>
+                {projectName && <DropdownMenuLabel className="max-w-64 truncate" title={projectName}>{projectName}</DropdownMenuLabel>}
+                {settingsTo && (
+                  <DropdownMenuItem className="min-h-9" onClick={() => navigate(settingsTo)}>
+                    <Settings className="size-4" /> Настройки проекта
+                  </DropdownMenuItem>
+                )}
+                {settingsTo && (
+                  <DropdownMenuItem className="min-h-9" onClick={() => navigate('/')}>
+                    <LayoutGrid className="size-4" /> Сменить проект
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuGroup>
-            <DropdownMenuLabel>
-              {user.login} · {ROLE_LABEL[user.role]}
-            </DropdownMenuLabel>
+            <DropdownMenuLabel>{user.login}</DropdownMenuLabel>
+            {!DEMO && userSettingsTo && (
+              <DropdownMenuItem className="min-h-9" onClick={() => navigate(userSettingsTo)}>
+                <UserRound className="size-4" /> Настройки пользователя
+              </DropdownMenuItem>
+            )}
+            {!DEMO && user.role === 'admin' && (
+              <DropdownMenuItem className="min-h-9" onClick={() => setUsers(true)}>
+                <Users className="size-4" /> Пользователи
+              </DropdownMenuItem>
+            )}
+            {DEMO ? (
+              <DropdownMenuItem className="min-h-9" onClick={resetDemo}>
+                <RotateCcw className="size-4" /> Начать демо заново
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem className="min-h-9" onClick={() => void signOut()}>
+                <LogOut className="size-4" /> Выйти
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          {settingsTo && (
-            <DropdownMenuItem className="min-h-9" onClick={() => navigate(settingsTo)}>
-              <Settings className="size-4" /> Настройки
-            </DropdownMenuItem>
-          )}
-          {settingsTo && (
-            <DropdownMenuItem className="min-h-9" onClick={() => navigate('/')}>
-              <LayoutGrid className="size-4" /> Сменить проект
-            </DropdownMenuItem>
-          )}
-          {!DEMO && (
-            <DropdownMenuItem className="min-h-9" onClick={() => setPassword(true)}>
-              <KeyRound className="size-4" /> Сменить пароль
-            </DropdownMenuItem>
-          )}
-          {!DEMO && user.role === 'admin' && (
-            <DropdownMenuItem className="min-h-9" onClick={() => setUsers(true)}>
-              <Users className="size-4" /> Пользователи
-            </DropdownMenuItem>
-          )}
-          {(settingsTo || !DEMO) && <DropdownMenuSeparator />}
-          {DEMO ? (
-            <DropdownMenuItem className="min-h-9" onClick={resetDemo}>
-              <RotateCcw className="size-4" /> Начать демо заново
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem className="min-h-9" onClick={() => void signOut()}>
-              <LogOut className="size-4" /> Выйти
-            </DropdownMenuItem>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <ChangePasswordDialog open={password} onOpenChange={setPassword} />
       {user.role === 'admin' && <UsersDialog open={users} onOpenChange={setUsers} />}
     </>
   );

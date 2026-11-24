@@ -14,6 +14,7 @@ interface Ctx {
   state: AuthState;
   createAdmin: (login: string, password: string) => Promise<void>;
   signIn: (login: string, password: string) => Promise<void>;
+  updateProfile: (login: string, email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -42,12 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (login: string, password: string) => {
     setState({ status: 'authed', user: await auth.login(login, password) });
   }, []);
+  const updateProfile = useCallback(async (login: string, email: string) => {
+    const user = await auth.updateProfile(login, email);
+    setState({ status: 'authed', user });
+  }, []);
   const signOut = useCallback(async () => {
     await auth.logout();
     setState({ status: 'anonymous' });
   }, []);
 
-  const value = useMemo(() => ({ state, createAdmin, signIn, signOut }), [state, createAdmin, signIn, signOut]);
+  const value = useMemo(() => ({ state, createAdmin, signIn, updateProfile, signOut }), [state, createAdmin, signIn, updateProfile, signOut]);
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 

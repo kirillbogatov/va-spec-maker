@@ -105,6 +105,30 @@ describe('пароли', () => {
   });
 });
 
+describe('профиль пользователя', () => {
+  it('обновляет логин и нормализует email, сохраняя пароль и сессию', async () => {
+    await auth.createFirstAdmin('admin', 'password1');
+    const updated = await auth.updateProfile('newadmin', ' Admin@Example.com ');
+    expect(updated).toMatchObject({ login: 'newadmin', email: 'admin@example.com' });
+    expect(await auth.restoreSession()).toMatchObject({ login: 'newadmin', email: 'admin@example.com' });
+    await auth.logout();
+    expect((await auth.login('newadmin', 'password1')).email).toBe('admin@example.com');
+  });
+
+  it('отклоняет занятый логин, занятый или некорректный email', async () => {
+    await auth.createFirstAdmin('admin', 'password1');
+    await auth.updateProfile('admin', 'admin@example.com');
+    await auth.addUser('worker', 'password1');
+    await auth.logout();
+    await auth.login('worker', 'password1');
+    await auth.updateProfile('worker', 'worker@example.com');
+    await auth.logout();
+    await auth.login('admin', 'password1');
+    await reject(auth.updateProfile('worker', 'other@example.com'), /логин уже занят/i);
+    await reject(auth.updateProfile('admin', 'worker@example.com'), /email уже используется/i);
+    await reject(auth.updateProfile('admin', 'invalid'), /корректный email/i);
+  });
+});
 describe('управление пользователями', () => {
   let adminId: string;
   beforeEach(async () => {

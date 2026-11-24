@@ -7,7 +7,7 @@ import { GlobalSaveStatus } from '@/components/GlobalSaveStatus';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
 import { UserMenu } from '@/components/UserMenu';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { usePath, useProjectId } from '@/hooks/project';
+import { usePath, useProject, useProjectId } from '@/hooks/project';
 import { useIntentMode } from '@/lib/intentMode';
 import { api } from '@/lib/api';
 import { Logo } from '@/components/Logo';
@@ -57,6 +57,7 @@ function useCounts() {
 
 export function AppShell() {
   const path = usePath();
+  const { project } = useProject();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { scenarios, counts } = useCounts();
@@ -152,7 +153,7 @@ export function AppShell() {
 
         <div className="flex shrink-0 flex-col gap-2 px-1">
           {!collapsed && <GlobalSaveStatus />}
-          <UserMenu variant="sidebar" collapsed={collapsed} settingsTo={path('/settings')} />
+          <UserMenu variant="sidebar" collapsed={collapsed} projectName={project?.name} settingsTo={path('/settings')} userSettingsTo={path('/user-settings')} />
         </div>
       </aside>
 
@@ -191,7 +192,7 @@ export function AppShell() {
             {TEMPLATES.map(d => <DropdownMenuItem key={d.to} onClick={() => navigate(path(d.to))}><d.icon className="size-4" />{d.label}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
-        <UserMenu variant="tab" settingsTo={path('/settings')} />
+        <UserMenu variant="tab" projectName={project?.name} settingsTo={path('/settings')} userSettingsTo={path('/user-settings')} />
       </nav>
 
       <CommandPalette open={searching} onOpenChange={setSearching} />
