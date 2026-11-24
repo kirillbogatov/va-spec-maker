@@ -88,7 +88,7 @@ export function ScenariosPage({ templates = false }: { templates?: boolean }) {
               </li>}
               {filtered.map((s) => (
                 <li key={s.id}>
-                  <ListItem to={path(`${base}/${s.id}`)} endAdornment={s.pending_change_count ? <span className="shrink-0" role="img" aria-label="Требует повторного экспорта" title="Требует повторного экспорта"><TriangleAlert aria-hidden className="size-3.5 text-amber-600 [&>path:first-child]:fill-warning-bg" /></span> : null}>
+                  <ListItem to={path(`${base}/${s.id}`)} endAdornment={s.pending_change_count ? <span className="shrink-0" role="img" aria-label="Есть непроверенные изменения" title="Есть непроверенные изменения"><TriangleAlert aria-hidden className="size-3.5 text-amber-600 [&>path:first-child]:fill-warning-bg" /></span> : null}>
                     <span className="block min-w-0 truncate">{s.name}</span>
                     {s.description?.trim() && <span className="block truncate text-xs font-normal text-muted-foreground">{s.description.trim().replace(/\s+/g, ' ')}</span>}
                   </ListItem>

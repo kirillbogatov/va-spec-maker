@@ -25,5 +25,5 @@ export function groupScenarioChanges(changes: ScenarioChange[]): ReviewChange[] 
 
 export function ReadinessPill({ hasUnreviewedChanges, onOpen }: { criteria: Criterion[]; hasUnreviewedChanges: boolean; onOpen: () => void }) {
   if (!hasUnreviewedChanges) return null;
-  return <button type="button" onClick={onOpen} aria-label="Проверить сценарий перед экспортом" className={cn('inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50', 'bg-warning-bg text-warning hover:bg-warning-bg/80')}><TriangleAlert className="size-3.5" /><span className="max-sm:hidden">Проверьте неучтенные изменения</span><span className="sm:hidden">Проверить</span></button>;
+  return <button type="button" onClick={onOpen} aria-label="Есть непроверенные изменения" title="Есть непроверенные изменения" className={cn('inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50', 'bg-warning-bg text-warning hover:bg-warning-bg/80')}><TriangleAlert className="size-3.5" /><span className="max-sm:hidden">Проверьте неучтенные изменения</span><span className="sm:hidden">Проверить</span></button>;
 }

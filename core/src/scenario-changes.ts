@@ -50,6 +50,13 @@ export function reviewScenarioChanges(db: Db, scenarioId: number, changeIds: num
   db.prepare(`UPDATE scenario_change_events SET reviewed_at = ${reviewed ? 'CURRENT_TIMESTAMP' : 'NULL'} WHERE scenario_id = ? AND resolved_at IS NULL AND id IN (${marks})`).run(scenarioId, ...ids);
 }
 
+export function resolveScenarioChangeEvents(db: Db, scenarioId: number, changeIds: number[]): void {
+  const ids = [...new Set(changeIds)].filter((id) => Number.isInteger(id) && id > 0);
+  if (!ids.length) return;
+  const marks = ids.map(() => '?').join(', ');
+  db.prepare(`UPDATE scenario_change_events SET resolved_at = CURRENT_TIMESTAMP WHERE scenario_id = ? AND resolved_at IS NULL AND id IN (${marks})`).run(scenarioId, ...ids);
+}
+
 export function resolveScenarioChanges(db: Db, scenarioId: number): void {
   db.prepare('UPDATE scenario_change_events SET resolved_at = CURRENT_TIMESTAMP WHERE scenario_id = ? AND resolved_at IS NULL').run(scenarioId);
 }

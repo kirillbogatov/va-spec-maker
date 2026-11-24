@@ -8,7 +8,7 @@ import { connect } from '../links';
 import { copyScenario, copyScenarioToBranch } from '../scenario-copy';
 import { normalizeTaskLinks } from '../text-links';
 import { optString, parseId, requireString } from '../validate';
-import { reviewScenarioChanges, scenarioChanges } from '../scenario-changes';
+import { resolveScenarioChangeEvents, reviewScenarioChanges, scenarioChanges } from '../scenario-changes';
 
 const matchAnyIntent = (value: unknown): boolean => {
   if (value !== undefined && typeof value !== 'boolean') throw badRequest('Поле match_any_intent должно быть логическим значением');
@@ -325,8 +325,11 @@ export function scenariosRouter(db: Db): RouterT {
   r.put('/scenarios/:id/changes', (req, res) => {
     const id = parseId(req.params.id);
     load(id);
-    if (!Array.isArray(req.body?.change_ids) || typeof req.body?.reviewed !== 'boolean') throw badRequest('Некорректная отметка изменений');
-    reviewScenarioChanges(db, id, req.body.change_ids.map((value: unknown) => parseId(value)), req.body.reviewed);
+    if (!Array.isArray(req.body?.change_ids)) throw badRequest('Некорректная отметка изменений');
+    const changeIds = req.body.change_ids.map((value: unknown) => parseId(value));
+    if (req.body?.resolved === true) resolveScenarioChangeEvents(db, id, changeIds);
+    else if (typeof req.body?.reviewed === 'boolean') reviewScenarioChanges(db, id, changeIds, req.body.reviewed);
+    else throw badRequest('Некорректная отметка изменений');
     const changes = scenarioChanges(db, id);
     res.json({ needs_export: changes.length > 0, changes });
   });

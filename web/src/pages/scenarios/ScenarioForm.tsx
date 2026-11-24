@@ -46,8 +46,8 @@ const TABS: { id: ScenarioTab; label: string }[] = [
   { id: 'general', label: 'Общая информация' },
   { id: 'intents', label: 'Интенты' },
   { id: 'prompts', label: 'Промпты' },
-  { id: 'logic', label: 'Логика' },
   { id: 'sections', label: 'Дополнительно' },
+  { id: 'logic', label: 'Логика' },
   { id: 'history', label: 'История изменений' },
   { id: 'preview', label: 'Предпросмотр' },
 ];

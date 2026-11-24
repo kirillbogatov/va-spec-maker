@@ -1,4 +1,4 @@
-import { createApp, DEMO_NAME, ensureDemoBranches, keepOneDemoScenarioChange, openDb, seedDemo, type App, type AppResponse, type Db } from '@va/core';
+import { createApp, DEMO_NAME, ensureDemoBranches, openDb, retainSingleDemoChange, seedDemo, type App, type AppResponse, type Db } from '@va/core';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { DEMO } from '@/lib/demoMode';
 
@@ -38,7 +38,7 @@ const idb = <T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest
 
 // В демо база живёт в sessionStorage: переживает перезагрузку, но не закрытие вкладки.
 const DEMO_KEY = 'va-demo-db';
-const DEMO_CHANGE_MIGRATION_KEY = 'va-demo-change-migration-v1';
+const DEMO_CHANGE_MIGRATION_KEY = 'va-demo-change-migration-v2';
 const toB64 = (b: Uint8Array) => {
   let s = '';
   for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
@@ -163,7 +163,7 @@ export async function initBackend(): Promise<void> {
         let migrationDone = false;
         try { migrationDone = sessionStorage.getItem(DEMO_CHANGE_MIGRATION_KEY) === 'done'; } catch { /* РЎРµСЃСЃРёСЏ РјРѕР¶РµС‚ Р±С‹С‚СЊ РЅРµРґРѕСЃС‚СѓРїРЅР°. */ }
         if (!migrationDone) {
-          changed = await keepOneDemoScenarioChange(app, demoProject.id) || changed;
+          changed = await retainSingleDemoChange(app, demoProject.id) || changed;
           try { sessionStorage.setItem(DEMO_CHANGE_MIGRATION_KEY, 'done'); } catch { /* РЎРµСЃСЃРёСЏ РјРѕР¶РµС‚ Р±С‹С‚СЊ РЅРµРґРѕСЃС‚СѓРїРЅР°. */ }
         }
         if (changed) persist();

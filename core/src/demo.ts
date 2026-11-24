@@ -46,24 +46,29 @@ export async function ensureDemoBranches(app: App, projectId: number): Promise<b
   return changed;
 }
 
-/** Сохраняет открытое уведомление хотя бы для одного сценария демо. */
-export async function keepOneDemoScenarioChange(app: App, projectId: number): Promise<boolean> {
+/** Оставляет одно непроверенное изменение в демо и закрывает лишние события инициализации. */
+export async function retainSingleDemoChange(app: App, projectId: number): Promise<boolean> {
   const branches = await call<any[]>(app, 'GET', `/api/projects/${projectId}/branches`);
   const main = branches.find((branch) => branch.branch_name === 'main');
   const orderedBranches = main ? [main, ...branches.filter((branch) => branch.id !== main.id)] : branches;
-  let retained = false;
+  const pendingByScenario: { scenarioId: number; changes: { id: number; reviewed_at: string | null }[] }[] = [];
+  let retainedId: number | undefined;
   let changed = false;
   for (const branch of orderedBranches) {
     const scenarios = await call<any[]>(app, 'GET', `/api/projects/${branch.id}/scenarios`);
     for (const scenario of scenarios) {
-      if ((scenario.pending_change_count ?? 0) === 0) continue;
-      if (!retained) {
-        retained = true;
-        continue;
-      }
-      await call(app, 'GET', `/api/scenarios/${scenario.id}/export?format=md`);
-      changed = true;
+      const { changes } = await call<any>(app, 'GET', `/api/scenarios/${scenario.id}/changes`);
+      if (!changes.length) continue;
+      pendingByScenario.push({ scenarioId: scenario.id, changes });
+      retainedId ??= changes.find((change: any) => !change.reviewed_at)?.id ?? changes[0].id;
     }
+  }
+  if (retainedId === undefined) return false;
+  for (const { scenarioId, changes } of pendingByScenario) {
+    const resolveIds = changes.filter((change) => change.id !== retainedId).map((change) => change.id);
+    if (!resolveIds.length) continue;
+    await call(app, 'PUT', `/api/scenarios/${scenarioId}/changes`, { change_ids: resolveIds, resolved: true });
+    changed = true;
   }
   return changed;
 }
@@ -317,6 +322,6 @@ export async function seedDemo(app: App): Promise<number> {
   });
 
   await ensureDemoBranches(app, pid);
-  await keepOneDemoScenarioChange(app, pid);
+  await retainSingleDemoChange(app, pid);
   return pid;
 }
