@@ -1,4 +1,4 @@
-import { createApp, DEMO_NAME, openDb, seedDemo, type App, type AppResponse, type Db } from '@va/core';
+import { createApp, DEMO_NAME, ensureDemoBranches, openDb, seedDemo, type App, type AppResponse, type Db } from '@va/core';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { DEMO } from '@/lib/demoMode';
 
@@ -151,6 +151,12 @@ export async function initBackend(): Promise<void> {
   if (!data) {
     await seed();
     persist();
+  } else {
+    const projects = await app.handle({ method: 'GET', url: '/api/projects' });
+    if (projects.status < 400) {
+      const demoProject = (projects.body as { id: number; name: string }[]).find((project) => project.name === DEMO_NAME);
+      if (demoProject && await ensureDemoBranches(app, demoProject.id)) persist();
+    }
   }
 }
 

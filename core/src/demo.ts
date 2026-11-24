@@ -6,6 +6,46 @@ async function call<T = any>(app: App, method: string, url: string, body?: unkno
   return r.body as T;
 }
 
+/** Добавляет учебные ветки к новому или уже существующему демо, не дублируя их. */
+export async function ensureDemoBranches(app: App, projectId: number): Promise<boolean> {
+  const branches = await call<any[]>(app, 'GET', `/api/projects/${projectId}/branches`);
+  const main = branches.find((branch) => branch.branch_name === 'main');
+  if (!main) return false;
+  let changed = false;
+  for (const [legacyName, versionName] of [['Эксперимент', 'v1.1'], ['Согласование', 'v1.2']]) {
+    const legacy = branches.find((branch) => branch.branch_name === legacyName);
+    if (!legacy || branches.some((branch) => branch.branch_name === versionName)) continue;
+    await call(app, 'PATCH', `/api/projects/${main.id}/branches/${legacy.id}`, { name: versionName });
+    legacy.branch_name = versionName;
+    const scenarios = await call<any[]>(app, 'GET', `/api/projects/${legacy.id}/scenarios`);
+    if (scenarios.length) {
+      const detail = await call<any>(app, 'GET', `/api/scenarios/${scenarios[0].id}`);
+      const description = detail.description.replace(`Вариант ветки «${legacyName}»`, `Вариант ${versionName}`);
+      if (description !== detail.description) {
+        await call(app, 'PUT', `/api/scenarios/${scenarios[0].id}`, { ...detail, description });
+      }
+    }
+    changed = true;
+  }
+  for (const [branchName, variation] of [
+    ['v1.1', 'Вариант v1.1: подготовлен для проверки новой логики.'],
+    ['v1.2', 'Вариант v1.2: подготовлен для обсуждения изменений.'],
+  ]) {
+    if (branches.some((branch) => branch.branch_name === branchName)) continue;
+    const branch = await call<any>(app, 'POST', `/api/projects/${main.id}/branches/clone`, { name: branchName });
+    const summaries = await call<any[]>(app, 'GET', `/api/projects/${branch.id}/scenarios`);
+    if (summaries.length) {
+      const detail = await call<any>(app, 'GET', `/api/scenarios/${summaries[0].id}`);
+      await call(app, 'PUT', `/api/scenarios/${summaries[0].id}`, {
+        ...detail,
+        description: [detail.description, variation].filter(Boolean).join('\n\n'),
+      });
+    }
+    changed = true;
+  }
+  return changed;
+}
+
 type Step = Record<string, unknown>;
 const base = { request_params: '', condition: '', conditions: [], prompt_id: null, system_action: '' };
 type Cond = { dep: string; op: string; value: string } | { entity_id: number; op: string; value: string };
@@ -253,5 +293,7 @@ export async function seedDemo(app: App): Promise<number> {
       },
     }],
   });
+
+  await ensureDemoBranches(app, pid);
   return pid;
 }

@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { openDb } from '../src/db';
-import { seedDemo } from '../src/demo';
+import { ensureDemoBranches, seedDemo } from '../src/demo';
 
 it('demo separates entities from external dependencies and keeps scenario references complete', async () => {
   const db = await openDb();
@@ -13,6 +13,39 @@ it('demo separates entities from external dependencies and keeps scenario refere
       expect(response.status, url).toBe(200);
       return response.body;
     };
+    const branches = await get(`/api/projects/${pid}/branches`);
+    expect(branches.map((branch: any) => branch.branch_name)).toEqual(['main', 'v1.1', 'v1.2']);
+    for (const [branchName, marker] of [
+      ['v1.1', 'проверки новой логики'],
+      ['v1.2', 'обсуждения изменений'],
+    ]) {
+      const branch = branches.find((candidate: any) => candidate.branch_name === branchName);
+      const branchScenarios = await get(`/api/projects/${branch.id}/scenarios`);
+      const branchScenario = await get(`/api/scenarios/${branchScenarios[0].id}`);
+      expect(branchScenario.description).toContain(marker);
+    }
+    const mainScenarios = await get(`/api/projects/${pid}/scenarios`);
+    const mainScenario = await get(`/api/scenarios/${mainScenarios[0].id}`);
+    expect(mainScenario.description).not.toContain('проверки новой логики');
+    for (const branch of branches.slice(1)) {
+      const response = await app.handle({ method: 'DELETE', url: `/api/projects/${pid}/branches/${branch.id}` });
+      expect(response.status).toBe(204);
+    }
+    expect(await ensureDemoBranches(app, pid)).toBe(true);
+    expect(await ensureDemoBranches(app, pid)).toBe(false);
+    const renamedBranches = await get(`/api/projects/${pid}/branches`);
+    expect(renamedBranches.map((branch: any) => branch.branch_name)).toEqual(['main', 'v1.1', 'v1.2']);
+    const renamedV11 = renamedBranches.find((branch: any) => branch.branch_name === 'v1.1');
+    const v11Scenario = (await get(`/api/projects/${renamedV11.id}/scenarios`))[0];
+    expect((await get(`/api/scenarios/${v11Scenario.id}`)).description).toContain('Вариант v1.1');
+    for (const [versionName, legacyName] of [['v1.1', 'Эксперимент'], ['v1.2', 'Согласование']]) {
+      const branch = (await get(`/api/projects/${pid}/branches`)).find((candidate: any) => candidate.branch_name === versionName);
+      const response = await app.handle({ method: 'PATCH', url: `/api/projects/${pid}/branches/${branch.id}`, body: { name: legacyName } });
+      expect(response.status).toBe(200);
+    }
+    expect(await ensureDemoBranches(app, pid)).toBe(true);
+    expect(await ensureDemoBranches(app, pid)).toBe(false);
+    expect((await get(`/api/projects/${pid}/branches`)).map((branch: any) => branch.branch_name)).toEqual(['main', 'v1.1', 'v1.2']);
     const entities = await get(`/api/projects/${pid}/entities`);
     const dictionary = await get(`/api/projects/${pid}/dependency-dictionary`);
     const entityIds = new Set(entities.map((e: any) => e.id));

@@ -3,7 +3,7 @@ export { normalizeTaskLinks, parseTextLinks } from './text-links';
 export type { App, AppRequest, AppResponse } from './app';
 export { openDb } from './db';
 export type { Db } from './sqlite';
-export { seedDemo, DEMO_NAME } from './demo';
+export { seedDemo, DEMO_NAME, ensureDemoBranches } from './demo';
 export { dumpProject, importProject } from './project-dump';
 export { stem, normalizeText, phraseKey, findSlotMatches, findSlots } from './stem';
 export type { SlotMatch } from './stem';
