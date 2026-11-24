@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { openDb } from '../src/db';
-import { ensureDemoBranches, seedDemo } from '../src/demo';
+import { ensureDemoBranches, keepOneDemoScenarioChange, seedDemo } from '../src/demo';
 
 it('demo separates entities from external dependencies and keeps scenario references complete', async () => {
   const db = await openDb();
@@ -15,6 +15,13 @@ it('demo separates entities from external dependencies and keeps scenario refere
     };
     const branches = await get(`/api/projects/${pid}/branches`);
     expect(branches.map((branch: any) => branch.branch_name)).toEqual(['main', 'v1.1', 'v1.2']);
+    const scenariosWithPendingChanges = [];
+    for (const branch of branches) {
+      const branchScenarios = await get(`/api/projects/${branch.id}/scenarios`);
+      scenariosWithPendingChanges.push(...branchScenarios.filter((scenario: any) => scenario.pending_change_count > 0));
+    }
+    expect(scenariosWithPendingChanges).toHaveLength(1);
+    expect(await keepOneDemoScenarioChange(app, pid)).toBe(false);
     for (const [branchName, marker] of [
       ['v1.1', 'проверки новой логики'],
       ['v1.2', 'обсуждения изменений'],

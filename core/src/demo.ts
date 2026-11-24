@@ -46,6 +46,28 @@ export async function ensureDemoBranches(app: App, projectId: number): Promise<b
   return changed;
 }
 
+/** Сохраняет открытое уведомление хотя бы для одного сценария демо. */
+export async function keepOneDemoScenarioChange(app: App, projectId: number): Promise<boolean> {
+  const branches = await call<any[]>(app, 'GET', `/api/projects/${projectId}/branches`);
+  const main = branches.find((branch) => branch.branch_name === 'main');
+  const orderedBranches = main ? [main, ...branches.filter((branch) => branch.id !== main.id)] : branches;
+  let retained = false;
+  let changed = false;
+  for (const branch of orderedBranches) {
+    const scenarios = await call<any[]>(app, 'GET', `/api/projects/${branch.id}/scenarios`);
+    for (const scenario of scenarios) {
+      if ((scenario.pending_change_count ?? 0) === 0) continue;
+      if (!retained) {
+        retained = true;
+        continue;
+      }
+      await call(app, 'GET', `/api/scenarios/${scenario.id}/export?format=md`);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 type Step = Record<string, unknown>;
 const base = { request_params: '', condition: '', conditions: [], prompt_id: null, system_action: '' };
 type Cond = { dep: string; op: string; value: string } | { entity_id: number; op: string; value: string };
@@ -295,5 +317,6 @@ export async function seedDemo(app: App): Promise<number> {
   });
 
   await ensureDemoBranches(app, pid);
+  await keepOneDemoScenarioChange(app, pid);
   return pid;
 }
