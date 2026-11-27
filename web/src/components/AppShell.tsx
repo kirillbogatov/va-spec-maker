@@ -65,7 +65,8 @@ export function AppShell() {
   const keywordsMode = useIntentMode(useProjectId()) === 'keywords';
   const dictionary = DICTIONARY.filter((d) => d.key !== 'keywords' || keywordsMode);
   const [searching, setSearching] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const compactEmbed = typeof window !== 'undefined' && window.self !== window.top && window.matchMedia('(max-width: 1440px)').matches;
+  const [collapsed, setCollapsed] = useState(compactEmbed);
   const [closedGroups, setClosedGroups] = useState({ dictionary: false, templates: true });
   const restoreButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -162,9 +163,11 @@ export function AppShell() {
       </div>
 
       <main className="min-h-0 min-w-0 flex-1 bg-page">
-        <PanelVisibilityContext.Provider value={{ collapsed, setCollapsed, restoreButton }}>
-          <Outlet />
-        </PanelVisibilityContext.Provider>
+        {compactEmbed ? <Outlet /> : (
+          <PanelVisibilityContext.Provider value={{ collapsed, setCollapsed, restoreButton }}>
+            <Outlet />
+          </PanelVisibilityContext.Provider>
+        )}
       </main>
 
       <nav aria-label="Основная навигация" className="grid shrink-0 grid-cols-4 border-t bg-nav pb-[env(safe-area-inset-bottom)] md:hidden">
