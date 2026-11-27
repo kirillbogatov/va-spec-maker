@@ -21,6 +21,12 @@ test('compact portfolio iframe preserves scenario list and fits its visible widt
     document.body.append(frame);
   }, demoRoute);
 
+  const geometry = await page.locator('#compact-demo').evaluate((iframe) => ({
+    frame: iframe.getBoundingClientRect().width,
+    container: iframe.parentElement!.getBoundingClientRect().width,
+  }));
+  expect(geometry.frame).toBeLessThanOrEqual(geometry.container);
+
   const embeddedApp = page.frameLocator('#compact-demo');
   await expect(embeddedApp.locator('aside.w-16')).toBeVisible();
   await expect(embeddedApp.getByText('SC_LIGHT', { exact: true }).first()).toBeVisible();
