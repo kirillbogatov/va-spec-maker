@@ -65,7 +65,7 @@ export function AppShell() {
   const keywordsMode = useIntentMode(useProjectId()) === 'keywords';
   const dictionary = DICTIONARY.filter((d) => d.key !== 'keywords' || keywordsMode);
   const [searching, setSearching] = useState(false);
-  const compactEmbed = typeof window !== 'undefined' && window.self !== window.top && window.matchMedia('(max-width: 1440px)').matches;
+  const compactEmbed = typeof window !== 'undefined' && window.self !== window.top && window.matchMedia('(max-width: 1600px)').matches;
   const [collapsed, setCollapsed] = useState(compactEmbed);
   const [closedGroups, setClosedGroups] = useState({ dictionary: false, templates: true });
   const restoreButton = useRef<HTMLButtonElement>(null);
